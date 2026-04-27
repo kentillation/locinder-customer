@@ -440,7 +440,7 @@ export default {
     computed: {
 
         allCategories() {
-            return this.productsStore.getBaseCategories.slice(20);
+            return this.productsStore.getBaseCategories.slice(10);
         },
 
         sortedCategories() {
@@ -454,7 +454,7 @@ export default {
         },
 
         limitedStores() {
-            return this.shopStore.getShops.slice(0, 10);
+            return this.shopStore.getShops.slice(0, 20);
         },
 
         availableCategoriesLower() {
