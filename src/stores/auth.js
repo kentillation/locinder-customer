@@ -199,7 +199,6 @@ export const useAuthStore = defineStore('auth', () => {
             if (!token.value) {
                 clearAuth();
                 initialized.value = true;
-                window.location.href = '/';
                 return false;
             }
 
