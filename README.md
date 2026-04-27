@@ -1,4 +1,4 @@
-# cct-new-frontend
+# locinder-customer
 
 ## Project setup
 ```
