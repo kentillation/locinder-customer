@@ -214,7 +214,7 @@
                                             {{ shop.type }}
                                         </span>
                                     </div>
-                                    <div class="d-flex align-center flex-column"
+                                    <div :class="{ 'd-none' : !shop.lowest_price }" class="d-flex align-center flex-column"
                                         style="position: absolute; right: 10px;">
                                         <span class="text-grey-darken-1" style="font-size:10px">
                                             Starting @
