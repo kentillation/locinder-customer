@@ -1,0 +1,1443 @@
+<template>
+    <div class="locinder-wrapper">
+        <!-- Map Style Selector -->
+        <div class="map-style-selector">
+            <button v-for="style in mapStyles" :key="style.id" @click="changeMapStyle(style)"
+                :class="{ active: currentStyle === style.id }" class="style-btn">
+                {{ style.name }}
+            </button>
+        </div>
+
+        <!-- Distance Badge -->
+        <div v-if="loading" class="distance-badge" style="background: none;">
+            <div class="distance-icon" style="margin-top: -10px !important;">
+                <v-skeleton-loader type="text" width="200" style="background: none;"></v-skeleton-loader>
+            </div>
+        </div>
+
+        <div v-if="distanceText" :class="distanceClass" class="distance-badge">
+            <span class="distance-icon">{{ distanceIcon }} &nbsp;</span>
+            <span class="distance-text">{{ distanceText }}</span>
+            <span class="d-none">{{ currentRouteSource }}</span>
+        </div>
+
+        <!-- Permission Request Overlay -->
+        <div v-if="showPermissionRequest" class="permission-overlay">
+            <v-card class="permission-card">
+                <v-icon size="48" color="#5c3a21">mdi-map-marker</v-icon>
+                <h3 class="mt-3">Location Access Needed</h3>
+                <p class="text-center mt-2">
+                    Allow location access to see your current position and get directions to this shop.
+                </p>
+                <div class="btn-container mt-4">
+                    <v-btn color="grey" height="50" width="110" variant="outlined" @click="dismissPermissionRequest">
+                        Not Now
+                    </v-btn>
+                    <v-btn color="#5c3a21" height="50" width="110" @click="requestLocationPermission">
+                        Allow
+                    </v-btn>
+                </div>
+            </v-card>
+        </div>
+
+        <!-- Permission Denied Banner -->
+        <div v-if="showPermissionDeniedBanner" class="permission-denied-banner">
+            <v-alert type="warning" variant="tonal" closable @click:close="showPermissionDeniedBanner = false">
+                <div class="d-flex align-center">
+                    <v-icon left>mdi-map-marker-off</v-icon>
+                    <span class="ml-2">Location access is needed for map features.
+                        <a href="#" @click="openAppSettings" class="settings-link">Open Settings</a>
+                    </span>
+                </div>
+            </v-alert>
+        </div>
+
+        <!-- Map display -->
+        <div id="map" class="map"></div>
+
+        <!-- Rotation Control -->
+        <div class="rotation-control" @click="resetRotation" v-if="mapInitialized">
+            <v-icon color="#5c3a21" size="24">mdi-compass</v-icon>
+        </div>
+
+        <!-- GPS Guidance -->
+        <div v-if="showGpsGuidance" class="gps-guidance">
+            <div class="guidance-content">
+                <span class="guidance-icon">📡</span>
+                <div class="guidance-text">
+                    <strong style="color: #ff0000">Low GPS Signal</strong>
+                    <p>Move to an open area away from buildings and trees for better accuracy</p>
+                </div>
+                <button @click="showGpsGuidance = false" class="guidance-close">×</button>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div v-if="loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Getting your exact location...</p>
+            <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">Please allow location access when prompted</p>
+        </div>
+
+        <!-- Status messages -->
+        <div v-if="error" class="status error">{{ error }}</div>
+    </div>
+</template>
+
+<script setup>
+/* eslint-disable */
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
+import L from 'leaflet'
+import 'leaflet-rotate'
+import 'leaflet/dist/leaflet.css'
+import { Geolocation } from '@capacitor/geolocation'
+import { useToast } from 'vue-toastification'
+
+// Props
+const props = defineProps({
+    nameOnMap: {
+        type: String,
+        default: 'Shop Location'
+    },
+    latitudeOnMap: {
+        type: Number,
+        default: null
+    },
+    longitudeOnMap: {
+        type: Number,
+        default: null
+    },
+    addressOnMap: {
+        type: String,
+        default: 'Address not available'
+    }
+})
+
+// Emits
+const emit = defineEmits(['map-ready', 'bearing-changed'])
+
+const toast = useToast()
+
+// Fix for Leaflet's default icon paths in Vue
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
+
+// ==================== Reactive State ====================
+const coordinates = ref(null)
+const userAddress = ref('Getting your address...')
+const loading = ref(false)
+const error = ref(null)
+const showGpsGuidance = ref(false)
+let destinationMarker = null
+
+// Map-related
+let map = null
+let userMarker = null
+let watchId = null
+let currentTileLayer = null
+let mapInitialized = false
+let routeLine = null
+let glowLine = null
+let routeLabel = null
+let currentRouteSource = null
+
+// Rotation-related
+const currentBearing = ref(0)
+
+// Location Permission Properties
+const showPermissionRequest = ref(false)
+const showPermissionDeniedBanner = ref(false)
+const hasRequestedPermission = ref(false)
+const permissionGranted = ref(false)
+
+// Debounce and throttle timers
+let routeUpdateTimeout = null
+let addressUpdateTimeout = null
+let lastAddressUpdate = 0
+const ADDRESS_UPDATE_THROTTLE = 5000
+const ROUTE_UPDATE_DEBOUNCE = 1000
+
+// Abort controller for route requests
+let currentRouteController = null
+
+// Map styles
+const mapStyles = [
+    {
+        id: 'osm',
+        name: 'Standard',
+        url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        attribution: 'Locinder'
+    },
+    {
+        id: 'humanitarian',
+        name: 'Humanitarian',
+        url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+        attribution: 'Locinder'
+    },
+    {
+        id: 'cartodb',
+        name: 'Light',
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+        attribution: 'Locinder'
+    },
+    {
+        id: 'cartodb-dark',
+        name: 'Dark',
+        url: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png',
+        attribution: 'Locinder'
+    },
+]
+
+const currentStyle = ref('osm')
+
+// Cache for reverse geocoding
+const addressCache = new Map()
+const routeCache = new Map()
+
+// Check if running in Capacitor
+const isCapacitor = () => {
+    return !!(window && window.Capacitor && window.Capacitor.isNativePlatform)
+}
+
+// ==================== Location Permission Methods ====================
+const checkLocationPermission = async () => {
+    if (!isCapacitor()) {
+        // For web, just allow map to work
+        permissionGranted.value = true
+        showPermissionRequest.value = false
+        return true
+    }
+
+    try {
+        const permissionStatus = await Geolocation.checkPermissions()
+
+        if (permissionStatus.location === 'granted') {
+            permissionGranted.value = true
+            showPermissionRequest.value = false
+            showPermissionDeniedBanner.value = false
+            return true
+        } else if (permissionStatus.location === 'denied') {
+            permissionGranted.value = false
+            showPermissionDeniedBanner.value = true
+            showPermissionRequest.value = false
+            return false
+        } else {
+            // 'prompt' state - never asked before
+            showPermissionRequest.value = true
+            return false
+        }
+    } catch (error) {
+        console.error('Error checking location permission:', error)
+        return false
+    }
+}
+
+const requestLocationPermission = async () => {
+    if (!isCapacitor()) {
+        // For web, just proceed
+        permissionGranted.value = true
+        showPermissionRequest.value = false
+        await refreshLocation()
+        return
+    }
+
+    try {
+        const result = await Geolocation.requestPermissions()
+
+        if (result.location === 'granted') {
+            permissionGranted.value = true
+            showPermissionRequest.value = false
+            showPermissionDeniedBanner.value = false
+            if (toast) toast.success('Location access granted!')
+
+            // Refresh the map to get user location
+            setTimeout(async () => {
+                await refreshLocation()
+            }, 500)
+        } else {
+            permissionGranted.value = false
+            showPermissionRequest.value = false
+            showPermissionDeniedBanner.value = true
+            if (toast) toast.warning('Location access is needed for map features')
+        }
+
+        hasRequestedPermission.value = true
+    } catch (error) {
+        console.error('Permission request error:', error)
+        showPermissionRequest.value = false
+        if (toast) toast.error('Failed to request location permission')
+    }
+}
+
+const dismissPermissionRequest = () => {
+    showPermissionRequest.value = false
+    if (toast) toast.info('You can enable location from settings later')
+}
+
+const openAppSettings = async () => {
+    if (isCapacitor()) {
+        try {
+            await Geolocation.openSettings()
+        } catch (error) {
+            console.error('Error opening settings:', error)
+            if (toast) toast.error('Please enable location access in device settings')
+        }
+    }
+}
+
+// ==================== Rotation Methods ====================
+const setMapBearing = (bearing, options = { animate: true }) => {
+    if (!map || !mapInitialized) return
+
+    try {
+        const normalizedBearing = ((bearing % 360) + 360) % 360
+        if (typeof map.setBearing === 'function') {
+            map.setBearing(normalizedBearing, options)
+            currentBearing.value = normalizedBearing
+            emit('bearing-changed', normalizedBearing)
+        } else {
+            console.warn('Map rotation not supported. Make sure leaflet-rotate is installed.')
+        }
+    } catch (error) {
+        console.error('Error setting map bearing:', error)
+    }
+}
+
+const getCurrentBearing = () => {
+    if (!map || !mapInitialized) return 0
+    try {
+        if (typeof map.getBearing === 'function') {
+            return map.getBearing()
+        }
+    } catch (error) {
+        console.error('Error getting map bearing:', error)
+    }
+    return 0
+}
+
+const resetRotation = () => {
+    setMapBearing(0, { animate: true })
+}
+
+const rotateMap = (deltaDegrees) => {
+    const newBearing = (currentBearing.value + deltaDegrees) % 360
+    setMapBearing(newBearing, { animate: true })
+}
+
+// ==================== Helper Functions ====================
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371
+    const dLat = (lat2 - lat1) * Math.PI / 180
+    const dLon = (lon2 - lon1) * Math.PI / 180
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    return R * c
+}
+
+const getTravelTime = (distanceKm, speedKmPerHour = 5) => {
+    const timeHours = distanceKm / speedKmPerHour
+    const timeMinutes = Math.round(timeHours * 60)
+    return Math.max(1, timeMinutes)
+}
+
+// Clear all route layers
+const clearRouteLayers = () => {
+    try {
+        if (routeLine && map) {
+            map.removeLayer(routeLine)
+            routeLine = null
+        }
+        if (glowLine && map) {
+            map.removeLayer(glowLine)
+            glowLine = null
+        }
+        if (routeLabel && map) {
+            map.removeLayer(routeLabel)
+            routeLabel = null
+        }
+        currentRouteSource = null
+    } catch (err) {
+        console.warn('Error clearing route layers:', err)
+    }
+}
+
+// Cancel ongoing route request
+const cancelRouteRequest = () => {
+    if (currentRouteController) {
+        currentRouteController.abort()
+        currentRouteController = null
+    }
+}
+
+// Draw route line (only OSRM, no fallback)
+const drawOsrmRoute = async () => {
+    if (!map || !mapInitialized || !coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) {
+        return
+    }
+
+    cancelRouteRequest()
+    clearRouteLayers()
+
+    const cacheKey = `${coordinates.value.lat},${coordinates.value.lng}|${props.latitudeOnMap},${props.longitudeOnMap}`
+
+    const cachedRoute = routeCache.get(cacheKey)
+    if (cachedRoute && Date.now() - cachedRoute.timestamp < 30000) {
+        renderRoute(cachedRoute.data)
+        return
+    }
+
+    try {
+        currentRouteController = new AbortController()
+
+        const start = `${coordinates.value.lng},${coordinates.value.lat}`
+        const end = `${props.longitudeOnMap},${props.latitudeOnMap}`
+        const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?geometries=geojson&overview=full`
+
+        const response = await fetch(url, {
+            signal: currentRouteController.signal
+        })
+
+        const data = await response.json()
+
+        if (data.routes && data.routes[0]) {
+            const routeData = {
+                coordinates: data.routes[0].geometry.coordinates.map((coord) => [coord[1], coord[0]]),
+                distance: data.routes[0].distance,
+                duration: data.routes[0].duration
+            }
+
+            routeCache.set(cacheKey, {
+                data: routeData,
+                timestamp: Date.now()
+            })
+
+            renderRoute(routeData)
+            currentRouteSource = 'osrm'
+        } else {
+            console.warn('OSRM route not available')
+            currentRouteSource = null
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            console.error('OSRM routing error:', err)
+            currentRouteSource = null
+        }
+    } finally {
+        currentRouteController = null
+    }
+}
+
+// Render the route on map
+const renderRoute = (routeData) => {
+    if (!map || !mapInitialized) return
+
+    try {
+        const { coordinates: routeCoords, distance, duration } = routeData
+
+        routeLine = L.polyline(routeCoords, {
+            color: '#8B4513',
+            weight: 5,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(map)
+
+        glowLine = L.polyline(routeCoords, {
+            color: '#D2691E',
+            weight: 8,
+            opacity: 0.2,
+            lineCap: 'round',
+            lineJoin: 'round'
+        }).addTo(map)
+
+        const midIndex = Math.floor(routeCoords.length / 2)
+        const midPoint = routeCoords[midIndex]
+        const distanceKm = distance / 1000
+        const minutes = Math.round(duration / 60)
+
+        const distanceLabelHtml = L.divIcon({
+            className: 'route-label',
+            html: `<div style="background: #8B4513; color: white; padding: 2px 6px; border-radius: 12px; font-size: 10px; font-weight: bold; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+                ${minutes} min • ${distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}
+            </div>`,
+            iconSize: [60, 20],
+            iconAnchor: [30, 10]
+        })
+
+        routeLabel = L.marker([midPoint[0], midPoint[1]], {
+            icon: distanceLabelHtml,
+            interactive: false
+        }).addTo(map)
+
+    } catch (err) {
+        console.error('Error rendering route:', err)
+    }
+}
+
+// Debounced route update
+const debouncedUpdateRoute = () => {
+    if (routeUpdateTimeout) {
+        clearTimeout(routeUpdateTimeout)
+    }
+    routeUpdateTimeout = setTimeout(() => {
+        if (coordinates.value && props.latitudeOnMap && props.longitudeOnMap) {
+            drawOsrmRoute()
+        }
+        routeUpdateTimeout = null
+    }, ROUTE_UPDATE_DEBOUNCE)
+}
+
+// Reverse geocoding with caching
+const reverseGeocode = async (lat, lng) => {
+    const cacheKey = `${lat.toFixed(6)},${lng.toFixed(6)}`
+
+    if (addressCache.has(cacheKey)) {
+        const cached = addressCache.get(cacheKey)
+        if (Date.now() - cached.timestamp < 60000) {
+            return cached.address
+        }
+    }
+
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+            {
+                headers: {
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'User-Agent': 'Locinder Map Application'
+                }
+            }
+        )
+        const data = await response.json()
+
+        if (data && data.display_name) {
+            const address = data.address
+            let formattedAddress = ''
+
+            if (address.road || address.pedestrian) {
+                formattedAddress += address.road || address.pedestrian || ''
+            }
+            if (address.suburb) {
+                formattedAddress += formattedAddress ? `, ${address.suburb}` : address.suburb
+            }
+            if (address.city || address.town || address.village) {
+                const city = address.city || address.town || address.village
+                formattedAddress += formattedAddress ? `, ${city}` : city
+            }
+            if (address.postcode) {
+                formattedAddress += formattedAddress ? ` ${address.postcode}` : address.postcode
+            }
+
+            const result = formattedAddress || data.display_name.split(',')[0]
+
+            addressCache.set(cacheKey, {
+                address: result,
+                timestamp: Date.now()
+            })
+
+            return result
+        }
+        return 'Address not found'
+    } catch (error) {
+        console.error('Reverse geocoding error:', error)
+        return 'Address unavailable'
+    }
+}
+
+// Throttled address update
+const throttledUpdateAddress = async (lat, lng, shouldOpenPopup = false) => {
+    const now = Date.now()
+    if (now - lastAddressUpdate < ADDRESS_UPDATE_THROTTLE) {
+        if (addressUpdateTimeout) {
+            clearTimeout(addressUpdateTimeout)
+        }
+        addressUpdateTimeout = setTimeout(async () => {
+            await updateUserMarkerWithAddress(lat, lng, shouldOpenPopup)
+            addressUpdateTimeout = null
+        }, ADDRESS_UPDATE_THROTTLE - (now - lastAddressUpdate))
+        return
+    }
+
+    lastAddressUpdate = now
+    await updateUserMarkerWithAddress(lat, lng, shouldOpenPopup)
+}
+
+// Update user marker with address
+const updateUserMarkerWithAddress = async (lat, lng, shouldOpenPopup = true) => {
+    if (!userMarker || !map) return
+
+    const address = await reverseGeocode(lat, lng)
+    userAddress.value = address
+
+    userMarker.bindPopup(`
+        <div style="text-align: center; min-width: 200px;">
+            <strong style="font-size: 14px;">📍 You are here</strong><br>
+            <small style="font-size: 11px; color: #666;">${address}</small>
+        </div>
+    `)
+
+    if (shouldOpenPopup) {
+        userMarker.openPopup()
+        setTimeout(() => {
+            if (userMarker) {
+                userMarker.closePopup()
+            }
+        }, 10000)
+    }
+}
+
+// Computed distance properties
+const distanceMinutes = computed(() => {
+    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return 0
+
+    const distanceKm = calculateDistance(
+        coordinates.value.lat,
+        coordinates.value.lng,
+        props.latitudeOnMap,
+        props.longitudeOnMap
+    )
+    return getTravelTime(distanceKm, 5)
+})
+
+const distanceText = computed(() => {
+    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return ''
+
+    const distanceKm = calculateDistance(
+        coordinates.value.lat,
+        coordinates.value.lng,
+        props.latitudeOnMap,
+        props.longitudeOnMap
+    )
+    const minutes = getTravelTime(distanceKm, 5)
+
+    let distanceDisplay = ''
+    if (distanceKm < 1) {
+        distanceDisplay = `${Math.round(distanceKm * 1000)}m`
+    } else {
+        distanceDisplay = `${distanceKm.toFixed(1)}km`
+    }
+
+    if (minutes === 1) {
+        return `est. 1 min away (${distanceDisplay})`
+    }
+    return `est. ${minutes} mins away (${distanceDisplay})`
+})
+
+const distanceIcon = computed(() => {
+    const minutes = distanceMinutes.value
+    if (minutes <= 5) return '🚶‍♂️'
+    if (minutes <= 10) return '🚶'
+    if (minutes <= 20) return '🚲'
+    if (minutes <= 30) return '🚗'
+    return '🚌'
+})
+
+const distanceClass = computed(() => {
+    const minutes = distanceMinutes.value
+    if (minutes <= 5) return 'distance-very-close'
+    if (minutes <= 10) return 'distance-close'
+    if (minutes <= 20) return 'distance-moderate'
+    if (minutes <= 30) return 'distance-far'
+    return 'distance-very-far'
+})
+
+const updateDestinationMarker = () => {
+    if (!map || !mapInitialized || !props.latitudeOnMap || !props.longitudeOnMap) return
+
+    try {
+        if (destinationMarker && map) {
+            map.removeLayer(destinationMarker)
+            destinationMarker = null
+        }
+
+        const destinationIcon = L.divIcon({
+            className: 'destination-marker',
+            html: `<div style="background-color: #ff4444; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        })
+
+        destinationMarker = L.marker([props.latitudeOnMap, props.longitudeOnMap], {
+            icon: destinationIcon
+        }).addTo(map)
+
+        let distanceDisplay = ''
+        if (coordinates.value) {
+            const distanceKm = calculateDistance(
+                coordinates.value.lat,
+                coordinates.value.lng,
+                props.latitudeOnMap,
+                props.longitudeOnMap
+            )
+            const minutes = getTravelTime(distanceKm, 5)
+            distanceDisplay = `est. ${minutes} mins away`
+        }
+
+        destinationMarker.bindPopup(`
+            <div style="text-align: center;">
+                <strong>📍 ${props.nameOnMap} Branch</strong><br>
+                ${props.addressOnMap}<br>
+                ${distanceDisplay ? `<small>${distanceDisplay}</small>` : ''}
+            </div>
+        `)
+    } catch (err) {
+        console.error('Error updating destination marker:', err)
+    }
+}
+
+const refreshLocation = async () => {
+    if (map && mapInitialized) {
+        await updateUserMarker()
+    }
+}
+
+const updateUserMarker = async () => {
+    if (!map || !mapInitialized) return
+
+    // Check permission first
+    const hasPermission = await checkLocationPermission()
+    if (!hasPermission && isCapacitor()) {
+        loading.value = false
+        return
+    }
+
+    loading.value = true
+    error.value = null
+
+    if (!isCapacitor()) {
+        // Browser geolocation
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const userLat = position.coords.latitude
+                const userLng = position.coords.longitude
+
+                coordinates.value = {
+                    lat: userLat,
+                    lng: userLng
+                }
+
+                if (userMarker && map) {
+                    userMarker.setLatLng([userLat, userLng])
+                    await throttledUpdateAddress(userLat, userLng, true)
+                } else if (map) {
+                    const userIcon = L.divIcon({
+                        className: 'user-marker',
+                        html: `<div style="background-color: #4CAF50; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px rgba(0,0,0,0.3);"></div>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    })
+
+                    userMarker = L.marker([userLat, userLng], {
+                        draggable: false,
+                        icon: userIcon
+                    }).addTo(map)
+
+                    await throttledUpdateAddress(userLat, userLng, true)
+                }
+
+                debouncedUpdateRoute()
+                updateDestinationMarker()
+
+                if (map) {
+                    map.setView([userLat, userLng], 15)
+                }
+
+                loading.value = false
+            },
+            (err) => {
+                console.error('Error getting user location:', err)
+                error.value = 'Could not get your location. Please check your location settings.'
+
+                if (map && props.latitudeOnMap && props.longitudeOnMap) {
+                    map.setView([props.latitudeOnMap, props.longitudeOnMap], 15)
+                }
+                loading.value = false
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000
+            }
+        )
+    } else {
+        // Capacitor geolocation
+        try {
+            const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 10000
+            })
+            
+            const userLat = position.coords.latitude
+            const userLng = position.coords.longitude
+
+            coordinates.value = {
+                lat: userLat,
+                lng: userLng
+            }
+
+            if (userMarker && map) {
+                userMarker.setLatLng([userLat, userLng])
+                await throttledUpdateAddress(userLat, userLng, true)
+            } else if (map) {
+                const userIcon = L.divIcon({
+                    className: 'user-marker',
+                    html: `<div style="background-color: #4CAF50; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                })
+
+                userMarker = L.marker([userLat, userLng], {
+                    draggable: false,
+                    icon: userIcon
+                }).addTo(map)
+
+                await throttledUpdateAddress(userLat, userLng, true)
+            }
+
+            debouncedUpdateRoute()
+            updateDestinationMarker()
+
+            if (map) {
+                map.setView([userLat, userLng], 15)
+            }
+
+            loading.value = false
+        } catch (err) {
+            console.error('Error getting user location:', err)
+            error.value = 'Could not get your location. Please check your location settings.'
+
+            if (map && props.latitudeOnMap && props.longitudeOnMap) {
+                map.setView([props.latitudeOnMap, props.longitudeOnMap], 15)
+            }
+            loading.value = false
+        }
+    }
+}
+
+const startWatchingLocation = () => {
+    if (!navigator.geolocation && !isCapacitor()) return
+
+    let lastUpdateTime = 0
+    const UPDATE_THROTTLE = 5000
+
+    if (isCapacitor()) {
+        // For Capacitor, use interval
+        watchId = setInterval(async () => {
+            if (!permissionGranted.value) return
+            
+            const now = Date.now()
+            if (now - lastUpdateTime < UPDATE_THROTTLE) return
+
+            try {
+                const position = await Geolocation.getCurrentPosition({
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                })
+
+                const newLat = position.coords.latitude
+                const newLng = position.coords.longitude
+
+                if (coordinates.value) {
+                    const distanceMoved = calculateDistance(
+                        coordinates.value.lat,
+                        coordinates.value.lng,
+                        newLat,
+                        newLng
+                    ) * 1000
+
+                    if (distanceMoved < 10) return
+                }
+
+                coordinates.value = {
+                    lat: newLat,
+                    lng: newLng
+                }
+
+                if (userMarker && map && mapInitialized) {
+                    userMarker.setLatLng([newLat, newLng])
+
+                    if (now - lastUpdateTime > UPDATE_THROTTLE) {
+                        lastUpdateTime = now
+                        await throttledUpdateAddress(newLat, newLng, false)
+                    }
+
+                    debouncedUpdateRoute()
+                    updateDestinationMarker()
+                }
+            } catch (err) {
+                console.error('Watch position error:', err)
+            }
+        }, 5000)
+    } else {
+        // Browser geolocation watchPosition
+        watchId = navigator.geolocation.watchPosition(
+            async (position) => {
+                const now = Date.now()
+                const newLat = position.coords.latitude
+                const newLng = position.coords.longitude
+
+                if (coordinates.value) {
+                    const distanceMoved = calculateDistance(
+                        coordinates.value.lat,
+                        coordinates.value.lng,
+                        newLat,
+                        newLng
+                    ) * 1000
+
+                    if (distanceMoved < 10) return
+                }
+
+                coordinates.value = {
+                    lat: newLat,
+                    lng: newLng
+                }
+
+                if (userMarker && map && mapInitialized) {
+                    userMarker.setLatLng([newLat, newLng])
+
+                    if (now - lastUpdateTime > UPDATE_THROTTLE) {
+                        lastUpdateTime = now
+                        await throttledUpdateAddress(newLat, newLng, false)
+                    }
+
+                    debouncedUpdateRoute()
+                    updateDestinationMarker()
+                }
+            },
+            (err) => {
+                console.error('Watch position error:', err)
+                if (err.code === 2 || err.code === 3) {
+                    showGpsGuidance.value = true
+                }
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        )
+    }
+}
+
+const stopWatchingLocation = () => {
+    if (isCapacitor() && watchId) {
+        clearInterval(watchId)
+        watchId = null
+    } else if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
+        watchId = null
+    }
+}
+
+const initMap = () => {
+    if (mapInitialized) return
+
+    const mapContainer = document.getElementById('map')
+    if (!mapContainer) {
+        console.error('Map container not found!')
+        error.value = 'Map container not found'
+        return
+    }
+
+    const defaultCenter = [props.latitudeOnMap, props.longitudeOnMap]
+
+    try {
+        // Initialize map with rotation support
+        map = L.map('map', {
+            center: defaultCenter,
+            zoom: 15,
+            rotate: true,
+            bearing: 0,
+            rotateControl: false
+        }).setView(defaultCenter, 15)
+
+        // Add rotation event listener
+        map.on('rotate', (e) => {
+            currentBearing.value = e.bearing
+            emit('bearing-changed', e.bearing)
+        })
+
+        currentTileLayer = L.tileLayer(mapStyles[0].url, {
+            attribution: mapStyles[0].attribution
+        }).addTo(map)
+
+        mapInitialized = true
+
+        updateDestinationMarker()
+        updateUserMarker()
+        startWatchingLocation()
+
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize()
+            }
+        }, 100)
+
+        setTimeout(() => {
+            if (map) {
+                map.invalidateSize()
+            }
+        }, 500)
+
+        emit('map-ready')
+
+    } catch (err) {
+        console.error('Failed to initialize map:', err)
+        error.value = 'Failed to load map'
+        mapInitialized = false
+    }
+}
+
+const changeMapStyle = (style) => {
+    if (!map || !mapInitialized) return
+
+    if (currentTileLayer && map) {
+        map.removeLayer(currentTileLayer)
+    }
+
+    currentTileLayer = L.tileLayer(style.url, {
+        attribution: style.attribution,
+        maxZoom: 19,
+        minZoom: 3
+    }).addTo(map)
+
+    currentStyle.value = style.id
+}
+
+// Cleanup function
+const cleanup = () => {
+    if (routeUpdateTimeout) {
+        clearTimeout(routeUpdateTimeout)
+    }
+    if (addressUpdateTimeout) {
+        clearTimeout(addressUpdateTimeout)
+    }
+    cancelRouteRequest()
+    stopWatchingLocation()
+    if (map) {
+        clearRouteLayers()
+        map.remove()
+        map = null
+        mapInitialized = false
+    }
+    addressCache.clear()
+    routeCache.clear()
+}
+
+// Expose methods to parent component
+defineExpose({
+    refreshLocation,
+    setMapBearing,
+    getCurrentBearing,
+    resetRotation,
+    rotateMap,
+    currentBearing,
+    checkLocationPermission,
+    requestLocationPermission
+})
+
+// Watch for prop changes
+watch(() => [props.latitudeOnMap, props.longitudeOnMap], () => {
+    if (map && mapInitialized && props.latitudeOnMap && props.longitudeOnMap) {
+        updateDestinationMarker()
+        debouncedUpdateRoute()
+        map.setView([props.latitudeOnMap, props.longitudeOnMap], 15)
+    }
+})
+
+// Watch for coordinates changes to update route
+watch(coordinates, () => {
+    if (map && mapInitialized && coordinates.value) {
+        debouncedUpdateRoute()
+        updateDestinationMarker()
+    }
+})
+
+// Lifecycle Hooks
+onMounted(() => {
+    setTimeout(() => {
+        initMap()
+    }, 100)
+})
+
+onBeforeUnmount(() => {
+    cleanup()
+})
+</script>
+
+<style scoped>
+/* User marker style */
+.user-marker {
+    background: transparent;
+    border: none;
+}
+
+.user-marker div {
+    transition: transform 0.2s ease;
+    animation: pulse-green 2s ease-in-out infinite;
+}
+
+.user-marker div:hover {
+    transform: scale(1.5);
+}
+
+@keyframes pulse-green {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+    }
+}
+
+/* Wrapper styles */
+.locinder-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.leaflet-container {
+    margin-top: 110px;
+    margin-bottom: 20px;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+.map-style-selector {
+    position: absolute;
+    margin-top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: 8px 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.distance-badge {
+    position: absolute;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    background: white;
+    white-space: nowrap;
+}
+
+.distance-very-close {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+.distance-close {
+    background: #dcedc8;
+    color: #33691e;
+}
+
+.distance-moderate {
+    background: #fff9c4;
+    color: #f57f17;
+}
+
+.distance-far {
+    background: #ffe0b2;
+    color: #e65100;
+}
+
+.distance-very-far {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+.distance-icon {
+    font-size: 16px;
+}
+
+.distance-text {
+    font-weight: 600;
+}
+
+.style-btn {
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.style-btn.active {
+    background: #5c3a21;
+    color: white;
+    border-color: #5c3a21;
+}
+
+.map {
+    position: relative;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 500px;
+    z-index: 1;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 110px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    border-radius: 20px;
+}
+
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #5c3a21;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    padding: 8px 16px;
+    font-size: 15px;
+    border-radius: 8px;
+    z-index: 1000;
+    text-align: center;
+}
+
+.status.error {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.status.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.gps-guidance {
+    position: absolute;
+    bottom: 80px;
+    left: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 12px;
+    padding: 12px 16px;
+    z-index: 1000;
+}
+
+.guidance-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.guidance-icon {
+    font-size: 24px;
+}
+
+.guidance-text {
+    flex: 1;
+}
+
+.guidance-text strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #ff0000;
+}
+
+.guidance-text p {
+    font-size: 12px;
+    opacity: 0.8;
+    margin: 0;
+    color: #fff;
+}
+
+.guidance-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+}
+
+/* Marker styles */
+.leaflet-marker-icon {
+    cursor: grab !important;
+}
+
+.leaflet-marker-icon:active {
+    cursor: grabbing !important;
+}
+
+.route-label {
+    background: transparent;
+    border: none;
+    pointer-events: none;
+}
+
+.route-label div {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.destination-marker {
+    background: transparent;
+    border: none;
+}
+
+.destination-marker div {
+    transition: transform 0.2s ease;
+}
+
+.destination-marker div:hover {
+    transform: scale(1.5);
+}
+
+/* Permission Overlay Styles */
+.permission-overlay {
+    position: absolute;
+    top: 110px;
+    left: 0;
+    right: 0;
+    bottom: 15px;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+}
+
+.permission-card {
+    max-width: 320px;
+    padding: 24px;
+    text-align: center;
+    border-radius: 20px;
+    margin: 20px;
+}
+
+.permission-card .btn-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+.permission-denied-banner {
+    position: absolute;
+    top: 20px;
+    left: 16px;
+    right: 16px;
+    z-index: 1500;
+}
+
+.settings-link {
+    color: #5c3a21;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+/* Rotation Control */
+.rotation-control {
+    position: absolute;
+    bottom: 30px;
+    left: 20px;
+    z-index: 1000;
+    background: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.rotation-control:hover {
+    background: #f0f0f0;
+    transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+    .leaflet-marker-icon {
+        width: 30px !important;
+        height: 42px !important;
+        margin-left: -15px !important;
+        margin-top: -42px !important;
+    }
+
+    .map-style-selector {
+        top: 0;
+        padding: 6px 10px;
+    }
+
+    .distance-badge {
+        top:60px;
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+}
+</style>

@@ -1,0 +1,7 @@
+import axios from 'axios';
+
+axios.defaults.withCredentials = false;
+
+export function getCsrfCookie() {
+  return axios.get('http://localhost:8000/sanctum/csrf-cookie');  // Update with your backend URL
+}
