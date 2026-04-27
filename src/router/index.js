@@ -1,4 +1,5 @@
-import { createRouter as _createRouter, createWebHistory } from 'vue-router';
+// router/index.js
+import { createRouter, createWebHistory } from 'vue-router';
 import NotFound from '@/views/NotFound.vue';
 import LoginPage from '@/views/LoginPage.vue';
 import HomePage from '@/views/HomePage.vue';
@@ -21,57 +22,64 @@ const routes = [
   { path: '/new-products', name: 'NewProducts', component: NewProducts, meta: { requiresAuth: true } },
 ];
 
-export const createRouter = (pinia) => {
-  const router = _createRouter({
-    history: createWebHistory(process.env.BASE_URL),
-    routes
-  });
+const router = createRouter({
+  history: createWebHistory(process.env.BASE_URL),
+  routes
+});
 
-  let historyStack = [];
-  let isCheckingAuth = false;
+let historyStack = [];
+let isCheckingAuth = false;
 
-  const setSlideTransition = (to, from) => {
-    const toIndex = historyStack.indexOf(to.fullPath);
-    const fromIndex = historyStack.indexOf(from.fullPath);
-    
-    if (toIndex === -1) {
-      historyStack.push(to.fullPath);
-      window.setPageTransition('slide-left');
-    } else {
-      window.setPageTransition(toIndex < fromIndex ? 'slide-right' : 'slide-left');
-    }
-  };
-
-  router.beforeEach(async (to, from, next) => {
-    // Use the injected pinia instance
-    const { useAuthStore } = await import('@/stores/auth');
-    const authStore = useAuthStore(pinia); // Pass pinia to store
-
-    if (!authStore.initialized && !isCheckingAuth) {
-      isCheckingAuth = true;
-      try {
-        await authStore.checkAuth();
-      } catch (err) {
-        console.error('Auth check failed:', err);
-      } finally {
-        isCheckingAuth = false;
-      }
-    }
-
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-      setSlideTransition(to, from);
-      next('/');
-      return;
-    }
-
-    if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
-      setSlideTransition(to, from);
-      next('/home');
-      return;
-    }
-
-    next();
-  });
-
-  return router;
+// Fixed slide transition function
+const setSlideTransition = (to, from) => {
+  const toIndex = historyStack.indexOf(to.fullPath);
+  const fromIndex = historyStack.indexOf(from.fullPath);
+  
+  if (toIndex === -1) {
+    historyStack.push(to.fullPath);
+    window.setPageTransition('slide-left');
+  } else {
+    window.setPageTransition(toIndex < fromIndex ? 'slide-right' : 'slide-left');
+  }
 };
+
+router.beforeEach(async (to, from, next) => {
+  // Dynamically import auth store to ensure Pinia is initialized
+  const { useAuthStore } = await import('@/stores/auth');
+  const authStore = useAuthStore();
+
+  // Wait for auth check if not initialized
+  if (!authStore.initialized && !isCheckingAuth) {
+    isCheckingAuth = true;
+    try {
+      await authStore.checkAuth();
+    } catch (err) {
+      console.error('Auth check failed:', err);
+    } finally {
+      isCheckingAuth = false;
+    }
+  }
+
+  // Check if route requires authentication
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    console.log('Unauthenticated access detected, clearing auth and redirecting');
+    
+    // Clear any stale auth data without calling logout API
+    authStore.clearAuth(); // This just removes localStorage and resets state
+    
+    setSlideTransition(to, from);
+    next('/');
+    return;
+  }
+
+  // Redirect authenticated users away from login/register
+  if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
+    setSlideTransition(to, from);
+    next('/home');
+    return;
+  }
+
+  next();
+});
+
+export default router;

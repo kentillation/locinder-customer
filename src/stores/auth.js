@@ -188,7 +188,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
-    // Check if the current token is still valid
     const checkAuth = async () => {
         // Prevent multiple simultaneous checks
         if (checkingAuth.value) {
@@ -196,7 +195,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
 
         checkingAuth.value = true;
-        
+
         try {
             // If no token, auth is invalid
             if (!token.value) {
@@ -231,12 +230,12 @@ export const useAuthStore = defineStore('auth', () => {
                 return false;
             }
             */
-            
+
             // Simple validation - just check if token exists
             // This is faster but less secure
             initialized.value = true;
             return true;
-            
+
         } catch (err) {
             console.error('Auth check error:', err);
             clearAuth();
@@ -247,7 +246,6 @@ export const useAuthStore = defineStore('auth', () => {
         }
     };
 
-    // Sync state from localStorage (useful after page refresh)
     const syncFromLocalStorage = () => {
         const storedToken = localStorage.getItem('auth_token');
         const storeduserId = localStorage.getItem('user_id');
@@ -264,7 +262,38 @@ export const useAuthStore = defineStore('auth', () => {
         initialized.value = true;
     };
 
-    // Initialize by syncing from localStorage
+    const handleUnauthenticated = () => {
+        clearAuth();
+    };
+
+    const validateSession = async () => {
+        if (!token.value) {
+            handleUnauthenticated();
+            return false;
+        }
+
+        // Optional: Verify token with backend
+        try {
+            const response = await apiClient.get('v1/customer/verify-token', {
+                headers: {
+                    Authorization: `Bearer ${token.value}`
+                }
+            });
+
+            if (response.status === 200 && response.data.valid) {
+                return true;
+            } else {
+                handleUnauthenticated();
+                return false;
+            }
+        } catch (err) {
+            if (err.response?.status === 401) {
+                handleUnauthenticated();
+            }
+            return false;
+        }
+    };
+
     syncFromLocalStorage();
 
     return {
@@ -284,6 +313,7 @@ export const useAuthStore = defineStore('auth', () => {
         logout,
         clearAuth,
         syncFromLocalStorage,
-        checkAuth, // Add checkAuth to the returned object
+        checkAuth,
+        validateSession,
     };
 });
