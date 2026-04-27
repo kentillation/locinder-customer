@@ -189,7 +189,6 @@ export const useAuthStore = defineStore('auth', () => {
     };
 
     const checkAuth = async () => {
-        // Prevent multiple simultaneous checks
         if (checkingAuth.value) {
             return;
         }
@@ -197,7 +196,6 @@ export const useAuthStore = defineStore('auth', () => {
         checkingAuth.value = true;
 
         try {
-            // If no token, auth is invalid
             if (!token.value) {
                 clearAuth();
                 initialized.value = true;
