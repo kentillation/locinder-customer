@@ -1,5 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { createRouter as _createRouter, createWebHistory } from 'vue-router';
 import NotFound from '@/views/NotFound.vue';
 import LoginPage from '@/views/LoginPage.vue';
 import HomePage from '@/views/HomePage.vue';
@@ -22,65 +21,57 @@ const routes = [
   { path: '/new-products', name: 'NewProducts', component: NewProducts, meta: { requiresAuth: true } },
 ];
 
-const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
-  routes
-});
+export const createRouter = (pinia) => {
+  const router = _createRouter({
+    history: createWebHistory(process.env.BASE_URL),
+    routes
+  });
 
-let historyStack = [];
-let isCheckingAuth = false;
-let authInitialized = false;
+  let historyStack = [];
+  let isCheckingAuth = false;
 
-
-const initAuth = async () => {
-  if (!authInitialized && !isCheckingAuth) {
-    isCheckingAuth = true;
-    const authStore = useAuthStore();
-    try {
-      await authStore.checkAuth();
-      authInitialized = true;
-    } catch (err) {
-      console.error('Auth check failed:', err);
-    } finally {
-      isCheckingAuth = false;
+  const setSlideTransition = (to, from) => {
+    const toIndex = historyStack.indexOf(to.fullPath);
+    const fromIndex = historyStack.indexOf(from.fullPath);
+    
+    if (toIndex === -1) {
+      historyStack.push(to.fullPath);
+      window.setPageTransition('slide-left');
+    } else {
+      window.setPageTransition(toIndex < fromIndex ? 'slide-right' : 'slide-left');
     }
-  }
+  };
+
+  router.beforeEach(async (to, from, next) => {
+    // Use the injected pinia instance
+    const { useAuthStore } = await import('@/stores/auth');
+    const authStore = useAuthStore(pinia); // Pass pinia to store
+
+    if (!authStore.initialized && !isCheckingAuth) {
+      isCheckingAuth = true;
+      try {
+        await authStore.checkAuth();
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        isCheckingAuth = false;
+      }
+    }
+
+    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+      setSlideTransition(to, from);
+      next('/');
+      return;
+    }
+
+    if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
+      setSlideTransition(to, from);
+      next('/home');
+      return;
+    }
+
+    next();
+  });
+
+  return router;
 };
-
-await initAuth();
-
-const setSlideTransition = (to, from) => {
-  const toIndex = historyStack.indexOf(to.fullPath);
-  const fromIndex = historyStack.indexOf(from.fullPath);
-  
-  if (toIndex === -1) {
-    historyStack.push(to.fullPath);
-    window.setPageTransition('slide-left');
-  } else {
-    window.setPageTransition(toIndex < fromIndex ? 'slide-right' : 'slide-left');
-  }
-};
-
-router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore();
-
-  if (!authStore.initialized && !isCheckingAuth) {
-    await initAuth();
-  }
-
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    setSlideTransition(to, from);
-    next('/');
-    return;
-  }
-
-  if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
-    setSlideTransition(to, from);
-    next('/home');
-    return;
-  }
-
-  next();
-});
-
-export default router;
