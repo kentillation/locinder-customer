@@ -28,8 +28,27 @@ const router = createRouter({
 });
 
 let historyStack = [];
+let isCheckingAuth = false;
+let authInitialized = false;
 
-// Fixed slide transition function
+
+const initAuth = async () => {
+  if (!authInitialized && !isCheckingAuth) {
+    isCheckingAuth = true;
+    const authStore = useAuthStore();
+    try {
+      await authStore.checkAuth();
+      authInitialized = true;
+    } catch (err) {
+      console.error('Auth check failed:', err);
+    } finally {
+      isCheckingAuth = false;
+    }
+  }
+};
+
+await initAuth();
+
 const setSlideTransition = (to, from) => {
   const toIndex = historyStack.indexOf(to.fullPath);
   const fromIndex = historyStack.indexOf(from.fullPath);
@@ -42,35 +61,22 @@ const setSlideTransition = (to, from) => {
   }
 };
 
-// Flag to prevent multiple simultaneous checks
-let isCheckingAuth = false;
-
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore();
 
-  // Wait for auth check if not initialized
   if (!authStore.initialized && !isCheckingAuth) {
-    isCheckingAuth = true;
-    try {
-      await authStore.checkAuth();
-    } catch (err) {
-      console.error('Auth check failed:', err);
-    } finally {
-      isCheckingAuth = false;
-    }
+    await initAuth();
   }
 
-  // Check if route requires authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     setSlideTransition(to, from);
     next('/');
     return;
   }
 
-  // Redirect authenticated users away from login/register
   if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
     setSlideTransition(to, from);
-    next('/home'); // Redirect to home instead of '/'
+    next('/home');
     return;
   }
 
