@@ -1,7 +1,6 @@
 import { createPinia } from 'pinia'
 import { createApp } from 'vue';
 import App from './App.vue';
-import router from './router';
 import vuetify from './plugins/vuetify';
 import { loadFonts } from './plugins/webfontloader';
 import Toast from 'vue-toastification'
@@ -12,8 +11,14 @@ loadFonts();
 
 const app = createApp(App);
 
-app.use(createPinia());
+// Setup Pinia first
+const pinia = createPinia();
+app.use(pinia);
+
+// THEN import and use router (so auth store is available)
+import router from './router';
 app.use(router);
+
 app.use(vuetify);
 app.use(Toast, {
   position: 'top-center',
