@@ -348,7 +348,7 @@ export default {
             debouncedSearch: null,
             selectedSuggestionIndex: -1,
             selectedBaseCategory: null,
-            itemsPerPage: 10,
+            itemsPerPage: 20,
             moreSheet: false,
             sheetHeight: 55,
             startY: 0,
