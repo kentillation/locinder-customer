@@ -258,76 +258,90 @@
         </div>
 
         <!-- More Bottom Sheet -->
-        <v-bottom-sheet v-model="moreSheet" inset scrollable @closed="onMoreSheetClosed">
-            <v-card class="sheet-buttons-container px-1" :style="{ height: sheetHeight + 'vh' }" @touchstart="startDrag"
-                @touchmove="onDrag" @touchend="endDrag">
+        <transition name="slide-up">
+            <div v-if="moreSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
+                @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
                 <div class="drag-handle mt-3"></div>
-                <v-container>
-                    <h4 class="text-left">
-                        More choices for you<br />
-                        <span>Iban pa nga pili-an para sa imo</span>
-                    </h4>
-                    <v-row class="px-2 mb-5">
-                        <v-col v-for="(category) in sortedCategories" :key="category.label" cols="4" lg="3" md="4"
-                            sm="4" style="padding: 5px !important;">
-                            <v-btn class="button" @click="handleCategorySelect(category)">
-                                <span class="button-item">
-                                    <span><v-img :src="productImages[category.label] || moreImage"
-                                            width="40"></v-img></span>
-                                    <span class="button-text">{{ category.label }}</span>
-                                </span>
-                            </v-btn>
-                        </v-col>
-                    </v-row>
-                    <!-- New -->
-                    <v-btn @click="this.$router.push('new-products')" class="new-product-btn content-between">
-                        <span>
-                            Check these new products<br />
-                            <span class="subtitle">Lantawa mga bag-o nga produkto</span>
-                        </span>
-                        <template v-slot:append>
-                            <v-icon>mdi-arrow-right</v-icon>
-                        </template>
-                    </v-btn>
-                </v-container>
-            </v-card>
-        </v-bottom-sheet>
+                <v-card class="sheet-content">
+                    <v-container>
+                        <h4 class="text-left">
+                            More choices for you<br />
+                            <span>Iban pa nga pili-an para sa imo</span>
+                        </h4>
+                        <v-row class="px-2 mb-5">
+                            <v-col v-for="(category) in sortedCategories" :key="category.label" cols="4" lg="3" md="4"
+                                sm="4" style="padding: 5px !important;">
+                                <v-btn class="button" @click="handleCategorySelect(category)">
+                                    <span class="button-item">
+                                        <span><v-img :src="productImages[category.label] || moreImage"
+                                                width="40"></v-img></span>
+                                        <span class="button-text">{{ category.label }}</span>
+                                    </span>
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                        <!-- New -->
+                        <v-btn @click="this.$router.push('new-products')" class="new-product-btn content-between">
+                            <span>
+                                Check these new products<br />
+                                <span class="subtitle">Lantawa mga bag-o nga produkto</span>
+                            </span>
+                            <template v-slot:append>
+                                <v-icon>mdi-arrow-right</v-icon>
+                            </template>
+                        </v-btn>
+                    </v-container>
+                </v-card>
+            </div>
+        </transition>
+
+        <!-- Also add an overlay -->
+        <transition name="fade">
+            <div v-if="moreSheet" class="sheet-overlay" @click="moreSheet = false"></div>
+        </transition>
 
         <!--Surprise Bottom Sheet-->
-        <v-bottom-sheet v-model="surpriseSheet" inset scrollable @closed="onSurpriseSheetClosed">
-            <v-card class="sheet-buttons-container px-1" :style="{ height: sheetHeight + 'vh' }" @touchstart="startDrag"
-                @touchmove="onDrag" @touchend="endDrag">
+        <transition name="slide-up">
+            <div v-if="surpriseSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
+                @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
                 <div class="drag-handle mt-3"></div>
-                <v-container>
-                    <div class="flex-center-column">
-                        <template v-if="surprising">
-                            <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;">{{
-                                loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)] }}
-                            </p>
-                            <div class="mt-3 flex-center-column">
-                                <v-skeleton-loader type="image" width="200" class="no-background"></v-skeleton-loader>
-                                <v-skeleton-loader type="sentences" width="200"
-                                    class="no-background"></v-skeleton-loader>
-                            </div>
-                        </template>
-                        <template v-else>
-                            <h4 class="mb-5">
-                                A surprise you deserve is <br />
-                                <span>Ang sorpresa nga deserve mo ay ang</span>
-                            </h4>
-                            <v-img :src="productImages[surpriseImage] || moreImage" width="130"></v-img>
-                            <h3 class="mt-3" style="font-weight: 500;">{{ surpriseProduct }}</h3>
-                            <span class="d-flex align-center">
-                                <h5 class="text-grey mr-1" style="font-weight: 500;">from {{ surpriseShopName }}
-                                </h5>
-                                <v-img :src="storeImage" width="15" class="mb-1"></v-img>
-                            </span>
-                            <v-btn @click="orderNow" class="order-now-btn px-10">Order Now</v-btn>
-                        </template>
-                    </div>
-                </v-container>
-            </v-card>
-        </v-bottom-sheet>
+                <v-card class="sheet-content">
+                    <v-container>
+                        <div class="flex-center-column">
+                            <template v-if="surprising">
+                                <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;">{{
+                                    loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)] }}
+                                </p>
+                                <div class="mt-3 flex-center-column">
+                                    <v-skeleton-loader type="image" width="200" class="no-background"></v-skeleton-loader>
+                                    <v-skeleton-loader type="sentences" width="200"
+                                        class="no-background"></v-skeleton-loader>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <h4 class="mb-5">
+                                    A surprise you deserve is <br />
+                                    <span>Ang sorpresa nga deserve mo ay ang</span>
+                                </h4>
+                                <v-img :src="productImages[surpriseImage] || moreImage" width="130"></v-img>
+                                <h3 class="mt-3" style="font-weight: 500;">{{ surpriseProduct }}</h3>
+                                <span class="d-flex align-center">
+                                    <h5 class="text-grey mr-1" style="font-weight: 500;">from {{ surpriseShopName }}
+                                    </h5>
+                                    <v-img :src="storeImage" width="15" class="mb-1"></v-img>
+                                </span>
+                                <v-btn @click="orderNow" class="order-now-btn px-10">Order Now</v-btn>
+                            </template>
+                        </div>
+                    </v-container>
+                </v-card>
+            </div>
+        </transition>
+
+        <!-- Also add an overlay -->
+        <transition name="fade">
+            <div v-if="surpriseSheet" class="sheet-overlay" @click="surpriseSheet = false"></div>
+        </transition>
     </v-container>
 </template>
 
@@ -350,12 +364,12 @@ export default {
             selectedBaseCategory: null,
             itemsPerPage: 20,
             moreSheet: false,
-            sheetHeight: 55,
+            sheetHeight: 60,
             startY: 0,
-            startHeight: 45,
+            startHeight: 60,
             SNAP_POINTS: {
-                half: 55,
-                full: 90
+                half: 60,
+                full: 95,
             },
             activeSheet: null,
             surpriseSheet: false,
@@ -996,11 +1010,6 @@ export default {
             );
         },
 
-        onMoreSheetClosed() {
-            this.activeSheet = null;
-            this.sheetHeight = this.SNAP_POINTS.half;
-        },
-
         onSurpriseSheetClosed() {
             this.activeSheet = null;
             this.sheetHeight = this.SNAP_POINTS.half;
@@ -1021,12 +1030,12 @@ export default {
         async openSurpriseSheet() {
             const time = `${this.currentHour}:${this.currentMinute}`;
 
-            if (this.shopStore.surprise_shop_list && this.shopStore.surprise_shop_list.length > 0) {
-                this.toast.warning("You can try again after a minute.")
-                return;
-            }
+            // if (this.shopStore.surprise_shop_list && this.shopStore.surprise_shop_list.length > 0) {
+            //     this.toast.warning("You can try again after a minute.")
+            //     return;
+            // }
 
-            this.sheetHeight = 55;
+            this.sheetHeight = 60;
             this.surprising = true;
             this.surpriseSheet = true;
 
@@ -1039,7 +1048,7 @@ export default {
                     if (this.currentTimeMeal === 'Not meal time') {
                         this.surprising = false;
                         this.surpriseSheet = false;
-                        this.sheetHeight = 55;
+                        this.sheetHeight = 60;
                     } else {
                         const shops = this.shopStore.getSurpriseShops;
                         if (shops && shops.length > 0) {
@@ -1080,7 +1089,7 @@ export default {
                 console.error('Error fetching stores:', error);
                 this.surprising = false;
                 this.surpriseSheet = false;
-                this.sheetHeight = 55;
+                this.sheetHeight = 60;
             }
         },
 
@@ -1398,6 +1407,54 @@ export default {
     max-width: none !important;
 }
 
+.custom-bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 30px 30px 0 0;
+    box-shadow: none;
+    z-index: 1000;
+    transition: height 0.1s linear !important; /* Faster transition */
+    touch-action: none; /* Prevents page scroll while dragging */
+    overflow: hidden;
+}
+
+.sheet-content {
+    height: calc(100% - 20px);
+    overflow-y: auto;
+    padding: 0 10px !important;
+    box-shadow: none !important;
+}
+
+.sheet-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+/* Transitions */
+.slide-up-enter-active, .slide-up-leave-active {
+    transition: transform 0.2s ease-out;
+}
+
+.slide-up-enter-from, .slide-up-leave-to {
+    transform: translateY(100%);
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
 .buttons-container {
     border-radius: 10px;
     margin-bottom: 20px;
@@ -1421,7 +1478,8 @@ export default {
     overflow: hidden;
 }
 
-.sheet-buttons-container .v-container {
+.sheet-buttons-container .v-container,
+.sheet-content .v-container {
     height: 100%;
     overflow-y: auto;
     padding: 12px !important;
@@ -1434,7 +1492,8 @@ export default {
 }
 
 .buttons-container h4,
-.sheet-buttons-container h4 {
+.sheet-buttons-container h4,
+.sheet-content h4 {
     line-height: 0.5cm;
     text-align: center;
     margin-bottom: 25px;
@@ -1442,7 +1501,8 @@ export default {
 }
 
 .buttons-container h4 span,
-.sheet-buttons-container h4 span {
+.sheet-buttons-container h4 span,
+.sheet-content h4 span {
     font-weight: 500;
     font-size: 13px;
     color: #adadad;
@@ -1450,7 +1510,8 @@ export default {
 }
 
 .buttons-container .button,
-.sheet-buttons-container .button {
+.sheet-buttons-container .button,
+.sheet-content .button {
     box-shadow: none;
     border-radius: 10px;
     width: 100%;
@@ -1463,14 +1524,16 @@ export default {
 }
 
 .buttons-container .button-item,
-.sheet-buttons-container .button-item {
+.sheet-buttons-container .button-item,
+.sheet-content .button-item {
     display: flex;
     align-items: center;
     flex-direction: column;
 }
 
 .buttons-container .button .button-text,
-.sheet-buttons-container .button-text {
+.sheet-buttons-container .button-text,
+.sheet-content .button-text {
     margin-top: 5px;
     font-weight: 600;
     font-size: 10px;
