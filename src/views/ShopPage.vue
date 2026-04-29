@@ -140,13 +140,11 @@
                                                 <p style="font-weight: 500;" class="product-card-text text-grey mb-2">
                                                     {{ product.size_label }}
                                                 </p>
-                                                <v-img 
-                                                    :src="getProductImageUrl(product)"
-                                                    loading="lazy" 
-                                                    class="product-image"
-                                                >
+                                                <v-img :src="getProductImageUrl(product)" loading="lazy"
+                                                    class="product-image">
                                                     <template v-slot:placeholder>
-                                                        <v-img :src="productImages[product.category_label]" class="product-image"></v-img>
+                                                        <v-img :src="productImages[product.category_label]"
+                                                            class="product-image"></v-img>
                                                     </template>
                                                 </v-img>
                                                 <p class="mt-2">
@@ -191,22 +189,31 @@
                     </div>
                 </transition>
             </v-tabs-window>
+        </div>
 
-            <v-bottom-sheet v-model="productSheet" inset scrollable>
-                <v-card class="sheet-buttons-container px-1" :style="{ height: sheetHeight + 'vh' }"
-                    @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
-                    <div class="drag-handle"></div>
+        <transition name="slide-up">
+            <div v-if="productSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
+                @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
+                <div class="drag-handle mt-3"></div>
+                <v-card class="sheet-content">
                     <v-container>
                         <v-card class="flex-center-column">
                             <h4 class="mb-2">{{ selectedProductName }}</h4>
-                            <v-img :src="selectedProductImage || productImages[selectedProductImageFallBack]" class="product-image" style="width: 150px !important; height: 150px !important;"></v-img>
+                            <v-img :src="selectedProductImage || productImages[selectedProductImageFallBack]"
+                                class="product-image" style="width: 150px !important; height: 150px !important;"></v-img>
                             <h5 class="mt-2 text-grey">{{ selectedProductSize }}</h5>
                             <h4 class="mt-2">₱{{ selectedProductPrice }}</h4>
                         </v-card>
                     </v-container>
                 </v-card>
-            </v-bottom-sheet>
-        </div>
+            </div>
+        </transition>
+
+        <!-- Also add an overlay -->
+        <transition name="fade">
+            <div v-if="productSheet" class="sheet-overlay" @click="productSheet = false"></div>
+        </transition>
+
     </v-container>
 </template>
 
@@ -1086,30 +1093,67 @@ onUnmounted(() => {
     overflow: auto;
 }
 
-.sheet-buttons-container {
-    box-shadow: none !important;
-    border-radius: 30px 30px 0 0 !important;
+.custom-bottom-sheet {
     position: fixed;
-    bottom: 0 !important;
-    width: 100% !important;
-    transition: height 0.25s ease-in-out !important;
-    touch-action: none !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 30px 30px 0 0;
+    box-shadow: none;
+    z-index: 1000;
+    transition: height 0.1s linear !important; /* Faster transition */
+    touch-action: none; /* Prevents page scroll while dragging */
     overflow: hidden;
 }
 
-.sheet-buttons-container .v-container {
+.sheet-content {
+    height: calc(100% - 20px);
+    overflow-y: auto;
+    padding: 0 10px !important;
+    box-shadow: none !important;
+}
+
+.sheet-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+}
+
+/* Transitions */
+.slide-up-enter-active, .slide-up-leave-active {
+    transition: transform 0.2s ease-out;
+}
+
+.slide-up-enter-from, .slide-up-leave-to {
+    transform: translateY(100%);
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
+.sheet-content .v-container {
     height: 100%;
     overflow-y: auto;
 }
 
-.sheet-buttons-container .v-card {
+.sheet-content .v-card {
     box-shadow: none;
     background-color: #fcf0e0;
     border-radius: 10px;
     padding: 20px 0 20px;
 }
 
-.sheet-buttons-container h4 {
+.sheet-content h4 {
     line-height: 0.5cm;
     text-align: center;
     color: #5c3a21;
