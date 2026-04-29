@@ -257,12 +257,12 @@ const hasMoreProducts = ref(true)
 const selectedCard = ref(null)
 const searchProduct = ref('')
 const productSheet = ref(false)
-const sheetHeight = ref(55)
+const sheetHeight = ref(60)
 const startY = ref(0)
 const startHeight = ref(45)
 const SNAP_POINTS = {
-    half: 55,
-    full: 90
+    half: 60,
+    full: 95
 }
 const selectedProductImage = ref(null)
 const selectedProductImageFallBack = ref(null)
@@ -628,7 +628,7 @@ const selectProduct = (product) => {
 
     selectedCard.value = product.product_id
     productSheet.value = true
-    sheetHeight.value = 55
+    sheetHeight.value = 60
     selectedProductImageFallBack.value = product.category_label
     selectedProductImage.value = product.thumbnail_url
     selectedProductName.value = product.product_name
@@ -649,13 +649,13 @@ const onDrag = (e) => {
     const currentY = e.touches[0].clientY
     const delta = startY.value - currentY
     let newHeight = startHeight.value + delta / 6
-    newHeight = Math.max(20, Math.min(95, newHeight))
+    newHeight = Math.max(0, Math.min(95, newHeight))
     sheetHeight.value = newHeight
 }
 
 const endDrag = () => {
     const shthght = sheetHeight.value
-    if (shthght < 25) {
+    if (shthght < 10) {
         productSheet.value = false
         sheetHeight.value = SNAP_POINTS.half
         return

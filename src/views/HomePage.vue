@@ -294,8 +294,6 @@
                 </v-card>
             </div>
         </transition>
-
-        <!-- Also add an overlay -->
         <transition name="fade">
             <div v-if="moreSheet" class="sheet-overlay" @click="moreSheet = false"></div>
         </transition>
@@ -337,8 +335,6 @@
                 </v-card>
             </div>
         </transition>
-
-        <!-- Also add an overlay -->
         <transition name="fade">
             <div v-if="surpriseSheet" class="sheet-overlay" @click="surpriseSheet = false"></div>
         </transition>
@@ -1117,7 +1113,7 @@ export default {
             const currentY = e.touches[0].clientY
             const delta = this.startY - currentY
             let newHeight = this.startHeight + delta / 6
-            newHeight = Math.max(20, Math.min(95, newHeight))
+            newHeight = Math.max(0, Math.min(95, newHeight))
             this.sheetHeight = newHeight
         },
 
@@ -1127,7 +1123,7 @@ export default {
             if (!this.activeSheet) return;
 
             const shthght = this.sheetHeight
-            if (shthght < 25) {
+            if (shthght < 10) {
                 if (this.activeSheet === 'more') {
                     this.moreSheet = false;
                 } else if (this.activeSheet === 'surprise') {
