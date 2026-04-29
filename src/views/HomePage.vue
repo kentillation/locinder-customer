@@ -302,7 +302,7 @@
         <transition name="slide-up">
             <div v-if="surpriseSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
                 @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
-                <div class="drag-handle mt-3"></div>
+                <div :class="!surpriseProduct ? 'd-none' : 'drag-handle mt-3'"></div>
                 <v-card class="sheet-content">
                     <v-container>
                         <div class="flex-center-column">
@@ -1026,10 +1026,10 @@ export default {
         async openSurpriseSheet() {
             const time = `${this.currentHour}:${this.currentMinute}`;
 
-            // if (this.shopStore.surprise_shop_list && this.shopStore.surprise_shop_list.length > 0) {
-            //     this.toast.warning("You can try again after a minute.")
-            //     return;
-            // }
+            if (this.shopStore.surprise_shop_list && this.shopStore.surprise_shop_list.length > 0) {
+                this.toast.warning("You can try again after a minute.")
+                return;
+            }
 
             this.sheetHeight = 60;
             this.surprising = true;
