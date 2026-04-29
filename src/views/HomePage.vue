@@ -411,6 +411,7 @@ export default {
             rotationInterval: null,
             surpriseCooldown: false,
             surpriseCooldownInterval: null,
+            surpriseCooldownEndTime: null,
         }
     },
 
@@ -442,6 +443,8 @@ export default {
 
         // Initialize scroll container reference
         this.scrollContainer = this.$refs.scrollContainer;
+
+        this.checkAndRestoreCooldown();
     },
 
     beforeUnmount() {
@@ -451,9 +454,6 @@ export default {
         }
         if (this.rotationInterval) {
             clearInterval(this.rotationInterval);
-        }
-        if (this.surpriseCooldownInterval) {
-            clearInterval(this.surpriseCooldownInterval);
         }
     },
 
@@ -1035,29 +1035,109 @@ export default {
 
         startSurpriseCooldown() {
             this.surpriseCooldown = true;
-            let elapsed = 0;
+            this.surpriseCooldownEndTime = Date.now() + 60000;
+            
+            // Save to localStorage
+            localStorage.setItem('surpriseCooldownEndTime', this.surpriseCooldownEndTime);
+        },
 
-            this.surpriseCooldownInterval = setInterval(() => {
-                elapsed += 0.1;
-                if (elapsed >= 60) {
-                    this.stopSurpriseCooldown();
+        updateCooldownProgress() {
+            if (!this.surpriseCooldownEndTime) return;
+            
+            const now = Date.now();
+            const remaining = this.surpriseCooldownEndTime - now;
+            
+            if (remaining <= 0) {
+                this.stopSurpriseCooldown();
+            } else {
+                // Calculate progress percentage
+                const progress = (remaining / 60000) * 100;
+                // Update CSS variable for animation
+                const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
+                if (sheetEl) {
+                    sheetEl.style.setProperty('--cooldown-progress', `${progress}%`);
                 }
-            }, 100);
+            }
         },
 
         stopSurpriseCooldown() {
             this.surpriseCooldown = false;
-
+            this.surpriseCooldownEndTime = null;
+            
+            // Remove from localStorage
+            localStorage.removeItem('surpriseCooldownEndTime');
+            
             if (this.surpriseCooldownInterval) {
                 clearInterval(this.surpriseCooldownInterval);
                 this.surpriseCooldownInterval = null;
             }
         },
 
+        checkAndRestoreCooldown() {
+            // Check localStorage for saved cooldown
+            const savedEndTime = localStorage.getItem('surpriseCooldownEndTime');
+            if (savedEndTime) {
+                this.surpriseCooldownEndTime = parseInt(savedEndTime);
+            }
+            
+            if (this.surpriseCooldownEndTime) {
+                const now = Date.now();
+                const remaining = this.surpriseCooldownEndTime - now;
+                
+                if (remaining > 0) {
+                    // Cooldown is still active
+                    this.surpriseCooldown = true;
+                    
+                    // Remove and re-add the class to restart animation with new duration
+                    this.$nextTick(() => {
+                        const btn = this.$el?.querySelector('.surprise-btn');
+                        if (btn) {
+                            // Remove the cooldown class
+                            btn.classList.remove('surprise-btn-cooldown');
+                            // Force reflow
+                            void btn.offsetHeight;
+                            // Add it back with custom animation duration
+                            btn.classList.add('surprise-btn-cooldown');
+                            
+                            // Create a style element for custom animation duration
+                            const styleId = 'surprise-cooldown-style';
+                            let styleEl = document.getElementById(styleId);
+                            if (!styleEl) {
+                                styleEl = document.createElement('style');
+                                styleEl.id = styleId;
+                                document.head.appendChild(styleEl);
+                            }
+                            
+                            // Set animation duration to remaining seconds
+                            const remainingSeconds = remaining / 1000;
+                            styleEl.textContent = `
+                                .surprise-btn-cooldown::after {
+                                    animation: decreaseFromRight ${remainingSeconds}s linear forwards !important;
+                                }
+                            `;
+                        }
+                    });
+                    
+                    // Set timeout to end cooldown when time is up
+                    this.surpriseCooldownInterval = setTimeout(() => {
+                        this.stopSurpriseCooldown();
+                        // Remove custom style
+                        const styleEl = document.getElementById('surprise-cooldown-style');
+                        if (styleEl) {
+                            styleEl.remove();
+                        }
+                    }, remaining);
+                } else {
+                    this.stopSurpriseCooldown();
+                }
+            }
+        },
+
         async openSurpriseSheet() {
 
             if (this.surpriseCooldown) {
-                this.toast.warning("You can try again after a minute.");
+                const remainingSeconds = Math.ceil((this.surpriseCooldownEndTime - Date.now()) / 1000);
+                this.toast.warning(`Please wait ${remainingSeconds} seconds before trying again.`);
                 return;
             }
 
@@ -1654,28 +1734,6 @@ export default {
     width: 100%;
     height: 100%;
     background-color: #5c3a215e;
-    animation: decreaseBackground 60s linear forwards;
-    pointer-events: none;
-}
-
-@keyframes decreaseBackground {
-    0% {
-        width: 100%;
-    }
-    100% {
-        width: 0%;
-    }
-}
-
-/* Alternative: Right-to-left decreasing effect */
-.surprise-btn-cooldown::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 100%;
-    height: 100%;
-    background-color: #5c3a21;
     animation: decreaseFromRight 60s linear forwards;
     pointer-events: none;
 }
