@@ -1,5 +1,5 @@
 <template>
-    <v-container class="mb-5 pull-to-refresh-container">
+    <v-container>
 
         <!-- Pull to Refresh Progress Indicator -->
         <div class="refresh-progress" :style="{
@@ -1537,7 +1537,7 @@ export default {
     border-radius: 10px;
     font-weight: 500;
     height: 110px;
-    overflow: hidden;
+    margin-bottom: 80px;
 }
 
 .order-now-btn {

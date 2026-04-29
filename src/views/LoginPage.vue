@@ -333,9 +333,15 @@ export default {
     color: #8b8b8b;
 }
 
+.v-text-field :deep(.v-field) {
+    background-color: transparent !important;
+}
+
 .custom-input :deep(.v-field) {
     border-radius: 10px;
     transition: all 0.2s ease;
+    box-shadow: none;
+    border: 1px solid #dcdcdc;
 }
 
 .custom-input :deep(.v-field:hover) {
@@ -344,7 +350,6 @@ export default {
 
 .custom-input :deep(.v-field--focused) {
     border-color: #5c3a21;
-    box-shadow: 0 0 0 2px rgba(182, 112, 0, 0.2);
 }
 
 .forgot-pass-container {

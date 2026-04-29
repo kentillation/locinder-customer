@@ -765,6 +765,7 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     padding: 25px;
+    margin-bottom: 80px;
 }
 
 .buttons-container h4 {

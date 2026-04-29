@@ -751,7 +751,7 @@ onUnmounted(() => {
 .buttons-container {
     border-radius: 10px;
     box-shadow: none !important;
-    margin-bottom: 20px;
+    margin-bottom: 80px;
     padding: 25px;
 }
 

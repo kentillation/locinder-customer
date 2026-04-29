@@ -635,10 +635,14 @@ onUnmounted(() => {
     }
 }
 
+.no-more-products {
+    margin-bottom: 80px;
+}
+
 .loading-more,
 .no-more-products {
     text-align: center;
-    padding: 20px;
+    padding: 15px;
 }
 
 .loading-more p,
