@@ -244,9 +244,12 @@
             <v-divider class="my-4"></v-divider>
 
             <!-- Surprise -->
-            <v-btn @click="openSurpriseSheet" class="surprise-btn d-flex align-center text-none">
+            <v-btn @click="openSurpriseSheet" class="surprise-btn d-flex align-center text-none"
+                :disabled="surpriseCooldown || surprising"
+                :class="{ 'surprise-btn-cooldown': surpriseCooldown, 'surprise-btn-loading': surprising }">
                 <span class="flex-center-column">
-                    <v-img :src="openboxImage" width="35" class="flex-shrink-0"></v-img>
+                    <v-img :src="openboxImage" width="35" class="flex-shrink-0"
+                        :class="{ 'cooldown-icon': surpriseCooldown }"></v-img>
                     <div class="text-wrap">
                         <p>Surprise Me a random dish</p>
                         <span class="subtitle text-wrap">
@@ -302,16 +305,18 @@
         <transition name="slide-up">
             <div v-if="surpriseSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
                 @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
-                <div :class="!surpriseProduct ? 'd-none' : 'drag-handle mt-3'"></div>
+                <div :class="!surpriseProduct ? 'd-none' : 'drag-handle'"></div>
                 <v-card class="sheet-content">
                     <v-container>
                         <div class="flex-center-column">
                             <template v-if="surprising">
-                                <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;">{{
-                                    loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)] }}
+                                <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;" class="mt-3">{{
+                                    loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
+                                    }}
                                 </p>
                                 <div class="mt-3 flex-center-column">
-                                    <v-skeleton-loader type="image" width="200" class="no-background"></v-skeleton-loader>
+                                    <v-skeleton-loader type="image" width="200"
+                                        class="no-background"></v-skeleton-loader>
                                     <v-skeleton-loader type="sentences" width="200"
                                         class="no-background"></v-skeleton-loader>
                                 </div>
@@ -404,6 +409,8 @@ export default {
             showProgressThreshold: 100,
             rotationAngle: 0,
             rotationInterval: null,
+            surpriseCooldown: false,
+            surpriseCooldownInterval: null,
         }
     },
 
@@ -444,6 +451,9 @@ export default {
         }
         if (this.rotationInterval) {
             clearInterval(this.rotationInterval);
+        }
+        if (this.surpriseCooldownInterval) {
+            clearInterval(this.surpriseCooldownInterval);
         }
     },
 
@@ -1023,13 +1033,35 @@ export default {
             this.surpriseCloseAt = null;
         },
 
-        async openSurpriseSheet() {
-            const time = `${this.currentHour}:${this.currentMinute}`;
+        startSurpriseCooldown() {
+            this.surpriseCooldown = true;
+            let elapsed = 0;
 
-            if (this.shopStore.surprise_shop_list && this.shopStore.surprise_shop_list.length > 0) {
-                this.toast.warning("You can try again after a minute.")
+            this.surpriseCooldownInterval = setInterval(() => {
+                elapsed += 0.1;
+                if (elapsed >= 60) {
+                    this.stopSurpriseCooldown();
+                }
+            }, 100);
+        },
+
+        stopSurpriseCooldown() {
+            this.surpriseCooldown = false;
+
+            if (this.surpriseCooldownInterval) {
+                clearInterval(this.surpriseCooldownInterval);
+                this.surpriseCooldownInterval = null;
+            }
+        },
+
+        async openSurpriseSheet() {
+
+            if (this.surpriseCooldown) {
+                this.toast.warning("You can try again after a minute.");
                 return;
             }
+
+            const time = `${this.currentHour}:${this.currentMinute}`;
 
             this.sheetHeight = 60;
             this.surprising = true;
@@ -1074,6 +1106,8 @@ export default {
                                     '#bc00dd',
                                 ]
                             });
+
+                            this.startSurpriseCooldown();
                         } else {
                             this.toast.error('No product available. Please try agaian!');
                             this.surpriseSheet = false;
@@ -1412,8 +1446,10 @@ export default {
     border-radius: 30px 30px 0 0;
     box-shadow: none;
     z-index: 1000;
-    transition: height 0.1s linear !important; /* Faster transition */
-    touch-action: none; /* Prevents page scroll while dragging */
+    transition: height 0.1s linear !important;
+    /* Faster transition */
+    touch-action: none;
+    /* Prevents page scroll while dragging */
     overflow: hidden;
 }
 
@@ -1435,19 +1471,23 @@ export default {
 }
 
 /* Transitions */
-.slide-up-enter-active, .slide-up-leave-active {
+.slide-up-enter-active,
+.slide-up-leave-active {
     transition: transform 0.2s ease-out;
 }
 
-.slide-up-enter-from, .slide-up-leave-to {
+.slide-up-enter-from,
+.slide-up-leave-to {
     transform: translateY(100%);
 }
 
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
     transition: opacity 0.2s ease;
 }
 
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
     opacity: 0;
 }
 
@@ -1597,6 +1637,82 @@ export default {
     font-weight: 500;
     height: 110px;
     margin-bottom: 80px;
+}
+
+.surprise-btn-cooldown {
+    background-color: #8a8a8a !important;
+    cursor: not-allowed;
+    position: relative;
+    overflow: hidden;
+}
+
+.surprise-btn-cooldown::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #5c3a215e;
+    animation: decreaseBackground 60s linear forwards;
+    pointer-events: none;
+}
+
+@keyframes decreaseBackground {
+    0% {
+        width: 100%;
+    }
+    100% {
+        width: 0%;
+    }
+}
+
+/* Alternative: Right-to-left decreasing effect */
+.surprise-btn-cooldown::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #5c3a21;
+    animation: decreaseFromRight 60s linear forwards;
+    pointer-events: none;
+}
+
+@keyframes decreaseFromRight {
+    0% {
+        width: 100%;
+    }
+    100% {
+        width: 0%;
+    }
+}
+
+/* Loading animation */
+.surprise-btn-loading {
+    background-color: #7a4a2a !important;
+    cursor: wait;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.cooldown-icon {
+    filter: grayscale(0.3);
+    opacity: 0.6;
+}
+
+.surprise-btn:disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
 }
 
 .order-now-btn {
