@@ -51,9 +51,12 @@
                                 </div>
 
                                 <v-btn :disabled="!isFormValid || loading" color="primary" type="submit" size="large"
-                                    class="login-btn mt-6" height="52" block :loading="loading">
+                                    class="login-btn mt-6" height="52" block elevation="0">
                                     <span v-if="!loading">Sign In</span>
-                                    <span v-else>Authenticating...</span>
+                                    <template v-else>
+                                        <v-progress-circular indeterminate color="white" size="20" class="mr-2" />
+                                        Signing In...
+                                    </template>
                                 </v-btn>
 
                                 <div class="register-link">
@@ -378,13 +381,7 @@ export default {
     text-transform: none;
     font-size: 1rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 144, 182, 0.3);
     border-radius: 30px;
-}
-
-.login-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 144, 182, 0.4);
 }
 
 .login-btn:disabled {
