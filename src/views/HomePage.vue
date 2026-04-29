@@ -1039,6 +1039,12 @@ export default {
             
             // Save to localStorage
             localStorage.setItem('surpriseCooldownEndTime', this.surpriseCooldownEndTime);
+            
+            this.updateCooldownProgress();
+            
+            this.surpriseCooldownInterval = setInterval(() => {
+                this.updateCooldownProgress();
+            }, 100);
         },
 
         updateCooldownProgress() {
@@ -1071,6 +1077,12 @@ export default {
                 clearInterval(this.surpriseCooldownInterval);
                 this.surpriseCooldownInterval = null;
             }
+            
+            // Reset CSS variable
+            const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
+            if (sheetEl) {
+                sheetEl.style.removeProperty('--cooldown-progress');
+            }
         },
 
         checkAndRestoreCooldown() {
@@ -1085,49 +1097,28 @@ export default {
                 const remaining = this.surpriseCooldownEndTime - now;
                 
                 if (remaining > 0) {
-                    // Cooldown is still active
+                    // Cooldown is still active, restore it
                     this.surpriseCooldown = true;
                     
-                    // Remove and re-add the class to restart animation with new duration
+                    // Update the animation progress immediately
                     this.$nextTick(() => {
-                        const btn = this.$el?.querySelector('.surprise-btn');
-                        if (btn) {
-                            // Remove the cooldown class
-                            btn.classList.remove('surprise-btn-cooldown');
-                            // Force reflow
-                            void btn.offsetHeight;
-                            // Add it back with custom animation duration
-                            btn.classList.add('surprise-btn-cooldown');
-                            
-                            // Create a style element for custom animation duration
-                            const styleId = 'surprise-cooldown-style';
-                            let styleEl = document.getElementById(styleId);
-                            if (!styleEl) {
-                                styleEl = document.createElement('style');
-                                styleEl.id = styleId;
-                                document.head.appendChild(styleEl);
-                            }
-                            
-                            // Set animation duration to remaining seconds
-                            const remainingSeconds = remaining / 1000;
-                            styleEl.textContent = `
-                                .surprise-btn-cooldown::after {
-                                    animation: decreaseFromRight ${remainingSeconds}s linear forwards !important;
-                                }
-                            `;
+                        const progress = (remaining / 60000) * 100;
+                        const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
+                        if (sheetEl) {
+                            sheetEl.style.setProperty('--cooldown-progress', `${progress}%`);
                         }
                     });
                     
-                    // Set timeout to end cooldown when time is up
-                    this.surpriseCooldownInterval = setTimeout(() => {
-                        this.stopSurpriseCooldown();
-                        // Remove custom style
-                        const styleEl = document.getElementById('surprise-cooldown-style');
-                        if (styleEl) {
-                            styleEl.remove();
-                        }
-                    }, remaining);
+                    // Restart the interval
+                    if (this.surpriseCooldownInterval) {
+                        clearInterval(this.surpriseCooldownInterval);
+                    }
+                    
+                    this.surpriseCooldownInterval = setInterval(() => {
+                        this.updateCooldownProgress();
+                    }, 100);
                 } else {
+                    // Cooldown expired
                     this.stopSurpriseCooldown();
                 }
             }
