@@ -24,7 +24,7 @@
 
                             <v-form ref="form" @submit.prevent="handleLogin" v-model="isFormValid" class="login-form">
                                 
-                                <v-alert v-if="error_text" type="error" :class="error_text ? 'd-block' : 'd-none'" class="mb-4" 
+                                <v-alert v-if="error_text" type="error" class="mb-4" 
                                     style="font-size: 15px;">
                                     {{ error_text }}
                                 </v-alert>
