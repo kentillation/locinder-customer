@@ -556,7 +556,7 @@ export default {
                 const result = await authStore.customerRegistration(submissionData);
 
                 if (result.success) {
-                    this.toast.info("You’ve successfully registered!");
+                    this.toast.success("You’ve successfully registered!");
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 2000);

@@ -23,6 +23,12 @@
                             <p class="subtitle">A food discovery app for local delicacies in Sagay City</p>
 
                             <v-form ref="form" @submit.prevent="handleLogin" v-model="isFormValid" class="login-form">
+                                
+                                <v-alert v-if="error_text" type="error" :class="error_text ? 'd-block' : 'd-none'" class="mb-4" 
+                                    style="font-size: 15px;">
+                                    {{ error_text }}
+                                </v-alert>
+                                
                                 <div class="input-wrapper">
                                     <div class="input-label">
                                         <v-icon icon="mdi-email-outline" size="18" class="label-icon" />
@@ -93,6 +99,7 @@ export default {
             logo: require('@/assets/Logo.png'),
             customer_email: '',
             customer_password: '',
+            error_text: '',
             showPassword: false,
             isFormValid: false,
             loading: false,
@@ -138,16 +145,21 @@ export default {
 
                     if (status === 422 && data.errors) {
                         this.handleValidationErrors(data.errors);
-                        this.toast.error(Object.values(data.errors)[0][0]);
+                        // this.toast.error(Object.values(data.errors)[0][0]);
+                        this.error_text = Object.values(data.errors)[0][0];
                     } else if (status === 500) {
-                        this.toast.error(data.message);
+                        // this.toast.error(data.message);
+                        this.error_text = data.message;
                     } else {
-                        this.toast.error(data.message);
+                        // this.toast.error(data.message);
+                        this.error_text = data.message;
                     }
                 } else if (error.request) {
-                    this.toast.error('Network error. Please check your connection.');
+                    // this.toast.error('Network error. Please check your connection.');
+                    this.error_text = 'Network error. Please check your connection.';
                 } else {
-                    this.toast.error(error.message);
+                    // this.toast.error(error.message);
+                    this.error_text = error.message;
                 }
             } finally {
                 this.loading = false;
