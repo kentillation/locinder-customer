@@ -744,17 +744,25 @@ export default {
                 const data = await response.json();
                 
                 if (data && data.address) {
-                    // Format: City/Municipality, Province
-                    const city = data.address.city || data.address.town || data.address.village || data.address.municipality;
-                    const province = data.address.state || data.address.province;
-                    const district = data.address.suburb || data.address.neighbourhood;
-                    
-                    if (city && province) {
-                        return `${city}, ${province}`;
+                    const barangay = data.address.quarter || data.address.barangay;  // Paraiso
+                    const city = data.address.city || data.address.town || data.address.municipality;  // Sagay
+                    const province = data.address.state || data.address.province;  // Negros Occidental
+                    const neighbourhood = data.address.neighbourhood;  // Hupac
+
+                    if (barangay && city && province) {
+                        return `${barangay}, ${city}, ${province}`;  // Paraiso, Sagay, Negros Occidental
+                    } else if (neighbourhood && city && province) {
+                        return `${neighbourhood}, ${city}, ${province}`;  // Hupac, Sagay, Negros Occidental
+                    } else if (city && province) {
+                        return `${city}, ${province}`;  // Sagay, Negros Occidental
+                    } else if (barangay && city) {
+                        return `${barangay}, ${city}`;
+                    } else if (barangay) {
+                        return barangay;
                     } else if (city) {
                         return city;
-                    } else if (district) {
-                        return district;
+                    } else if (province) {
+                        return province;
                     }
                     return data.display_name?.split(',')[0] || 'Unknown location';
                 }
