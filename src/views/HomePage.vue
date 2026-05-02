@@ -17,6 +17,12 @@
             </div>
         </div>
 
+        <!-- <div v-if="locationStore.isMoving" class="movement-indicator" :class="locationStore.getMovementStatus"> -->
+        <div v-if="locationStore.isMoving" class="movement-indicator" :class="locationStore.getMovementStatus">
+            <v-icon small>mdi-speedometer</v-icon> <!-- above normal -->
+            <span>{{ locationStore.getFormattedSpeed }}</span>
+        </div>
+
         <!-- Scrollable Content -->
         <div ref="scrollContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
@@ -29,9 +35,9 @@
                         <div class="d-flex">
                             <v-icon class="mt-1 mr-1 text-grey-lighten-2"
                                 style="font-size: 14px !important;">mdi-map-marker-outline</v-icon>
-                            <h6>{{ currentLocationText }}</h6>
+                            <h6>{{ locationStore.getAddress }}</h6>
                         </div>
-                        <v-chip v-if="locationPermissionDenied" @click="getUserLocation"
+                        <v-chip v-if="locationStore.permissionDenied" @click="requestLocation"
                             style="border: 1px solid #6cff00; font-size: 10px;" color="#6cff00" class="pl-1 pr-3"
                             size="small" variant="outline">
                             <v-icon style="font-size: 13px !important;">mdi-map-marker</v-icon>
@@ -41,6 +47,11 @@
                 </div>
             </div>
 
+            <v-alert v-if="locationStore.isMoving && locationStore.movementSpeed > 10" type="warning" dense
+                class="mb-3">
+                You seem to be driving. Please be safe on the road!
+            </v-alert>
+
             <!-- <div class="headline">
                 <h3>Taste the best dishes in Sagay</h3>
                 <p>Tilawi ang manamit nga mga pagkaon sa Sagay</p>
@@ -49,7 +60,7 @@
             <div v-if="showKrisantaDialog" class="customer-dialog-overlay" @click="closeDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
-                        <v-btn class="close-btn" @click="closeDialog" icon>
+                        <v-btn class="close-btn" @click="closeDialog" size="small" elivation="0" icon>
                             <v-icon style="font-size: 14px !important;">mdi-close</v-icon>
                         </v-btn>
                         <div class="bubble-text">
@@ -352,7 +363,7 @@
                             <template v-if="surprising">
                                 <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;" class="mt-3">{{
                                     loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
-                                    }}
+                                }}
                                 </p>
                                 <div class="mt-3 flex-center-column">
                                     <v-skeleton-loader type="image" width="200"
@@ -388,6 +399,7 @@
 
 <script>
 import { useAuthStore } from '@/stores/auth';
+import { useLocationStore } from '@/stores/locationStore';
 import { useRouter } from 'vue-router';
 import { useShopStore } from '@/stores/shopStore';
 import { useProductsStore } from '@/stores/productsStore';
@@ -401,8 +413,6 @@ export default {
             authCheckDone: false,
             isOnline: navigator.onLine,
             showKrisantaDialog: false,
-            currentLocationText: 'Getting location...',
-            locationPermissionDenied: false,
             searchBox: null,
             searchTimeout: null,
             searching: false,
@@ -469,6 +479,7 @@ export default {
 
     setup() {
         const authStore = useAuthStore();
+        const locationStore = useLocationStore();
         const shopStore = useShopStore();
         const productsStore = useProductsStore();
         const toast = useToast();
@@ -476,10 +487,11 @@ export default {
 
         return {
             authStore,
+            locationStore,
             shopStore,
             productsStore,
             toast,
-            router 
+            router
         };
     },
 
@@ -489,6 +501,8 @@ export default {
         if (!this.authCheckDone) {
             return; // Stop execution if not authenticated
         }
+
+        await this.initializeLocationWithMovementTracking();
 
         this.startTimeTracking();
 
@@ -505,14 +519,17 @@ export default {
 
         this.checkAndRestoreCooldown();
 
-        this.getUserLocation();
     },
 
     beforeUnmount() {
+        this.locationStore.stopContinuousTracking();
+
         window.removeEventListener('online', this.onOnline);
+
         if (this.timeInterval) {
             clearInterval(this.timeInterval);
         }
+
         if (this.rotationInterval) {
             clearInterval(this.rotationInterval);
         }
@@ -695,100 +712,52 @@ export default {
             return true;
         },
 
+        async initializeLocationWithMovementTracking() {
+            try {
+                // Check if user has preference for tracking
+                const trackingPreference = localStorage.getItem('location_tracking_preference');
+
+                if (trackingPreference === 'always') {
+                    // Start continuous tracking for moving users
+                    await this.locationStore.startContinuousTracking({
+                        highAccuracy: true,
+                        adaptiveInterval: true
+                    });
+                } else {
+                    // Just get current location once
+                    await this.locationStore.getCurrentLocation({ force: false });
+                }
+            } catch (error) {
+                console.error('Location initialization failed:', error);
+                // Location is optional, continue without it
+            }
+        },
+
+        async requestLocation() {
+            try {
+                // Ask user if they want continuous tracking
+                const wantTracking = confirm('Do you want to keep tracking your location while moving? This will help provide better recommendations.');
+
+                if (wantTracking) {
+                    localStorage.setItem('location_tracking_preference', 'always');
+                    await this.locationStore.startContinuousTracking({
+                        highAccuracy: true,
+                        adaptiveInterval: true
+                    });
+                } else {
+                    localStorage.setItem('location_tracking_preference', 'once');
+                    await this.locationStore.getCurrentLocation({ force: true });
+                }
+
+                this.toast.success('Location enabled successfully!');
+            } catch (error) {
+                this.toast.error('Unable to get location. Please enable location permissions.');
+            }
+        },
+
         onOnline() {
             this.isOnline = true;
             this.toast.info('Internet connection restored');
-        },
-
-        async getUserLocation() {
-            // Check if geolocation is supported
-            if (!navigator.geolocation) {
-                this.currentLocationText = 'Location not supported';
-                return;
-            }
-
-            // Request permission and get location
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    // Success - got location
-                    const { latitude, longitude } = position.coords;
-
-                    // Get address from coordinates (reverse geocoding)
-                    const address = await this.reverseGeocode(latitude, longitude);
-                    this.currentLocationText = address;
-                    console.log("My address: ", address.city)
-                    this.locationPermissionDenied = false;
-                },
-                (error) => {
-                    // Error or permission denied
-                    console.error('Location error:', error);
-
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            this.currentLocationText = 'Location permission denied';
-                            this.locationPermissionDenied = true;
-                            // Show toast notification
-                            if (this.toast) {
-                                this.toast.warning('Please enable location to see your current location');
-                            }
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            this.currentLocationText = 'Location unavailable';
-                            break;
-                        case error.TIMEOUT:
-                            this.currentLocationText = 'Location timeout';
-                            break;
-                        default:
-                            this.currentLocationText = 'Unable to get location';
-                    }
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
-            );
-        },
-
-        // Reverse geocoding to get address from coordinates
-        async reverseGeocode(lat, lng) {
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-                    {
-                        headers: {
-                            'Accept-Language': 'en-US,en;q=0.9',
-                            'User-Agent': 'Locinder App'
-                        }
-                    }
-                );
-                const data = await response.json();
-
-                if (data && data.address) {
-                    const barangay = data.address.quarter || data.address.barangay;
-                    const city = data.address.city || data.address.town || data.address.municipality;
-                    const province = data.address.state || data.address.province;
-
-                    if (barangay && city && province) {
-                        return `${barangay}, ${city}, ${province}`;
-                    } else if (city && province) {
-                        return `${city}, ${province}`;
-                    } else if (barangay && city) {
-                        return `${barangay}, ${city}`;
-                    } else if (barangay) {
-                        return barangay;
-                    } else if (city) {
-                        return city;
-                    } else if (province) {
-                        return province;
-                    }
-                    return data.display_name?.split(',')[0] || 'Unknown location';
-                }
-                return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            } catch (error) {
-                console.error('Reverse geocoding error:', error);
-                return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            }
         },
 
         closeDialog() {
@@ -1554,6 +1523,53 @@ export default {
     overflow: hidden;
 }
 
+.movement-indicator {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: rgba(50, 138, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.movement-indicator.walking {
+    background: rgba(76, 175, 80, 0.9);
+}
+
+.movement-indicator.biking {
+    background: rgba(33, 150, 243, 0.9);
+}
+
+.movement-indicator.driving_slow {
+    background: rgba(255, 152, 0, 0.9);
+}
+
+.movement-indicator.driving_fast {
+    background: rgba(244, 67, 54, 0.9);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.7;
+    }
+}
+
 .clickable-cat {
     cursor: pointer;
     transition: transform 0.2s ease;
@@ -1580,6 +1596,7 @@ export default {
     align-items: flex-start;
     justify-content: flex-end;
     padding: 80px 20px 20px 20px;
+    z-index: 9999;
 }
 
 .customer-dialog {
@@ -1602,10 +1619,11 @@ export default {
 
 .close-btn {
     position: absolute;
-    top: 8px;
-    right: 12px;
+    top: 0;
+    right: 0;
     background: none;
     border: none;
+    box-shadow: none;
     font-size: 18px;
     cursor: pointer;
     color: #999;

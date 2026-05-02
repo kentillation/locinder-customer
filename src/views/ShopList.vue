@@ -232,6 +232,25 @@ const goBack = () => {
     router.go(-1)
 }
 
+// // In shop search component - find nearby shops based on movement
+// const findNearbyShops = () => {
+//     if (locationStore.isMoving) {
+//         // User is moving, search along route
+//         searchShopsAlongRoute(locationStore.movementHistory);
+//     } else {
+//         // User is stationary, search nearby
+//         searchNearbyShops(locationStore.getCoordinates);
+//     }
+// };
+
+// // For delivery tracking
+// const estimateDeliveryTime = (shopLocation) => {
+//     if (locationStore.isMoving) {
+//         const eta = locationStore.getETA(shopLocation.lat, shopLocation.lng);
+//         console.log(`ETA: ${eta.timeMinutes} minutes`);
+//     }
+// };
+
 const fetchShops = async (forceRefresh = false) => {
     // Skip cache check if force refresh is true
     if (!forceRefresh && 
