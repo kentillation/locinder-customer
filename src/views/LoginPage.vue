@@ -35,7 +35,7 @@
                                         <span>Email</span>
                                     </div>
                                     <v-text-field v-model="customer_email" :rules="[requiredRule, emailFormatRule]"
-                                        placeholder="myname@example.com" variant="solo" density="comfortable"
+                                        :disabled="loading" placeholder="myname@example.com" variant="solo" density="comfortable"
                                         autocomplete="customer_email" class="custom-input" :error="emailError"
                                         hide-details="auto" />
                                 </div>
@@ -46,7 +46,7 @@
                                         <span>Password</span>
                                     </div>
                                     <v-text-field v-model="customer_password" :rules="[requiredRule]"
-                                        placeholder="Enter your password" variant="solo" density="comfortable"
+                                        :disabled="loading" placeholder="Enter your password" variant="solo" density="comfortable"
                                         autocomplete="customer_password" :type="showPassword ? 'text' : 'password'"
                                         class="custom-input" hide-details="auto">
                                         <template v-slot:append-inner>

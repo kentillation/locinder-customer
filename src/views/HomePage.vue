@@ -27,16 +27,13 @@
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
                     <div class="d-flex">
                         <div class="d-flex">
-                            <v-icon class="mt-1 mr-1 text-grey-lighten-2" style="font-size: 14px !important;">mdi-map-marker-outline</v-icon>
+                            <v-icon class="mt-1 mr-1 text-grey-lighten-2"
+                                style="font-size: 14px !important;">mdi-map-marker-outline</v-icon>
                             <h6>{{ currentLocationText }}</h6>
                         </div>
-                        <v-chip v-if="locationPermissionDenied"
-                            @click="getUserLocation"
-                            style="border: 1px solid #6cff00; font-size: 10px;"
-                            color="#6cff00"
-                            class="pl-1 pr-3"
-                            size="small"
-                            variant="outline">
+                        <v-chip v-if="locationPermissionDenied" @click="getUserLocation"
+                            style="border: 1px solid #6cff00; font-size: 10px;" color="#6cff00" class="pl-1 pr-3"
+                            size="small" variant="outline">
                             <v-icon style="font-size: 13px !important;">mdi-map-marker</v-icon>
                             Enable Location
                         </v-chip>
@@ -52,12 +49,13 @@
             <div v-if="showKrisantaDialog" class="customer-dialog-overlay" @click="closeDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
-                        <v-button class="close-btn" @click="closeDialog" icon>
+                        <v-btn class="close-btn" @click="closeDialog" icon>
                             <v-icon style="font-size: 14px !important;">mdi-close</v-icon>
-                        </v-button>
+                        </v-btn>
                         <div class="bubble-text">
                             Meow! 🐾 My name is Krisanta, isa ka stray cat. Soon, pwede taka ma-guide sa pag explore
-                            sang Locinder, sa subong naga-learn pa ko kung ano mas maayo himuon in the future. Enjoy browsing!
+                            sang Locinder, sa subong naga-learn pa ko kung ano mas maayo himuon in the future. Enjoy
+                            browsing!
                         </div>
                         <!-- Pointer pointing to the image -->
                         <div class="bubble-pointer"></div>
@@ -354,7 +352,7 @@
                             <template v-if="surprising">
                                 <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;" class="mt-3">{{
                                     loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
-                                }}
+                                    }}
                                 </p>
                                 <div class="mt-3 flex-center-column">
                                     <v-skeleton-loader type="image" width="200"
@@ -390,6 +388,7 @@
 
 <script>
 import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
 import { useShopStore } from '@/stores/shopStore';
 import { useProductsStore } from '@/stores/productsStore';
 import confetti from 'canvas-confetti';
@@ -399,6 +398,7 @@ export default {
     name: 'HomePage',
     data() {
         return {
+            authCheckDone: false,
             isOnline: navigator.onLine,
             showKrisantaDialog: false,
             currentLocationText: 'Getting location...',
@@ -472,19 +472,30 @@ export default {
         const shopStore = useShopStore();
         const productsStore = useProductsStore();
         const toast = useToast();
+        const router = useRouter();
 
         return {
             authStore,
             shopStore,
             productsStore,
             toast,
+            router 
         };
     },
 
     async mounted() {
+        await this.checkAuthentication();
+
+        if (!this.authCheckDone) {
+            return; // Stop execution if not authenticated
+        }
+
         this.startTimeTracking();
+
         this.setupDebouncedSearch();
+
         window.addEventListener('online', this.onOnline);
+
         await Promise.all([
             this.fetchProductBaseCategories(),
             this.fetchShops(),
@@ -494,7 +505,6 @@ export default {
 
         this.checkAndRestoreCooldown();
 
-        // NEW: Get user location on page load
         this.getUserLocation();
     },
 
@@ -674,6 +684,17 @@ export default {
 
     methods: {
 
+        async checkAuthentication() {
+            if (!this.authStore.token) {
+                this.authStore.clearAuth();
+                this.$router.replace('/');
+                return false;
+            }
+
+            this.authCheckDone = true;
+            return true;
+        },
+
         onOnline() {
             this.isOnline = true;
             this.toast.info('Internet connection restored');
@@ -691,18 +712,18 @@ export default {
                 async (position) => {
                     // Success - got location
                     const { latitude, longitude } = position.coords;
-                    
+
                     // Get address from coordinates (reverse geocoding)
                     const address = await this.reverseGeocode(latitude, longitude);
                     this.currentLocationText = address;
-                    console.log ("My address: ", address.city)
+                    console.log("My address: ", address.city)
                     this.locationPermissionDenied = false;
                 },
                 (error) => {
                     // Error or permission denied
                     console.error('Location error:', error);
-                    
-                    switch(error.code) {
+
+                    switch (error.code) {
                         case error.PERMISSION_DENIED:
                             this.currentLocationText = 'Location permission denied';
                             this.locationPermissionDenied = true;
@@ -728,7 +749,7 @@ export default {
                 }
             );
         },
-        
+
         // Reverse geocoding to get address from coordinates
         async reverseGeocode(lat, lng) {
             try {
@@ -742,19 +763,16 @@ export default {
                     }
                 );
                 const data = await response.json();
-                
+
                 if (data && data.address) {
-                    const barangay = data.address.quarter || data.address.barangay;  // Paraiso
-                    const city = data.address.city || data.address.town || data.address.municipality;  // Sagay
-                    const province = data.address.state || data.address.province;  // Negros Occidental
-                    const neighbourhood = data.address.neighbourhood;  // Hupac
+                    const barangay = data.address.quarter || data.address.barangay;
+                    const city = data.address.city || data.address.town || data.address.municipality;
+                    const province = data.address.state || data.address.province;
 
                     if (barangay && city && province) {
-                        return `${barangay}, ${city}, ${province}`;  // Paraiso, Sagay, Negros Occidental
-                    } else if (neighbourhood && city && province) {
-                        return `${neighbourhood}, ${city}, ${province}`;  // Hupac, Sagay, Negros Occidental
+                        return `${barangay}, ${city}, ${province}`;
                     } else if (city && province) {
-                        return `${city}, ${province}`;  // Sagay, Negros Occidental
+                        return `${city}, ${province}`;
                     } else if (barangay && city) {
                         return `${barangay}, ${city}`;
                     } else if (barangay) {
