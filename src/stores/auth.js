@@ -65,7 +65,8 @@ export const useAuthStore = defineStore('auth', () => {
                 firstName.value = data.first_name;
 
                 return {
-                    success: true,
+                    success: data.success,
+                    message: data.message,
                     user_id: data.user_id,
                     first_name: data.first_name,
                 };

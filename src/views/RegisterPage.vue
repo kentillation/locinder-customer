@@ -47,7 +47,7 @@
                                             <span>First name <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.first_name" :rules="[requiredRule, max50Rule]"
-                                            placeholder="e.g. Juan" variant="solo" density="compact"
+                                            placeholder="e.g. Juan" variant="solo" density="comfortable"
                                             class="custom-input" maxlength="30" counter="30" />
                                     </div>
 
@@ -57,7 +57,7 @@
                                             <span>Middle name</span>
                                         </div>
                                         <v-text-field v-model="formData.middle_name" :rules="[leaveBlank]"
-                                            placeholder="e.g. Flores" variant="solo" density="compact"
+                                            placeholder="e.g. Flores" variant="solo" density="comfortable"
                                             class="custom-input" maxlength="30" counter="30" />
                                     </div>
 
@@ -67,7 +67,7 @@
                                             <span>Last name <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.last_name" :rules="[requiredRule, max50Rule]"
-                                            placeholder="e.g. Dela Cruz" variant="solo" density="compact"
+                                            placeholder="e.g. Dela Cruz" variant="solo" density="comfortable"
                                             class="custom-input" maxlength="30" counter="30" />
                                     </div>
 
@@ -81,7 +81,7 @@
                                             <span>Pet's name</span>
                                         </div>
                                         <v-text-field v-model="formData.pet_name" :rules="[leaveBlank]"
-                                            placeholder="e.g. Timmy" variant="solo" density="compact"
+                                            placeholder="e.g. Timmy" variant="solo" density="comfortable"
                                             class="custom-input" maxlength="30" counter="30" />
                                     </div>
 
@@ -92,7 +92,7 @@
                                         </div>
                                         <v-text-field v-model="formData.customer_contact_number"
                                             :rules="[requiredRule, mobileNumberRule]" placeholder="0912 345 6789"
-                                            variant="solo" density="compact" class="custom-input"
+                                            variant="solo" density="comfortable" class="custom-input"
                                             hide-details="auto" />
                                     </div>
 
@@ -107,7 +107,7 @@
                                         </div>
                                         <v-text-field v-model="formData.customer_email"
                                             :rules="[requiredRule, emailFormatRule]" placeholder="admin@example.com"
-                                            variant="solo" density="compact" class="custom-input"
+                                            variant="solo" density="comfortable" class="custom-input"
                                             hide-details="auto" />
                                     </div>
 
@@ -118,7 +118,7 @@
                                         </div>
                                         <v-text-field v-model="formData.customer_password"
                                             :rules="[requiredRule, passwordRule]" placeholder="Create a strong password"
-                                            variant="solo" density="compact"
+                                            variant="solo" density="comfortable"
                                             :type="showPassword ? 'text' : 'password'" class="custom-input"
                                             hide-details="auto">
                                             <template v-slot:append-inner>
@@ -135,7 +135,7 @@
                                         </div>
                                         <v-text-field v-model="formData.confirm_password"
                                             :rules="[requiredRule, confirmPasswordRule]"
-                                            placeholder="Confirm your password" variant="solo" density="compact"
+                                            placeholder="Confirm your password" variant="solo" density="comfortable"
                                             :type="showConfirmPassword ? 'text' : 'password'" class="custom-input"
                                             hide-details="auto">
                                             <template v-slot:append-inner>
@@ -555,8 +555,8 @@ export default {
 
                 const result = await authStore.customerRegistration(submissionData);
 
-                if (result.success) {
-                    this.toast.success("You’ve successfully registered!");
+                if (result.success === true) {
+                    this.toast.success(result.message);
                     setTimeout(() => {
                         window.location.href = '/';
                     }, 2000);
@@ -842,6 +842,8 @@ export default {
 .custom-input :deep(.v-field) {
     border-radius: 8px;
     transition: all 0.2s ease;
+    box-shadow: none;
+    border: 1px solid #dcdcdc;
 }
 
 .custom-input :deep(.v-field:hover) {
@@ -850,7 +852,6 @@ export default {
 
 .custom-input :deep(.v-field--focused) {
     border-color: #5c3a21;
-    box-shadow: 0 0 0 2px rgba(182, 112, 0, 0.15);
 }
 
 
