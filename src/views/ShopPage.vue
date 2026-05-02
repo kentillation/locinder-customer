@@ -902,43 +902,6 @@ onUnmounted(() => {
     touch-action: pan-x pan-y;
 }
 
-/* Permission Overlay Styles */
-.permission-overlay {
-    position: absolute;
-    top: 110px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 2000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 20px;
-}
-
-.permission-card {
-    max-width: 320px;
-    padding: 24px;
-    text-align: center;
-    border-radius: 20px;
-    margin: 20px;
-}
-
-.permission-card .btn-container {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-}
-
-.permission-denied-banner {
-    position: absolute;
-    top: 20px;
-    left: 16px;
-    right: 16px;
-    z-index: 1500;
-}
-
 .settings-link {
     color: #5c3a21;
     text-decoration: underline;
