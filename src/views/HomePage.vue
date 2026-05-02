@@ -23,8 +23,24 @@
             <!-- Headline -->
             <div class="headline d-flex align-center">
                 <span><v-img :src="happyKrisantaImage" width="50" @click="showKrisantaDialog = true"></v-img></span>
-                <div>
+                <div class="mx-1">
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
+                    <div class="d-flex">
+                        <div class="d-flex">
+                            <v-icon class="mt-1 mr-1 text-grey-lighten-2" style="font-size: 14px !important;">mdi-map-marker-outline</v-icon>
+                            <h6>{{ currentLocationText }}</h6>
+                        </div>
+                        <v-chip v-if="locationPermissionDenied"
+                            @click="getUserLocation"
+                            style="border: 1px solid #6cff00; font-size: 10px;"
+                            color="#6cff00"
+                            class="pl-1 pr-3"
+                            size="small"
+                            variant="outline">
+                            <v-icon style="font-size: 13px !important;">mdi-map-marker</v-icon>
+                            Enable Location
+                        </v-chip>
+                    </div>
                 </div>
             </div>
 
@@ -36,10 +52,12 @@
             <div v-if="showKrisantaDialog" class="customer-dialog-overlay" @click="closeDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
-                        <button class="close-btn" @click="closeDialog">✕</button>
+                        <v-button class="close-btn" @click="closeDialog" icon>
+                            <v-icon style="font-size: 14px !important;">mdi-close</v-icon>
+                        </v-button>
                         <div class="bubble-text">
                             Meow! 🐾 My name is Krisanta, isa ka stray cat. Soon, pwede taka ma-guide sa pag explore
-                            sang Locinder, sa subong naga-explore kag naga-learn pa ko kung ano mas maayo himuon in the future. Happy browsing!
+                            sang Locinder, sa subong naga-learn pa ko kung ano mas maayo himuon in the future. Enjoy browsing!
                         </div>
                         <!-- Pointer pointing to the image -->
                         <div class="bubble-pointer"></div>
@@ -383,6 +401,8 @@ export default {
         return {
             isOnline: navigator.onLine,
             showKrisantaDialog: false,
+            currentLocationText: 'Getting location...',
+            locationPermissionDenied: false,
             searchBox: null,
             searchTimeout: null,
             searching: false,
@@ -469,10 +489,12 @@ export default {
             this.fetchShops(),
         ]);
 
-        // Initialize scroll container reference
         this.scrollContainer = this.$refs.scrollContainer;
 
         this.checkAndRestoreCooldown();
+
+        // NEW: Get user location on page load
+        this.getUserLocation();
     },
 
     beforeUnmount() {
@@ -650,6 +672,92 @@ export default {
         onOnline() {
             this.isOnline = true;
             this.toast.info('Internet connection restored');
+        },
+
+        async getUserLocation() {
+            // Check if geolocation is supported
+            if (!navigator.geolocation) {
+                this.currentLocationText = 'Location not supported';
+                return;
+            }
+
+            // Request permission and get location
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    // Success - got location
+                    const { latitude, longitude } = position.coords;
+                    
+                    // Get address from coordinates (reverse geocoding)
+                    const address = await this.reverseGeocode(latitude, longitude);
+                    this.currentLocationText = address;
+                    console.log ("My address: ", address.city)
+                    this.locationPermissionDenied = false;
+                },
+                (error) => {
+                    // Error or permission denied
+                    console.error('Location error:', error);
+                    
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            this.currentLocationText = 'Location permission denied';
+                            this.locationPermissionDenied = true;
+                            // Show toast notification
+                            if (this.toast) {
+                                this.toast.warning('Please enable location to see your current location');
+                            }
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            this.currentLocationText = 'Location unavailable';
+                            break;
+                        case error.TIMEOUT:
+                            this.currentLocationText = 'Location timeout';
+                            break;
+                        default:
+                            this.currentLocationText = 'Unable to get location';
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        },
+        
+        // Reverse geocoding to get address from coordinates
+        async reverseGeocode(lat, lng) {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                    {
+                        headers: {
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'User-Agent': 'Locinder App'
+                        }
+                    }
+                );
+                const data = await response.json();
+                
+                if (data && data.address) {
+                    // Format: City/Municipality, Province
+                    const city = data.address.city || data.address.town || data.address.village || data.address.municipality;
+                    const province = data.address.state || data.address.province;
+                    const district = data.address.suburb || data.address.neighbourhood;
+                    
+                    if (city && province) {
+                        return `${city}, ${province}`;
+                    } else if (city) {
+                        return city;
+                    } else if (district) {
+                        return district;
+                    }
+                    return data.display_name?.split(',')[0] || 'Unknown location';
+                }
+                return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            } catch (error) {
+                console.error('Reverse geocoding error:', error);
+                return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            }
         },
 
         closeDialog() {
@@ -1622,7 +1730,7 @@ export default {
 
 .headline h4 {
     color: #fff;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
 }
 
