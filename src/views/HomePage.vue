@@ -21,10 +21,18 @@
         <div ref="scrollContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
             <!-- Headline -->
-            <div class="headline">
+            <div class="headline d-flex align-center">
+                <span><v-img :src="happyKrisantaImage" width="50"></v-img></span>
+                <div>
+                    <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
+                    <h6>Current location: {{  }}</h6>
+                </div>
+            </div>
+
+            <!-- <div class="headline">
                 <h3>Taste the best dishes in Sagay</h3>
                 <p>Tilawi ang manamit nga mga pagkaon sa Sagay</p>
-            </div>
+            </div> -->
 
             <!-- Search -->
             <v-card class="search-box">
@@ -347,8 +355,9 @@
 </template>
 
 <script>
-import { useProductsStore } from '@/stores/productsStore';
+import { useAuthStore } from '@/stores/auth';
 import { useShopStore } from '@/stores/shopStore';
+import { useProductsStore } from '@/stores/productsStore';
 import confetti from 'canvas-confetti';
 import { useToast } from 'vue-toastification'
 
@@ -396,6 +405,7 @@ export default {
             openboxImage: require('@/assets/img/png/box/Open Box.png'),
             nostoreImage: require('@/assets/img/png/food/No Store.png'),
             nofastfoodImage: require('@/assets/img/png/food/No Fast Food.png'),
+            happyKrisantaImage: require('@/assets/img/png/krisanta/Happy Krisanta.png'),
             currentHour: new Date().getHours(),
             currentMinute: new Date().getMinutes(),
             timeInterval: null,
@@ -420,14 +430,16 @@ export default {
     },
 
     setup() {
+        const authStore = useAuthStore();
         const shopStore = useShopStore();
         const productsStore = useProductsStore();
 
         const toast = useToast();
 
         return {
-            productsStore,
+            authStore,
             shopStore,
+            productsStore,
             toast,
         };
     },
@@ -533,6 +545,30 @@ export default {
                 map[cleanName] = images(fileName)
             })
             return map
+        },
+
+        currentDayGreeting() {
+            const hour = this.currentHour;
+
+            if (hour >= 6 && hour < 12) {
+                return 'Maayong aga';
+            }
+
+            else if (hour >= 12 && hour < 14) {
+                return 'Maayong udto';
+            }
+
+            else if (hour >= 14 && hour < 18) {
+                return 'Maayong hapon';
+            }
+
+            else if (hour >= 18 && hour < 24) {
+                return 'Maayong gab-i';
+            }
+
+            else {
+                return 'Kaagahon na';
+            }
         },
 
         currentTimeMeal() {
@@ -1408,13 +1444,25 @@ export default {
 }
 
 .headline {
-    background: linear-gradient(150deg, #ce8600 0%, #5c3a21 100%);
+    background: linear-gradient(150deg, #ffa600 0%, #5c3a21 100%);
     width: 100%;
-    padding: 20px 0 20px 0;
+    padding: 5px;
     line-height: 0.6cm;
     margin-top: 20px;
     margin-bottom: 20px;
     border-radius: 10px;
+}
+
+.headline h6 {
+    margin-top: 0 !important;
+    color: #dfdfdf;
+    font-weight: 500;
+}
+
+.headline h4 {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .headline h3 {
