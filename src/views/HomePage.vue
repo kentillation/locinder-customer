@@ -17,9 +17,11 @@
             </div>
         </div>
 
-        <!-- <div v-if="locationStore.isMoving" class="movement-indicator" :class="locationStore.getMovementStatus"> -->
-        <div v-if="locationStore.isMoving" class="movement-indicator" :class="locationStore.getMovementStatus">
-            <v-icon small>mdi-speedometer</v-icon> <!-- above normal -->
+        <div v-if="locationStore.isMoving" class="movement-indicator" 
+            :class="[locationStore.getMovementStatus, { 'fast-speed': locationStore.movementSpeed >= 60 }]">
+            <v-icon small :class="getSpeedometerIconClass">
+                {{ getSpeedometerIcon }}
+            </v-icon>
             <span>{{ locationStore.getFormattedSpeed }}</span>
         </div>
 
@@ -28,7 +30,7 @@
             @touchend="handleTouchEnd">
             <!-- Headline -->
             <div class="headline d-flex align-center">
-                <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog = true"></v-img></span>
+                <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog"></v-img></span>
                 <div class="mx-1">
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
                     <div class="d-flex">
@@ -47,9 +49,13 @@
                 </div>
             </div>
 
-            <v-alert v-if="locationStore.isMoving && locationStore.movementSpeed > 10" type="warning" dense
-                class="mb-3">
-                You seem to be driving. Please be safe on the road!
+            <!-- Show driving warning based on speed -->
+            <v-alert v-if="locationStore.isMoving && locationStore.movementSpeed > 10"
+                :type="getSpeedAlertType"
+                variant="outlined"
+                density="compact"
+                class="mb-5">
+                {{ getSpeedWarningMessage }}
             </v-alert>
 
             <!-- <div class="headline">
@@ -57,14 +63,14 @@
                 <p>Tilawi ang manamit nga mga pagkaon sa Sagay</p>
             </div> -->
 
-            <div v-if="showKrisantaDialog" class="customer-dialog-overlay" @click="closeDialog">
+            <div v-if="krisantaDialog" :class="sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'" @click="closeKrisantaDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
-                        <v-btn class="close-btn" @click="closeDialog" size="small" elivation="0" icon>
+                        <v-btn class="close-btn" @click="closeKrisantaDialog" size="small" elivation="0" icon>
                             <v-icon style="font-size: 14px !important;">mdi-close</v-icon>
                         </v-btn>
                         <div class="bubble-text">
-                            Meow! 🐾 My name is Krisanta, isa ka stray cat. Soon, pwede taka ma-guide sa pag explore
+                            Meow! 🐾 My name is <strong>Krisanta</strong>, isa ko ka stray cat. Soon, pwede taka ma-guide sa pag explore
                             sang Locinder, sa subong naga-learn pa ko kung ano mas maayo himuon in the future. Enjoy
                             browsing!
                         </div>
@@ -72,7 +78,7 @@
                         <div class="bubble-pointer"></div>
                     </div>
                     <div class="cat-avatar">
-                        <v-img :src="happyKrisantaImage" width="50" rounded="circle"></v-img>
+                        <v-img :src="currentKrisantaImage" width="50" rounded="circle"></v-img>
                     </div>
                 </div>
             </div>
@@ -213,7 +219,7 @@
                 </template>
             </v-btn>
 
-            <!-- Popular -->
+            <!-- Various stores -->
             <v-card class="buttons-container">
                 <template v-if="shopStore.loading">
                     <div class="title-skeleton">
@@ -348,6 +354,7 @@
                 </v-card>
             </div>
         </transition>
+        
         <transition name="fade">
             <div v-if="moreSheet" class="sheet-overlay" @click="moreSheet = false"></div>
         </transition>
@@ -412,7 +419,7 @@ export default {
         return {
             authCheckDone: false,
             isOnline: navigator.onLine,
-            showKrisantaDialog: false,
+            krisantaDialog: false,
             searchBox: null,
             searchTimeout: null,
             searching: false,
@@ -454,6 +461,7 @@ export default {
             nofastfoodImage: require('@/assets/img/png/food/No Fast Food.png'),
             happyKrisantaImage: require('@/assets/img/png/krisanta/Happy Krisanta.png'),
             tiredKrisantaImage: require('@/assets/img/png/krisanta/Tired Krisanta.png'),
+            sleepingKrisantaImage: require('@/assets/img/png/krisanta/Sleeping Krisanta.png'),
             currentHour: new Date().getHours(),
             currentMinute: new Date().getMinutes(),
             timeInterval: null,
@@ -537,6 +545,58 @@ export default {
 
     computed: {
 
+        getSpeedometerIcon() {
+            const speed = this.locationStore.movementSpeed;
+            
+            if (speed < 5) {
+                return 'mdi-speedometer-slow'; // Walking or very slow
+            } else if (speed < 30) {
+                return 'mdi-speedometer-medium'; // Normal driving speed
+            } else {
+                return 'mdi-speedometer'; // Fast driving
+            }
+        },
+        
+        // Additional class for animation intensity
+        getSpeedometerIconClass() {
+            const speed = this.locationStore.movementSpeed;
+            
+            return {
+                'speed-icon-slow': speed < 5,
+                'speed-icon-medium': speed >= 5 && speed < 30,
+                'speed-icon-fast': speed >= 30,
+                'speed-icon-very-fast': speed >= 60
+            };
+        },
+        
+        // Alert type based on speed
+        getSpeedAlertType() {
+            const speed = this.locationStore.movementSpeed;
+            
+            if (speed >= 60) {
+                return 'error';
+            } else if (speed >= 40) {
+                return 'warning';
+            } else {
+                return 'info';
+            }
+        },
+        
+        // Warning message based on speed
+        getSpeedWarningMessage() {
+            const speed = this.locationStore.movementSpeed;
+            
+            if (speed >= 80) {
+                return '⚠️ High speed detected! Please drive safely and don\'t use the app while driving!';
+            } else if (speed >= 60) {
+                return '🚗 You\'re driving quite fast. Please focus on the road!';
+            } else if (speed >= 40) {
+                return '🚙 Driving detected. Please be safe on the road!';
+            } else {
+                return '🚶 Moving detected. Stay safe!';
+            }
+        },
+
         allCategories() {
             return this.productsStore.getBaseCategories.slice(10);
         },
@@ -617,7 +677,7 @@ export default {
             const hour = this.currentHour;
 
             if (hour >= 0 && hour < 5) {
-                return 'Kaagahon na';
+                return 'Si Krisanta tulog na, ikaw pud';
             }
             else if (hour >= 5 && hour < 12) {
                 return 'Maayong aga';
@@ -635,10 +695,16 @@ export default {
 
         currentKrisantaImage() {
             const hour = this.currentHour;
-            if (hour >= 0 && hour < 6) {
+
+            if (hour === 22 || hour === 23) {        // 10 PM - 11:59 PM
                 return this.tiredKrisantaImage;
+            } 
+            else if (hour >= 0 && hour <= 5) {       // 12:00 AM - 6:00 AM (0, 1, 2, 3, 4, 5, 6)
+                return this.sleepingKrisantaImage;
+            } 
+            else {
+                return this.happyKrisantaImage;      // All other times
             }
-            return this.happyKrisantaImage;
         },
 
         currentTimeMeal() {
@@ -660,9 +726,9 @@ export default {
                 return 'Dinner';
             }
 
-            else if (hour >= 23 || hour < 1) {
-                return 'Midnight Snacks';
-            }
+            // else if (hour >= 23 || hour < 0) {
+            //     return 'Midnight Snacks';
+            // }
 
             else {
                 return 'Not meal time';
@@ -714,30 +780,25 @@ export default {
 
         async initializeLocationWithMovementTracking() {
             try {
-                // Check if user has preference for tracking
                 const trackingPreference = localStorage.getItem('location_tracking_preference');
-
+                
                 if (trackingPreference === 'always') {
-                    // Start continuous tracking for moving users
                     await this.locationStore.startContinuousTracking({
                         highAccuracy: true,
                         adaptiveInterval: true
                     });
                 } else {
-                    // Just get current location once
                     await this.locationStore.getCurrentLocation({ force: false });
                 }
             } catch (error) {
                 console.error('Location initialization failed:', error);
-                // Location is optional, continue without it
             }
         },
-
+        
         async requestLocation() {
             try {
-                // Ask user if they want continuous tracking
                 const wantTracking = confirm('Do you want to keep tracking your location while moving? This will help provide better recommendations.');
-
+                
                 if (wantTracking) {
                     localStorage.setItem('location_tracking_preference', 'always');
                     await this.locationStore.startContinuousTracking({
@@ -748,7 +809,7 @@ export default {
                     localStorage.setItem('location_tracking_preference', 'once');
                     await this.locationStore.getCurrentLocation({ force: true });
                 }
-
+                
                 this.toast.success('Location enabled successfully!');
             } catch (error) {
                 this.toast.error('Unable to get location. Please enable location permissions.');
@@ -760,8 +821,12 @@ export default {
             this.toast.info('Internet connection restored');
         },
 
-        closeDialog() {
-            this.showKrisantaDialog = false;
+        showKrisantaDialog() {
+            this.krisantaDialog = true;
+        },
+
+        closeKrisantaDialog() {
+            this.krisantaDialog = false;
         },
 
         async fetchShops() {
@@ -1522,7 +1587,7 @@ export default {
     height: 100vh;
     overflow: hidden;
 }
-
+/* Movement indicator base styles */
 .movement-indicator {
     position: fixed;
     top: 10px;
@@ -1537,8 +1602,11 @@ export default {
     gap: 5px;
     z-index: 1000;
     backdrop-filter: blur(5px);
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
+/* Speed-based background colors */
 .movement-indicator.walking {
     background: rgba(76, 175, 80, 0.9);
 }
@@ -1553,20 +1621,108 @@ export default {
 
 .movement-indicator.driving_fast {
     background: rgba(244, 67, 54, 0.9);
-    animation: pulse 1s infinite;
 }
 
-@keyframes pulse {
-    0% {
-        opacity: 0.7;
-    }
+.movement-indicator.driving_fast .v-icon {
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.5));
+}
 
+.movement-indicator.fast-speed {
+    animation: movementPulse 1s infinite;
+}
+
+/* Speed icon animations */
+.speed-icon-slow {
+    animation: slowRotate 3s ease-in-out infinite;
+}
+
+.speed-icon-medium {
+    animation: mediumPulse 1.5s ease-in-out infinite;
+}
+
+.speed-icon-fast {
+    animation: fastShake 0.8s ease-in-out infinite;
+}
+
+.speed-icon-very-fast {
+    animation: veryFastSpin 0.5s linear infinite;
+}
+
+/* Keyframe animations */
+@keyframes slowRotate {
+    0% {
+        transform: rotate(0deg);
+    }
     50% {
+        transform: rotate(15deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes mediumPulse {
+    0% {
+        transform: scale(1);
         opacity: 1;
     }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
 
+@keyframes fastShake {
+    0%, 100% {
+        transform: translateX(0) rotate(0deg);
+    }
+    25% {
+        transform: translateX(-2px) rotate(-5deg);
+    }
+    75% {
+        transform: translateX(2px) rotate(5deg);
+    }
+}
+
+@keyframes veryFastSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes movementPulse {
+    0% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
     100% {
         opacity: 0.7;
+        transform: scale(1);
+    }
+}
+
+/* For mobile devices */
+@media (max-width: 600px) {
+    .movement-indicator {
+        top: 5px;
+        right: 5px;
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    
+    .movement-indicator .v-icon {
+        font-size: 16px !important;
     }
 }
 
@@ -2109,10 +2265,10 @@ export default {
 .surprise-btn-loading {
     background-color: #7a4a2a !important;
     cursor: wait;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: surpriseBtnPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes surpriseBtnPulse {
 
     0%,
     100% {

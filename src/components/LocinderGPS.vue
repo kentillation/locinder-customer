@@ -1553,6 +1553,7 @@ onBeforeUnmount(() => {
     border-radius: 20px;
     overflow: hidden;
     border-bottom: 2px solid #ccc;
+    touch-action: pinch-zoom !important;
 }
 
 .map-style-selector {

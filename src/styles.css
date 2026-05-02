@@ -20,6 +20,12 @@ body {
   width: 100%;
   overflow-x: hidden;
   scroll-behavior: smooth;
+  touch-action: pan-x pan-y; /* Prevents pinch-zoom */
+}
+
+*:not(.map) {
+    zoom: reset !important;
+    zoom: 1 !important; /* Prevents text zoom in some browsers */
 }
 
 #app {
