@@ -22,10 +22,9 @@
             @touchend="handleTouchEnd">
             <!-- Headline -->
             <div class="headline d-flex align-center">
-                <span><v-img :src="happyKrisantaImage" width="50"></v-img></span>
+                <span><v-img :src="happyKrisantaImage" width="50" @click="showKrisantaDialog = true"></v-img></span>
                 <div>
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
-                    <h6>Current location: {{  }}</h6>
                 </div>
             </div>
 
@@ -33,6 +32,23 @@
                 <h3>Taste the best dishes in Sagay</h3>
                 <p>Tilawi ang manamit nga mga pagkaon sa Sagay</p>
             </div> -->
+
+            <div v-if="showKrisantaDialog" class="customer-dialog-overlay" @click="closeDialog">
+                <div class="customer-dialog" @click.stop>
+                    <div class="dialog-bubble">
+                        <button class="close-btn" @click="closeDialog">✕</button>
+                        <div class="bubble-text">
+                            Meow! 🐾 My name is Krisanta, isa ka stray cat. Soon, pwede taka ma-guide sa pag explore
+                            sang Locinder, sa subong naga-explore kag naga-learn pa ko kung ano mas maayo himuon in the future. Happy browsing!
+                        </div>
+                        <!-- Pointer pointing to the image -->
+                        <div class="bubble-pointer"></div>
+                    </div>
+                    <div class="cat-avatar">
+                        <v-img :src="happyKrisantaImage" width="50" rounded="circle"></v-img>
+                    </div>
+                </div>
+            </div>
 
             <!-- Search -->
             <v-card class="search-box">
@@ -320,7 +336,7 @@
                             <template v-if="surprising">
                                 <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;" class="mt-3">{{
                                     loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
-                                    }}
+                                }}
                                 </p>
                                 <div class="mt-3 flex-center-column">
                                     <v-skeleton-loader type="image" width="200"
@@ -366,6 +382,7 @@ export default {
     data() {
         return {
             isOnline: navigator.onLine,
+            showKrisantaDialog: false,
             searchBox: null,
             searchTimeout: null,
             searching: false,
@@ -433,7 +450,6 @@ export default {
         const authStore = useAuthStore();
         const shopStore = useShopStore();
         const productsStore = useProductsStore();
-
         const toast = useToast();
 
         return {
@@ -634,6 +650,10 @@ export default {
         onOnline() {
             this.isOnline = true;
             this.toast.info('Internet connection restored');
+        },
+
+        closeDialog() {
+            this.showKrisantaDialog = false;
         },
 
         async fetchShops() {
@@ -1072,12 +1092,12 @@ export default {
         startSurpriseCooldown() {
             this.surpriseCooldown = true;
             this.surpriseCooldownEndTime = Date.now() + 60000;
-            
+
             // Save to localStorage
             localStorage.setItem('surpriseCooldownEndTime', this.surpriseCooldownEndTime);
-            
+
             this.updateCooldownProgress();
-            
+
             this.surpriseCooldownInterval = setInterval(() => {
                 this.updateCooldownProgress();
             }, 100);
@@ -1085,10 +1105,10 @@ export default {
 
         updateCooldownProgress() {
             if (!this.surpriseCooldownEndTime) return;
-            
+
             const now = Date.now();
             const remaining = this.surpriseCooldownEndTime - now;
-            
+
             if (remaining <= 0) {
                 this.stopSurpriseCooldown();
             } else {
@@ -1105,15 +1125,15 @@ export default {
         stopSurpriseCooldown() {
             this.surpriseCooldown = false;
             this.surpriseCooldownEndTime = null;
-            
+
             // Remove from localStorage
             localStorage.removeItem('surpriseCooldownEndTime');
-            
+
             if (this.surpriseCooldownInterval) {
                 clearInterval(this.surpriseCooldownInterval);
                 this.surpriseCooldownInterval = null;
             }
-            
+
             // Reset CSS variable
             const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
             if (sheetEl) {
@@ -1127,15 +1147,15 @@ export default {
             if (savedEndTime) {
                 this.surpriseCooldownEndTime = parseInt(savedEndTime);
             }
-            
+
             if (this.surpriseCooldownEndTime) {
                 const now = Date.now();
                 const remaining = this.surpriseCooldownEndTime - now;
-                
+
                 if (remaining > 0) {
                     // Cooldown is still active, restore it
                     this.surpriseCooldown = true;
-                    
+
                     // Update the animation progress immediately
                     this.$nextTick(() => {
                         const progress = (remaining / 60000) * 100;
@@ -1144,12 +1164,12 @@ export default {
                             sheetEl.style.setProperty('--cooldown-progress', `${progress}%`);
                         }
                     });
-                    
+
                     // Restart the interval
                     if (this.surpriseCooldownInterval) {
                         clearInterval(this.surpriseCooldownInterval);
                     }
-                    
+
                     this.surpriseCooldownInterval = setInterval(() => {
                         this.updateCooldownProgress();
                     }, 100);
@@ -1393,6 +1413,147 @@ export default {
     padding: 0 !important;
     height: 100vh;
     overflow: hidden;
+}
+
+.clickable-cat {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.clickable-cat:hover {
+    transform: scale(1.05);
+}
+
+.clickable-cat:active {
+    transform: scale(0.95);
+}
+
+/* Dialog Overlay */
+.customer-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 80px 20px 20px 20px;
+}
+
+.customer-dialog {
+    position: fixed;
+    left: 10px;
+    top: 70px;
+    animation: slideInLeft 0.3s ease;
+}
+
+.dialog-bubble {
+    position: relative;
+    background: white;
+    border-radius: 20px;
+    padding: 16px 20px;
+    max-width: 320px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    border: 2px solid #f5d5a4;
+    margin-bottom: 15px;
+}
+
+.close-btn {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #333;
+}
+
+.bubble-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #2d2f36;
+    padding-right: 20px;
+}
+
+/* Pointer pointing to the top-left (towards the tapped image) */
+.bubble-pointer {
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-bottom: 12px solid white;
+}
+
+.dialog-bubble::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 18px;
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 14px solid #f5d5a4;
+    z-index: 0;
+}
+
+.cat-avatar {
+    display: flex;
+    justify-content: flex-start;
+    padding-left: 10px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.cat-avatar:hover {
+    transform: scale(1.05);
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (min-width: 960px) {
+    .customer-dialog-overlay {
+        display: none;
+    }
+}
+
+
+/* For mobile */
+@media (max-width: 600px) {
+    .customer-dialog-overlay {
+        padding: 60px 15px 15px 15px;
+    }
+
+    .dialog-bubble {
+        max-width: 300px;
+        padding: 14px 16px;
+    }
+
+    .bubble-text {
+        font-size: 13px;
+    }
 }
 
 .scroll-content {
@@ -1781,6 +1942,7 @@ export default {
     0% {
         width: 100%;
     }
+
     100% {
         width: 0%;
     }
@@ -1794,9 +1956,12 @@ export default {
 }
 
 @keyframes pulse {
-    0%, 100% {
+
+    0%,
+    100% {
         opacity: 1;
     }
+
     50% {
         opacity: 0.6;
     }
