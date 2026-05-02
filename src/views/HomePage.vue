@@ -22,7 +22,7 @@
             @touchend="handleTouchEnd">
             <!-- Headline -->
             <div class="headline d-flex align-center">
-                <span><v-img :src="happyKrisantaImage" width="50" @click="showKrisantaDialog = true"></v-img></span>
+                <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog = true"></v-img></span>
                 <div class="mx-1">
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
                     <div class="d-flex">
@@ -443,6 +443,7 @@ export default {
             nostoreImage: require('@/assets/img/png/food/No Store.png'),
             nofastfoodImage: require('@/assets/img/png/food/No Fast Food.png'),
             happyKrisantaImage: require('@/assets/img/png/krisanta/Happy Krisanta.png'),
+            tiredKrisantaImage: require('@/assets/img/png/krisanta/Tired Krisanta.png'),
             currentHour: new Date().getHours(),
             currentMinute: new Date().getMinutes(),
             timeInterval: null,
@@ -588,25 +589,29 @@ export default {
         currentDayGreeting() {
             const hour = this.currentHour;
 
-            if (hour >= 6 && hour < 12) {
+            if (hour >= 0 && hour < 5) {
+                return 'Kaagahon na';
+            }
+            else if (hour >= 5 && hour < 12) {
                 return 'Maayong aga';
             }
-
             else if (hour >= 12 && hour < 14) {
                 return 'Maayong udto';
             }
-
             else if (hour >= 14 && hour < 18) {
                 return 'Maayong hapon';
             }
-
-            else if (hour >= 18 && hour < 24) {
+            else {
                 return 'Maayong gab-i';
             }
+        },
 
-            else {
-                return 'Kaagahon na';
+        currentKrisantaImage() {
+            const hour = this.currentHour;
+            if (hour >= 0 && hour < 6) {
+                return this.tiredKrisantaImage;
             }
+            return this.happyKrisantaImage;
         },
 
         currentTimeMeal() {
