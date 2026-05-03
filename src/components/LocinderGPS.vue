@@ -1970,4 +1970,13 @@ onBeforeUnmount(() => {
 :deep(.maplibregl-ctrl-attrib.maplibregl-compact-show) {
     visibility: hidden !important;
 }
+
+:deep(.maplibregl-popup-content) {
+    z-index: 9999;
+}
+
+:deep(.maplibregl-popup-close-button) {
+    right: 8px;
+    top: 8px;
+}
 </style>
