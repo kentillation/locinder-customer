@@ -63,7 +63,7 @@
                 <p>Tilawi ang manamit nga mga pagkaon sa Sagay</p>
             </div> -->
 
-            <div v-if="krisantaDialog" :class="sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'" @click="closeKrisantaDialog">
+            <div v-if="krisantaDialog" :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'" @click="closeKrisantaDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
                         <v-btn class="close-btn" @click="closeKrisantaDialog" size="small" elivation="0" icon>
