@@ -1979,4 +1979,8 @@ onBeforeUnmount(() => {
     right: 8px;
     top: 8px;
 }
+
+:deep(.maplibregl-popup-anchor-bottom) {
+    display: none !important;
+}
 </style>
