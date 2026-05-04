@@ -1,3 +1,4 @@
 <resources>
+    <color name="colorPrimary">#b64c00</color>
     <color name="launchBackground">#5c3a21</color>
 </resources>
