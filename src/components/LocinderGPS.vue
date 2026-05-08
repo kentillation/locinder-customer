@@ -1720,145 +1720,6 @@ const initMap = () => {
 const setupTouchGestures = () => {
     const mapElement = document.getElementById('map')
     if (!mapElement) return
-
-    mapElement.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-            // Pinch gesture detected
-            touchStart = {
-                x1: e.touches[0].clientX,
-                y1: e.touches[0].clientY,
-                x2: e.touches[1].clientX,
-                y2: e.touches[1].clientY,
-                distance: Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                )
-            }
-        }
-    })
-
-    mapElement.addEventListener('touchmove', (e) => {
-        if (touchStart && e.touches.length === 2) {
-            const newDistance = Math.hypot(
-                e.touches[0].clientX - e.touches[1].clientX,
-                e.touches[0].clientY - e.touches[1].clientY
-            )
-
-            // Dynamically adjust zoom sensitivity based on pinch speed
-            const delta = newDistance - touchStart.distance
-            const sensitivity = Math.abs(delta) > 50 ? 0.02 : 0.01
-            const zoomDelta = delta * sensitivity
-
-            if (map && mapInitialized) {
-                const newZoom = Math.min(22, Math.max(1, map.getZoom() + zoomDelta))
-                map.setZoom(newZoom)
-            }
-
-            touchStart.distance = newDistance
-        }
-    })
-
-    mapElement.addEventListener('touchend', () => {
-        touchStart = null
-    })
-}
-
-const startInertia = () => {
-    if (inertiaFrame) cancelAnimationFrame(inertiaFrame)
-
-    // Only apply inertia if there's significant velocity
-    if (Math.abs(inertiaVelocity.x) < 0.5 && Math.abs(inertiaVelocity.y) < 0.5) {
-        inertiaVelocity = { x: 0, y: 0 }
-        return
-    }
-
-    const applyInertia = () => {
-        if (!map || !mapInitialized) {
-            inertiaVelocity = { x: 0, y: 0 }
-            return
-        }
-
-        // Apply friction
-        inertiaVelocity.x *= 0.95
-        inertiaVelocity.y *= 0.95
-
-        // Stop when velocity is very low
-        if (Math.abs(inertiaVelocity.x) < 0.1 && Math.abs(inertiaVelocity.y) < 0.1) {
-            inertiaVelocity = { x: 0, y: 0 }
-            inertiaFrame = null
-            return
-        }
-
-        // Calculate new center based on velocity
-        const center = map.getCenter()
-        const zoom = map.getZoom()
-
-        // Convert screen velocity to geographical delta
-        const metersPerPixel = 156543.03392 * Math.cos(center.lat * Math.PI / 180) / Math.pow(2, zoom)
-        const lngDelta = (inertiaVelocity.x * metersPerPixel * 0.00001) / (Math.cos(center.lat * Math.PI / 180))
-        const latDelta = inertiaVelocity.y * metersPerPixel * 0.00001
-
-        const newCenter = {
-            lng: center.lng - lngDelta,
-            lat: center.lat - latDelta
-        }
-
-        // Apply smooth movement
-        map.easeTo({
-            center: [newCenter.lng, newCenter.lat],
-            duration: 16, // 60fps
-            easing: (t) => t // Linear for inertia
-        })
-
-        inertiaFrame = requestAnimationFrame(applyInertia)
-    }
-
-    inertiaFrame = requestAnimationFrame(applyInertia)
-}
-
-const trackPanMovement = (e) => {
-    if (!map || !mapInitialized) return
-
-    const currentTime = Date.now()
-    const currentPos = {
-        x: e.clientX || (e.touches && e.touches[0]?.clientX) || 0,
-        y: e.clientY || (e.touches && e.touches[0]?.clientY) || 0
-    }
-
-    if (lastPanPosition && lastPanTime) {
-        const timeDiff = Math.max(1, currentTime - lastPanTime)
-        const velocityX = (currentPos.x - lastPanPosition.x) / timeDiff
-        const velocityY = (currentPos.y - lastPanPosition.y) / timeDiff
-
-        // Smooth velocity to reduce jitter
-        inertiaVelocity.x = inertiaVelocity.x * 0.7 + velocityX * 0.3
-        inertiaVelocity.y = inertiaVelocity.y * 0.7 + velocityY * 0.3
-
-        // Cap maximum velocity
-        inertiaVelocity.x = Math.min(5, Math.max(-5, inertiaVelocity.x))
-        inertiaVelocity.y = Math.min(5, Math.max(-5, inertiaVelocity.y))
-    }
-
-    lastPanPosition = currentPos
-    lastPanTime = currentTime
-    isPanning = true
-}
-
-const stopPanAndApplyInertia = () => {
-    if (!isPanning) return
-
-    isPanning = false
-
-    // Only apply inertia if dragging ended recently and velocity is significant
-    if (Date.now() - lastPanTime < 100 &&
-        (Math.abs(inertiaVelocity.x) > 0.3 || Math.abs(inertiaVelocity.y) > 0.3)) {
-        startInertia()
-    } else {
-        inertiaVelocity = { x: 0, y: 0 }
-    }
-
-    lastPanPosition = null
-    lastPanTime = 0
 }
 
 const changeMapStyle = (style) => {
@@ -1952,7 +1813,6 @@ watch(coordinates, () => {
 onMounted(() => {
     setTimeout(() => {
         initMap()
-        setupTouchGestures()
     }, 100)
 })
 
@@ -1993,6 +1853,10 @@ onBeforeUnmount(() => {
     pointer-events: auto;
 }
 
+.map canvas {
+    touch-action: pan-x pan-y pinch-zoom !important;
+}
+
 .map {
     position: relative;
     flex: 1;
@@ -2005,7 +1869,6 @@ onBeforeUnmount(() => {
     border-bottom: 2px solid #ccc;
     transform: translateZ(0);
     will-change: transform;
-    touch-action: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     pointer-events: auto;
