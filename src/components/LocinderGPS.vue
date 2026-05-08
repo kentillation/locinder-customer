@@ -1555,54 +1555,6 @@ const initMap = () => {
 
         // ============ ADD INERTIA EVENT LISTENERS HERE ============
 
-        // Mouse events for desktop inertia
-        map.on('mousedown', () => {
-            // Cancel any ongoing inertia when user starts new interaction
-            if (inertiaFrame) {
-                cancelAnimationFrame(inertiaFrame)
-                inertiaFrame = null
-            }
-            inertiaVelocity = { x: 0, y: 0 }
-        })
-
-        map.on('mousemove', (e) => {
-            if (e.originalEvent.buttons === 1) { // Left button pressed
-                trackPanMovement(e.originalEvent)
-            }
-        })
-
-        map.on('mouseup', () => {
-            stopPanAndApplyInertia()
-        })
-
-        // Touch events for mobile inertia
-        let touchMoveHandler = null
-
-        map.getCanvas().addEventListener('touchstart', (e) => {
-            // Cancel inertia on touch start
-            if (inertiaFrame) {
-                cancelAnimationFrame(inertiaFrame)
-                inertiaFrame = null
-            }
-            inertiaVelocity = { x: 0, y: 0 }
-            lastPanPosition = null
-
-            if (e.touches.length === 1) {
-                touchMoveHandler = (moveEvent) => {
-                    trackPanMovement(moveEvent)
-                }
-                map.getCanvas().addEventListener('touchmove', touchMoveHandler)
-            }
-        })
-
-        map.getCanvas().addEventListener('touchend', () => {
-            if (touchMoveHandler) {
-                map.getCanvas().removeEventListener('touchmove', touchMoveHandler)
-                touchMoveHandler = null
-            }
-            stopPanAndApplyInertia()
-        })
-
         // Optional: Add momentum scrolling with map's built-in events
         map.on('moveend', () => {
             // You can add additional logic here if needed
