@@ -407,6 +407,96 @@ const toggleGPSMode = async () => {
     }
 }
 
+const projectPointOnSegment = (p, a, b) => {
+    const A = { x: a[0], y: a[1] }
+    const B = { x: b[0], y: b[1] }
+    const P = { x: p.lng, y: p.lat }
+
+    const ABx = B.x - A.x
+    const ABy = B.y - A.y
+    const APx = P.x - A.x
+    const APy = P.y - A.y
+
+    const ab2 = ABx * ABx + ABy * ABy
+    const ap_ab = APx * ABx + APy * ABy
+
+    let t = ab2 !== 0 ? ap_ab / ab2 : 0
+    t = Math.max(0, Math.min(1, t))
+
+    return {
+        lng: A.x + ABx * t,
+        lat: A.y + ABy * t,
+        t
+    }
+}
+
+const snapToRoute = (location, routeCoords) => {
+    if (!routeCoords || routeCoords.length < 2) return location
+
+    let bestPoint = null
+    let minDist = Infinity
+    let bestIndex = 0
+
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+        const snapped = projectPointOnSegment(
+            location,
+            routeCoords[i],
+            routeCoords[i + 1]
+        )
+
+        const dist = calculateDistance(
+            location.lat,
+            location.lng,
+            snapped.lat,
+            snapped.lng
+        )
+
+        if (dist < minDist) {
+            minDist = dist
+            bestPoint = snapped
+            bestIndex = i
+        }
+    }
+
+    return { point: bestPoint, index: bestIndex }
+}
+
+const getLookAheadPoint = (routeCoords, startIndex, distanceMeters = 40) => {
+    let remaining = distanceMeters
+
+    for (let i = startIndex; i < routeCoords.length - 1; i++) {
+        const a = routeCoords[i]
+        const b = routeCoords[i + 1]
+
+        const segmentDist = calculateDistance(a[1], a[0], b[1], b[0]) * 1000
+
+        if (segmentDist >= remaining) {
+            const ratio = remaining / segmentDist
+
+            return {
+                lat: a[1] + (b[1] - a[1]) * ratio,
+                lng: a[0] + (b[0] - a[0]) * ratio
+            }
+        }
+
+        remaining -= segmentDist
+    }
+
+    return {
+        lat: routeCoords.at(-1)[1],
+        lng: routeCoords.at(-1)[0]
+    }
+}
+
+const smoothBearing = (current, target, factor = 0.12) => {
+    let diff = target - current
+
+    if (diff > 180) diff -= 360
+    if (diff < -180) diff += 360
+
+    return current + diff * factor
+}
+
 const enableGPSFollowMode = (location) => {
     if (!map || !mapInitialized || !location) return
 
@@ -530,63 +620,54 @@ const updateGPSLocation = async () => {
 const updateMapPosition = (location) => {
     if (!gpsModeEnabled.value || !map || !mapInitialized || !location) return
 
-    // Update coordinates
-    coordinates.value = location
+    const route = currentRouteData?.coordinates
+    if (!route) return
 
-    // Update user marker position
-    if (userMarker) {
-        userMarker.setLngLat([location.lng, location.lat])
+    // 1. SNAP USER TO ROUTE
+    const snapped = snapToRoute(location, route)
+    const snappedPoint = snapped.point
+
+    if (!snappedPoint) return
+
+    const snappedLocation = {
+        lat: snappedPoint.lat,
+        lng: snappedPoint.lng
     }
 
-    // Use easeTo with bezier easing for smoother movement
+    coordinates.value = snappedLocation
+
+    if (userMarker) {
+        userMarker.setLngLat([snappedLocation.lng, snappedLocation.lat])
+    }
+
+    // 2. LOOK-AHEAD TARGET (navigation feel)
+    const lookAhead = getLookAheadPoint(route, snapped.index, 50)
+
+    // 3. COMPUTE TARGET BEARING
+    const targetBearing = calculateHeading(
+        snappedLocation.lat,
+        snappedLocation.lng,
+        lookAhead.lat,
+        lookAhead.lng
+    )
+
+    // 4. SMOOTH ROTATION (progressive heading)
+    const currentMapBearing = map.getBearing()
+    const newBearing = smoothBearing(currentMapBearing, targetBearing)
+
+    map.setBearing(newBearing)
+    currentBearing.value = newBearing
+
+    // 5. SMOOTH CAMERA FOLLOW
     map.easeTo({
-        center: [location.lng, location.lat],
+        center: [snappedLocation.lng, snappedLocation.lat],
         zoom: lastZoomLevel.value,
-        duration: 900,
-        essential: true,
-        easing: (t) => {
-            // Cubic bezier easing for natural movement
-            return t < 0.5
-                ? 4 * t * t * t
-                : 1 - Math.pow(-2 * t + 2, 3) / 2
-        },
-        pitch: currentPitch.value
+        pitch: currentPitch.value,
+        duration: 250,
+        easing: (t) => t
     })
 
-    // Update bearing with smooth rotation
-    if (lastHeading !== null) {
-        const currentBearing = map.getBearing()
-        let delta = lastHeading - currentBearing
-
-        // Take the shortest path
-        if (delta > 180) delta -= 360
-        if (delta < -180) delta += 360
-
-        // Smooth rotation with custom easing
-        const startBearing = currentBearing
-        const endBearing = currentBearing + delta * 0.45
-        const startTime = performance.now()
-        const duration = 50
-
-        const animateBearing = (now) => {
-            const elapsed = now - startTime
-            const t = Math.min(1, elapsed / duration)
-            // Ease out cubic
-            const eased = 1 - Math.pow(1 - t, 3)
-            const newBearing = startBearing + (endBearing - startBearing) * eased
-            map.setBearing(newBearing)
-
-            if (t < 1) {
-                requestAnimationFrame(animateBearing)
-            } else {
-                currentBearing.value = endBearing
-            }
-        }
-
-        requestAnimationFrame(animateBearing)
-    }
-
-    // Update route to destination
+    // 6. ROUTE UPDATE (optional debounce already exists)
     debouncedUpdateRoute()
     updateDestinationMarker()
 }
