@@ -160,6 +160,7 @@ let mapInitialized = false
 let routeSource = null
 let routeLayer = null
 let glowRouteLayer = null
+let routeArrowLayer = null
 let currentRouteSource = null
 let currentRouteData = null // Store current route data for style changes
 
@@ -396,6 +397,7 @@ const toggleGPSMode = async () => {
         if (toast) toast.warning('GPS Mode disabled')
 
         setMapPitch(0, { animate: true })
+        setMapBearing(0, { animate: true, duration: 500 })
 
         // Clean up interval when disabled
         if (locationWatchInterval) {
@@ -420,7 +422,8 @@ const enableGPSFollowMode = (location) => {
         center: [location.lng, location.lat],
         zoom: gpsZoom,
         bearing: lastHeading || map.getBearing(),
-        duration: 1000,
+        duration: 850,
+        essential: true,
         pitch: 75
     })
 
@@ -440,7 +443,7 @@ const enableGPSFollowMode = (location) => {
         }
 
         await updateGPSLocation()
-    }, 2000)
+    }, 1200)
 }
 
 // Improve GPS location tracking with requestAnimationFrame
@@ -515,7 +518,8 @@ const updateMapPosition = (location) => {
     map.easeTo({
         center: [location.lng, location.lat],
         zoom: lastZoomLevel.value,
-        duration: 1200, // Slightly slower for smoother animation
+        duration: 900,
+        essential: true,
         easing: (t) => {
             // Cubic bezier easing for natural movement
             return t < 0.5
@@ -536,9 +540,9 @@ const updateMapPosition = (location) => {
 
         // Smooth rotation with custom easing
         const startBearing = currentBearing
-        const endBearing = currentBearing + delta * 0.3
+        const endBearing = currentBearing + delta * 0.45
         const startTime = performance.now()
-        const duration = 800
+        const duration = 50
 
         const animateBearing = (now) => {
             const elapsed = now - startTime
@@ -713,6 +717,10 @@ const clearRouteLayers = () => {
         if (routeLayer && map && map.getLayer(routeLayer)) {
             map.removeLayer(routeLayer)
             routeLayer = null
+        }
+        if (routeArrowLayer && map && map.getLayer(routeArrowLayer)) {
+            map.removeLayer(routeArrowLayer)
+            routeArrowLayer = null
         }
         if (glowRouteLayer && map && map.getLayer(glowRouteLayer)) {
             map.removeLayer(glowRouteLayer)
@@ -890,6 +898,30 @@ const renderRoute = (routeData) => {
             }
         })
         routeLayer = lineLayerId
+
+        const arrowLayerId = routeSource + '-arrows'
+        map.addLayer({
+            id: arrowLayerId,
+            type: 'symbol',
+            source: routeSource,
+            layout: {
+                'symbol-placement': 'line',
+                'symbol-spacing': 90,
+                'text-field': '➤',
+                'text-size': 16,
+                'text-keep-upright': false,
+                'text-rotation-alignment': 'map',
+                'text-pitch-alignment': 'map',
+                'text-allow-overlap': true,
+                'text-ignore-placement': true
+            },
+            paint: {
+                'text-color': '#ffffff',
+                'text-halo-color': '#0d47a1',
+                'text-halo-width': 1.2
+            }
+        })
+        routeArrowLayer = arrowLayerId
 
         // Add connection line as a separate source and layer if needed
         if (needsConnection && connectionCoords) {
@@ -1503,7 +1535,11 @@ const initMap = () => {
             dragRotate: true,
             dragPan: true,
             touchZoomRotate: true,
+            touchPitch: true,
             doubleClickZoom: true,
+            pitchWithRotate: true,
+            bearingSnap: 2,
+            cooperativeGestures: false,
             scrollZoom: {
                 around: 'center',
                 smooth: true
