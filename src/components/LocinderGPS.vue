@@ -1595,6 +1595,9 @@ const initMap = () => {
             emit('pitch-changed', currentPitch.value)
         })
 
+        map.dragRotate.enable()
+        map.touchZoomRotate.enable()
+
         // Ensure map is responsive to window resize
         window.addEventListener('resize', () => {
             if (map) {
@@ -1881,6 +1884,10 @@ onBeforeUnmount(() => {
     margin-bottom: 20px;
 }
 
+.locinder-wrapper > div:not(#map) {
+    pointer-events: auto;
+}
+
 .map {
     position: relative;
     flex: 1;
@@ -1891,16 +1898,12 @@ onBeforeUnmount(() => {
     border-radius: 20px;
     overflow: hidden;
     border-bottom: 2px solid #ccc;
-    /* CRITICAL: Enable hardware acceleration */
     transform: translateZ(0);
     will-change: transform;
-
-    /* Improve touch handling */
     touch-action: none;
-
-    /* Smoother rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    pointer-events: auto;
 }
 
 .map-style-selector {
@@ -2007,6 +2010,18 @@ onBeforeUnmount(() => {
         opacity: 1;
         transform: translateX(0);
     }
+}
+
+.distance-badge,
+.gps-mode-toggle,
+.tilt-control-group {
+    pointer-events: none;
+}
+
+.distance-badge *,
+.gps-mode-toggle *,
+.tilt-control-group * {
+    pointer-events: auto;
 }
 
 /* Tilt Control Group */
