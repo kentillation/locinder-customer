@@ -170,10 +170,6 @@ const currentPitch = ref(0)
 const minPitch = 0
 const maxPitch = 85
 const defaultPitch = 0
-let rotationVelocity = 0
-let rotationDecayFrame = null
-let isRotating = false
-let lastRotationTime = 0
 
 // GPS Auto-rotation Mode
 const gpsModeEnabled = ref(false)
@@ -636,31 +632,10 @@ const rotateMap = (deltaDegrees) => {
     if (gpsModeEnabled.value) {
         toggleGPSMode()
     }
-
-    if (map && mapInitialized) {
-        const startBearing = map.getBearing()
-        const endBearing = startBearing + deltaDegrees
-        const startTime = performance.now()
-        const duration = 400
-
-        const animate = (now) => {
-            const elapsed = now - startTime
-            const progress = Math.min(1, elapsed / duration)
-            const easeOutCubic = 1 - Math.pow(1 - progress, 3)
-            const current = startBearing + (deltaDegrees * easeOutCubic)
-
-            map.setBearing(current)
-            currentBearing.value = ((current % 360) + 360) % 360
-            emit('bearing-changed', currentBearing.value)
-
-            if (progress < 1) {
-                requestAnimationFrame(animate)
-            }
-        }
-
-        requestAnimationFrame(animate)
-    }
+    const newBearing = (currentBearing.value + deltaDegrees) % 360
+    setMapBearing(newBearing, { animate: true, duration: 400 })
 }
+
 // ==================== 3D Tilt Methods ====================
 const setMapPitch = (pitch, options = { animate: true, duration: 300 }) => {
     if (!map || !mapInitialized) return
@@ -1557,12 +1532,12 @@ const initMap = () => {
             preserveDrawingBuffer: false,
             fadeDuration: 0,
             crossSourceCollisions: false,
-            dragRotate: true, // Keep this true
+            dragRotate: true,
             dragPan: true,
-            touchZoomRotate: true, // This enables two-finger rotation on mobile
+            touchZoomRotate: true,
             touchPitch: true,
             doubleClickZoom: true,
-            pitchWithRotate: true, // Important for 3D rotation feel
+            pitchWithRotate: true,
             bearingSnap: 2,
             cooperativeGestures: false,
             scrollZoom: {
@@ -1578,285 +1553,102 @@ const initMap = () => {
             visualizePitch: true
         }), 'top-right')
 
-        // ============ ENHANCED ROTATION HANDLING ============
+        // ============ ADD INERTIA EVENT LISTENERS HERE ============
 
-        // Track rotation gestures for smooth inertia
-        let rotationStartBearing = 0
-        let rotationStartAngle = 0
-        let rotationStartTime = 0
-        let rotationVelocityValue = 0
+        // Mouse events for desktop inertia
+        map.on('mousedown', () => {
+            // Cancel any ongoing inertia when user starts new interaction
+            if (inertiaFrame) {
+                cancelAnimationFrame(inertiaFrame)
+                inertiaFrame = null
+            }
+            inertiaVelocity = { x: 0, y: 0 }
+        })
 
-        // Handle two-finger rotation for mobile
+        map.on('mousemove', (e) => {
+            if (e.originalEvent.buttons === 1) { // Left button pressed
+                trackPanMovement(e.originalEvent)
+            }
+        })
+
+        map.on('mouseup', () => {
+            stopPanAndApplyInertia()
+        })
+
+        // Touch events for mobile inertia
+        let touchMoveHandler = null
+
         map.getCanvas().addEventListener('touchstart', (e) => {
-            if (e.touches.length === 2 && !gpsModeEnabled.value) {
-                // Cancel any ongoing inertia rotation
-                if (rotationDecayFrame) {
-                    cancelAnimationFrame(rotationDecayFrame)
-                    rotationDecayFrame = null
+            // Cancel inertia on touch start
+            if (inertiaFrame) {
+                cancelAnimationFrame(inertiaFrame)
+                inertiaFrame = null
+            }
+            inertiaVelocity = { x: 0, y: 0 }
+            lastPanPosition = null
+
+            if (e.touches.length === 1) {
+                touchMoveHandler = (moveEvent) => {
+                    trackPanMovement(moveEvent)
                 }
-
-                // Store initial rotation angle
-                const center = {
-                    x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-                    y: (e.touches[0].clientY + e.touches[1].clientY) / 2
-                }
-
-                const angle1 = Math.atan2(
-                    e.touches[0].clientY - center.y,
-                    e.touches[0].clientX - center.x
-                )
-                const angle2 = Math.atan2(
-                    e.touches[1].clientY - center.y,
-                    e.touches[1].clientX - center.x
-                )
-
-                rotationStartAngle = angle2 - angle1
-                rotationStartBearing = map.getBearing()
-                rotationStartTime = performance.now()
-                rotationVelocityValue = 0
+                map.getCanvas().addEventListener('touchmove', touchMoveHandler)
             }
         })
 
-        // Track rotation movement
-        let lastRotationAngle = 0
-        let lastRotationTimestamp = 0
-
-        map.getCanvas().addEventListener('touchmove', (e) => {
-            if (e.touches.length === 2 && !gpsModeEnabled.value && e.cancelable) {
-                e.preventDefault()
-
-                const center = {
-                    x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-                    y: (e.touches[0].clientY + e.touches[1].clientY) / 2
-                }
-
-                const angle1 = Math.atan2(
-                    e.touches[0].clientY - center.y,
-                    e.touches[0].clientX - center.x
-                )
-                const angle2 = Math.atan2(
-                    e.touches[1].clientY - center.y,
-                    e.touches[1].clientX - center.x
-                )
-
-                const currentAngle = angle2 - angle1
-                let angleDelta = currentAngle - rotationStartAngle
-
-                // Calculate rotation velocity
-                const now = performance.now()
-                const timeDelta = Math.max(1, now - lastRotationTimestamp)
-
-                if (lastRotationAngle !== 0) {
-                    const deltaAngle = angleDelta - lastRotationAngle
-                    rotationVelocityValue = (deltaAngle * 0.7 + rotationVelocityValue * 0.3) / (timeDelta / 16)
-                    // Cap velocity
-                    rotationVelocityValue = Math.min(0.5, Math.max(-0.5, rotationVelocityValue))
-                }
-
-                lastRotationAngle = angleDelta
-                lastRotationTimestamp = now
-
-                // Apply rotation with smooth easing
-                const newBearing = rotationStartBearing + (angleDelta * 180 / Math.PI)
-                if (!isNaN(newBearing)) {
-                    map.setBearing(newBearing)
-                    currentBearing.value = ((newBearing % 360) + 360) % 360
-                    emit('bearing-changed', currentBearing.value)
-                }
+        map.getCanvas().addEventListener('touchend', () => {
+            if (touchMoveHandler) {
+                map.getCanvas().removeEventListener('touchmove', touchMoveHandler)
+                touchMoveHandler = null
             }
-        }, { passive: false })
-
-        // Apply rotation inertia on touch end
-        map.getCanvas().addEventListener('touchend', (e) => {
-            if (e.touches.length < 2 && Math.abs(rotationVelocityValue) > 0.02) {
-                applyRotationInertia()
-            }
-
-            // Reset tracking variables
-            rotationStartBearing = 0
-            rotationStartAngle = 0
-            rotationStartTime = 0
-            lastRotationAngle = 0
-            lastRotationTimestamp = 0
+            stopPanAndApplyInertia()
         })
 
-        // Apply rotation inertia function
-        const applyRotationInertia = () => {
-            if (!map || !mapInitialized || gpsModeEnabled.value) return
-
-            let velocity = rotationVelocityValue
-            const startBearing = map.getBearing()
-            const startTime = performance.now()
-
-            const animateRotation = (now) => {
-                const elapsed = now - startTime
-                const duration = 800 // Inertia duration in ms
-
-                if (elapsed < duration && Math.abs(velocity) > 0.01) {
-                    // Decay velocity
-                    const progress = elapsed / duration
-                    const easeOut = 1 - Math.pow(progress, 2)
-                    const currentVelocity = velocity * (1 - progress)
-                    const bearingDelta = currentVelocity * 16 // Apply velocity
-
-                    const newBearing = startBearing + bearingDelta
-                    map.setBearing(newBearing)
-                    currentBearing.value = ((newBearing % 360) + 360) % 360
-                    emit('bearing-changed', currentBearing.value)
-
-                    rotationDecayFrame = requestAnimationFrame(animateRotation)
-                } else {
-                    // Final snap to 0, 90, 180, 270 for better UX
-                    const finalBearing = map.getBearing()
-                    const snapAngles = [0, 90, 180, 270, 360]
-                    let closestSnap = finalBearing
-                    let minDiff = Infinity
-
-                    snapAngles.forEach(angle => {
-                        const diff = Math.abs(finalBearing - angle)
-                        if (diff < minDiff && diff < 5) { // Only snap if within 5 degrees
-                            minDiff = diff
-                            closestSnap = angle
-                        }
-                    })
-
-                    if (closestSnap !== finalBearing) {
-                        map.easeTo({
-                            bearing: closestSnap,
-                            duration: 200,
-                            easing: (t) => 1 - Math.pow(1 - t, 3)
-                        })
-                        currentBearing.value = closestSnap
-                        emit('bearing-changed', closestSnap)
-                    }
-
-                    rotationDecayFrame = null
-                    rotationVelocityValue = 0
-                }
-            }
-
-            rotationDecayFrame = requestAnimationFrame(animateRotation)
-        }
-
-        // Add right-click + drag rotation for desktop (more intuitive)
-        let isRightClickDragging = false
-        let rightClickStartPos = null
-        let rightClickStartBearing = null
-
-        map.getCanvas().addEventListener('mousedown', (e) => {
-            if (e.button === 2 && !gpsModeEnabled.value) { // Right click
-                e.preventDefault()
-                isRightClickDragging = true
-                rightClickStartPos = { x: e.clientX, y: e.clientY }
-                rightClickStartBearing = map.getBearing()
-                map.getCanvas().style.cursor = 'grabbing'
-
-                // Cancel any inertia
-                if (rotationDecayFrame) {
-                    cancelAnimationFrame(rotationDecayFrame)
-                    rotationDecayFrame = null
-                }
+        // Optional: Add momentum scrolling with map's built-in events
+        map.on('moveend', () => {
+            // You can add additional logic here if needed
+            if (!isPanning && inertiaFrame) {
+                // Inertia is handling the movement
             }
         })
 
-        map.getCanvas().addEventListener('mousemove', (e) => {
-            if (isRightClickDragging && rightClickStartPos && rightClickStartBearing !== null) {
-                const deltaX = e.clientX - rightClickStartPos.x
-                // Convert horizontal movement to rotation (sensitivity: 0.5 degrees per pixel)
-                const bearingDelta = deltaX * 0.5
-                const newBearing = rightClickStartBearing + bearingDelta
+        // ============ END INERTIA SETUP ============
 
-                if (!isNaN(newBearing)) {
-                    map.setBearing(newBearing)
-                    currentBearing.value = ((newBearing % 360) + 360) % 360
-                    emit('bearing-changed', currentBearing.value)
+        map.on('load', () => {
+            mapInitialized = true
 
-                    // Calculate velocity for inertia
-                    rotationVelocityValue = bearingDelta * 0.3
-                    rotationVelocityValue = Math.min(2, Math.max(-2, rotationVelocityValue))
-                }
-            }
-        })
-
-        map.getCanvas().addEventListener('mouseup', (e) => {
-            if (isRightClickDragging) {
-                isRightClickDragging = false
-                map.getCanvas().style.cursor = ''
-                rightClickStartPos = null
-
-                // Apply inertia if velocity is significant
-                if (Math.abs(rotationVelocityValue) > 0.1) {
-                    applyRotationInertia()
-                }
-            }
-        })
-
-        // Prevent context menu on right-click
-        map.getCanvas().addEventListener('contextmenu', (e) => {
-            e.preventDefault()
-            return false
-        })
-
-        // Keyboard controls for rotation (optional but nice)
-        window.addEventListener('keydown', (e) => {
-            if (!map || !mapInitialized || gpsModeEnabled.value) return
-
-            // Check if target is not an input/textarea
-            const target = e.target
-            const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
-            if (isInput) return
-
-            switch (e.key) {
-                case 'ArrowLeft':
-                    e.preventDefault()
-                    rotateMapSmooth(-15)
-                    break
-                case 'ArrowRight':
-                    e.preventDefault()
-                    rotateMapSmooth(15)
-                    break
-                case 'r':
-                case 'R':
-                    e.preventDefault()
-                    resetRotation()
-                    break
-            }
-        })
-
-        // Smooth rotation method
-        const rotateMapSmooth = (degrees) => {
-            if (gpsModeEnabled.value) {
-                toggleGPSMode()
+            if (map.style && map.style.stylesheet) {
+                map.setMaxPitch(maxPitch)
+                map.setMinPitch(minPitch)
             }
 
-            const startBearing = map.getBearing()
-            const endBearing = startBearing + degrees
-            const startTime = performance.now()
-            const duration = 300
+            updateDestinationMarker()
+            updateUserMarker()
+            startWatchingLocation()
+            emit('map-ready')
 
-            const animate = (now) => {
-                const elapsed = now - startTime
-                const progress = Math.min(1, elapsed / duration)
-                const easeOutCubic = 1 - Math.pow(1 - progress, 3)
-                const current = startBearing + (degrees * easeOutCubic)
+            setTimeout(() => {
+                map.resize()
+            }, 100)
+        })
 
-                map.setBearing(current)
-                currentBearing.value = ((current % 360) + 360) % 360
+        map.on('rotate', () => {
+            if (!gpsModeEnabled.value) {
+                currentBearing.value = map.getBearing()
                 emit('bearing-changed', currentBearing.value)
-
-                if (progress < 1) {
-                    requestAnimationFrame(animate)
-                }
             }
+        })
 
-            requestAnimationFrame(animate)
-        }
+        map.on('pitch', () => {
+            currentPitch.value = map.getPitch()
+            emit('pitch-changed', currentPitch.value)
+        })
 
-        // Expose the smooth rotation method
-        const originalRotateMap = rotateMap
-        window.rotateMapSmooth = rotateMapSmooth
-
-        // ... rest of your existing map initialization code
+        // Ensure map is responsive to window resize
+        window.addEventListener('resize', () => {
+            if (map) {
+                map.resize()
+            }
+        })
 
     } catch (err) {
         console.error('Failed to initialize map:', err)
