@@ -703,7 +703,11 @@ const getTravelTime = (distanceKm, speedKmPerHour = 5) => {
     return Math.max(1, timeMinutes)
 }
 
-// Clear all route layers
+// Add these to your reactive state at the top
+let connectionSource = null
+let connectionLayer = null
+
+// Update clearRouteLayers
 const clearRouteLayers = () => {
     try {
         if (routeLayer && map && map.getLayer(routeLayer)) {
@@ -718,13 +722,23 @@ const clearRouteLayers = () => {
             map.removeSource(routeSource)
             routeSource = null
         }
+
+        // Clean up connection layer
+        if (connectionLayer && map && map.getLayer(connectionLayer)) {
+            map.removeLayer(connectionLayer)
+            connectionLayer = null
+        }
+        if (connectionSource && map && map.getSource(connectionSource)) {
+            map.removeSource(connectionSource)
+            connectionSource = null
+        }
+
         currentRouteSource = null
         currentRouteData = null
     } catch (err) {
         console.warn('Error clearing route layers:', err)
     }
 }
-
 // Cancel ongoing route request
 const cancelRouteRequest = () => {
     if (currentRouteController) {
@@ -793,15 +807,39 @@ const drawOsrmRoute = async () => {
     }
 }
 
-// Render the route on map using MapLibre
+// Update renderRoute to use the global connection variables
 const renderRoute = (routeData) => {
     if (!map || !mapInitialized) return
 
     try {
-        const { coordinates: routeCoords, distance, duration } = routeData
+        let { coordinates: routeCoords, distance, duration } = routeData
+        let needsConnection = false
+        let connectionCoords = null
 
-        // Create GeoJSON source
-        const geojson = {
+        // Check if we need to add a direct connection from user location
+        if (coordinates.value && routeCoords.length > 0) {
+            const firstRoutePoint = routeCoords[0]
+            const distanceToFirstPoint = calculateDistance(
+                coordinates.value.lat,
+                coordinates.value.lng,
+                firstRoutePoint[1],
+                firstRoutePoint[0]
+            ) * 1000 // Convert to meters
+
+            // If user is more than 20 meters from the route start, create separate connection
+            if (distanceToFirstPoint > 20) {
+                connectionCoords = [
+                    [coordinates.value.lng, coordinates.value.lat],
+                    firstRoutePoint
+                ]
+                // Remove the first point from routeCoords since we'll draw it separately
+                routeCoords = routeCoords.slice(1)
+                needsConnection = true
+            }
+        }
+
+        // Create GeoJSON source for the main route
+        const routeGeojson = {
             type: 'Feature',
             properties: {},
             geometry: {
@@ -814,7 +852,7 @@ const renderRoute = (routeData) => {
 
         map.addSource(routeSource, {
             type: 'geojson',
-            data: geojson
+            data: routeGeojson
         })
 
         // Add glow line (background)
@@ -853,32 +891,68 @@ const renderRoute = (routeData) => {
         })
         routeLayer = lineLayerId
 
-        // Add distance label at midpoint
-        const midIndex = Math.floor(routeCoords.length / 2)
-        const midPoint = routeCoords[midIndex]
-        const distanceKm = distance / 1000
-        const minutes = Math.round(duration / 60)
+        // Add connection line as a separate source and layer if needed
+        if (needsConnection && connectionCoords) {
+            connectionSource = 'connection-' + Date.now()
+            const connectionGeojson = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: connectionCoords
+                }
+            }
 
-        // Create popup for distance
-        const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
-            .setLngLat(midPoint)
-            .setHTML(`
-                <div style="background: #8B4513; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
-                    ${minutes} min • ${distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}
-                </div>
-            `)
-            .addTo(map)
+            map.addSource(connectionSource, {
+                type: 'geojson',
+                data: connectionGeojson
+            })
 
-        // Auto-remove popup after 5 seconds
-        setTimeout(() => {
-            if (popup) popup.remove()
-        }, 5000)
+            connectionLayer = connectionSource + '-line'
+            map.addLayer({
+                id: connectionLayer,
+                type: 'line',
+                source: connectionSource,
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#8B4513',
+                    'line-width': 4,
+                    'line-dasharray': [2, 3],
+                    'line-opacity': 0.8
+                }
+            })
+        }
+
+        // Add distance label at midpoint of the main route
+        if (routeCoords.length > 0) {
+            const midIndex = Math.floor(routeCoords.length / 2)
+            const midPoint = routeCoords[midIndex]
+            const distanceKm = distance / 1000
+            const minutes = Math.round(duration / 60)
+
+            // Create popup for distance
+            const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
+                .setLngLat(midPoint)
+                .setHTML(`
+                    <div style="background: #8B4513; color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+                        ${minutes} min • ${distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}
+                    </div>
+                `)
+                .addTo(map)
+
+            // Auto-remove popup after 5 seconds
+            setTimeout(() => {
+                if (popup) popup.remove()
+            }, 5000)
+        }
 
     } catch (err) {
         console.error('Error rendering route:', err)
     }
 }
-
 // Re-render route after style change
 const rerenderRouteAfterStyleChange = () => {
     if (currentRouteData && map && mapInitialized) {
@@ -1444,7 +1518,7 @@ const initMap = () => {
         }), 'top-right')
 
         // ============ ADD INERTIA EVENT LISTENERS HERE ============
-        
+
         // Mouse events for desktop inertia
         map.on('mousedown', () => {
             // Cancel any ongoing inertia when user starts new interaction
@@ -1454,20 +1528,20 @@ const initMap = () => {
             }
             inertiaVelocity = { x: 0, y: 0 }
         })
-        
+
         map.on('mousemove', (e) => {
             if (e.originalEvent.buttons === 1) { // Left button pressed
                 trackPanMovement(e.originalEvent)
             }
         })
-        
+
         map.on('mouseup', () => {
             stopPanAndApplyInertia()
         })
-        
+
         // Touch events for mobile inertia
         let touchMoveHandler = null
-        
+
         map.getCanvas().addEventListener('touchstart', (e) => {
             // Cancel inertia on touch start
             if (inertiaFrame) {
@@ -1476,7 +1550,7 @@ const initMap = () => {
             }
             inertiaVelocity = { x: 0, y: 0 }
             lastPanPosition = null
-            
+
             if (e.touches.length === 1) {
                 touchMoveHandler = (moveEvent) => {
                     trackPanMovement(moveEvent)
@@ -1484,7 +1558,7 @@ const initMap = () => {
                 map.getCanvas().addEventListener('touchmove', touchMoveHandler)
             }
         })
-        
+
         map.getCanvas().addEventListener('touchend', () => {
             if (touchMoveHandler) {
                 map.getCanvas().removeEventListener('touchmove', touchMoveHandler)
@@ -1492,7 +1566,7 @@ const initMap = () => {
             }
             stopPanAndApplyInertia()
         })
-        
+
         // Optional: Add momentum scrolling with map's built-in events
         map.on('moveend', () => {
             // You can add additional logic here if needed
@@ -1500,27 +1574,27 @@ const initMap = () => {
                 // Inertia is handling the movement
             }
         })
-        
+
         // ============ END INERTIA SETUP ============
 
         map.on('load', () => {
             mapInitialized = true
-            
+
             if (map.style && map.style.stylesheet) {
                 map.setMaxPitch(maxPitch)
                 map.setMinPitch(minPitch)
             }
-            
+
             updateDestinationMarker()
             updateUserMarker()
             startWatchingLocation()
             emit('map-ready')
-            
+
             setTimeout(() => {
                 map.resize()
             }, 100)
         })
-        
+
         map.on('rotate', () => {
             if (!gpsModeEnabled.value) {
                 currentBearing.value = map.getBearing()
@@ -1550,7 +1624,7 @@ const initMap = () => {
 const setupTouchGestures = () => {
     const mapElement = document.getElementById('map')
     if (!mapElement) return
-    
+
     mapElement.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
             // Pinch gesture detected
@@ -1566,28 +1640,28 @@ const setupTouchGestures = () => {
             }
         }
     })
-    
+
     mapElement.addEventListener('touchmove', (e) => {
         if (touchStart && e.touches.length === 2) {
             const newDistance = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
             )
-            
+
             // Dynamically adjust zoom sensitivity based on pinch speed
             const delta = newDistance - touchStart.distance
             const sensitivity = Math.abs(delta) > 50 ? 0.02 : 0.01
             const zoomDelta = delta * sensitivity
-            
+
             if (map && mapInitialized) {
                 const newZoom = Math.min(22, Math.max(1, map.getZoom() + zoomDelta))
                 map.setZoom(newZoom)
             }
-            
+
             touchStart.distance = newDistance
         }
     })
-    
+
     mapElement.addEventListener('touchend', () => {
         touchStart = null
     })
@@ -1595,80 +1669,80 @@ const setupTouchGestures = () => {
 
 const startInertia = () => {
     if (inertiaFrame) cancelAnimationFrame(inertiaFrame)
-    
+
     // Only apply inertia if there's significant velocity
     if (Math.abs(inertiaVelocity.x) < 0.5 && Math.abs(inertiaVelocity.y) < 0.5) {
         inertiaVelocity = { x: 0, y: 0 }
         return
     }
-    
+
     const applyInertia = () => {
         if (!map || !mapInitialized) {
             inertiaVelocity = { x: 0, y: 0 }
             return
         }
-        
+
         // Apply friction
         inertiaVelocity.x *= 0.95
         inertiaVelocity.y *= 0.95
-        
+
         // Stop when velocity is very low
         if (Math.abs(inertiaVelocity.x) < 0.1 && Math.abs(inertiaVelocity.y) < 0.1) {
             inertiaVelocity = { x: 0, y: 0 }
             inertiaFrame = null
             return
         }
-        
+
         // Calculate new center based on velocity
         const center = map.getCenter()
         const zoom = map.getZoom()
-        
+
         // Convert screen velocity to geographical delta
         const metersPerPixel = 156543.03392 * Math.cos(center.lat * Math.PI / 180) / Math.pow(2, zoom)
         const lngDelta = (inertiaVelocity.x * metersPerPixel * 0.00001) / (Math.cos(center.lat * Math.PI / 180))
         const latDelta = inertiaVelocity.y * metersPerPixel * 0.00001
-        
+
         const newCenter = {
             lng: center.lng - lngDelta,
             lat: center.lat - latDelta
         }
-        
+
         // Apply smooth movement
         map.easeTo({
             center: [newCenter.lng, newCenter.lat],
             duration: 16, // 60fps
             easing: (t) => t // Linear for inertia
         })
-        
+
         inertiaFrame = requestAnimationFrame(applyInertia)
     }
-    
+
     inertiaFrame = requestAnimationFrame(applyInertia)
 }
 
 const trackPanMovement = (e) => {
     if (!map || !mapInitialized) return
-    
+
     const currentTime = Date.now()
     const currentPos = {
         x: e.clientX || (e.touches && e.touches[0]?.clientX) || 0,
         y: e.clientY || (e.touches && e.touches[0]?.clientY) || 0
     }
-    
+
     if (lastPanPosition && lastPanTime) {
         const timeDiff = Math.max(1, currentTime - lastPanTime)
         const velocityX = (currentPos.x - lastPanPosition.x) / timeDiff
         const velocityY = (currentPos.y - lastPanPosition.y) / timeDiff
-        
+
         // Smooth velocity to reduce jitter
         inertiaVelocity.x = inertiaVelocity.x * 0.7 + velocityX * 0.3
         inertiaVelocity.y = inertiaVelocity.y * 0.7 + velocityY * 0.3
-        
+
         // Cap maximum velocity
         inertiaVelocity.x = Math.min(5, Math.max(-5, inertiaVelocity.x))
         inertiaVelocity.y = Math.min(5, Math.max(-5, inertiaVelocity.y))
     }
-    
+
     lastPanPosition = currentPos
     lastPanTime = currentTime
     isPanning = true
@@ -1676,17 +1750,17 @@ const trackPanMovement = (e) => {
 
 const stopPanAndApplyInertia = () => {
     if (!isPanning) return
-    
+
     isPanning = false
-    
+
     // Only apply inertia if dragging ended recently and velocity is significant
-    if (Date.now() - lastPanTime < 100 && 
+    if (Date.now() - lastPanTime < 100 &&
         (Math.abs(inertiaVelocity.x) > 0.3 || Math.abs(inertiaVelocity.y) > 0.3)) {
         startInertia()
     } else {
         inertiaVelocity = { x: 0, y: 0 }
     }
-    
+
     lastPanPosition = null
     lastPanTime = 0
 }
@@ -1703,11 +1777,7 @@ const changeMapStyle = (style) => {
     // Restore route after style loads
     if (savedRouteData) {
         map.once('styledata', () => {
-            setTimeout(() => {
-                if (savedRouteData && map && mapInitialized) {
-                    renderRoute(savedRouteData)
-                }
-            }, 100)
+            rerenderRouteAfterStyleChange()
         })
     }
 }
@@ -1836,10 +1906,10 @@ onBeforeUnmount(() => {
     /* CRITICAL: Enable hardware acceleration */
     transform: translateZ(0);
     will-change: transform;
-    
+
     /* Improve touch handling */
     touch-action: none;
-    
+
     /* Smoother rendering */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -2240,7 +2310,7 @@ onBeforeUnmount(() => {
     /* Hardware acceleration for canvas */
     transform: translateZ(0);
     will-change: transform;
-    
+
     /* Smoother rendering */
     image-rendering: crisp-edges;
     image-rendering: -webkit-optimize-contrast;
