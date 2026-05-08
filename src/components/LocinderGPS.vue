@@ -22,9 +22,7 @@
 
         <!-- GPS Mode Toggle -->
         <div class="gps-mode-toggle" v-if="mapInitialized">
-            <v-btn @click="toggleGPSMode" 
-                :color="gpsModeEnabled ? '#c70000' : '#009207'" 
-                class="start-tracing-btn"
+            <v-btn @click="toggleGPSMode" :color="gpsModeEnabled ? '#c70000' : '#009207'" class="start-tracing-btn"
                 size="small">{{ gpsModeEnabled ? 'Stop' : 'Start following direction' }}
             </v-btn>
         </div>
@@ -189,9 +187,16 @@ let routeUpdateTimeout = null
 let addressUpdateTimeout = null
 let lastAddressUpdate = 0
 const ADDRESS_UPDATE_THROTTLE = 5000
-const ROUTE_UPDATE_DEBOUNCE = 1000
+const ROUTE_UPDATE_DEBOUNCE = 2000
+const LOCATION_WATCH_INTERVAL = 3000
 let lastZoomLevel = ref(17) // Store zoom level for GPS mode
 let locationWatchInterval = null
+let touchStart = null
+let inertiaVelocity = { x: 0, y: 0 }
+let lastPanPosition = null
+let inertiaFrame = null
+let isPanning = false
+let lastPanTime = 0
 
 // Abort controller for route requests
 let currentRouteController = null
@@ -205,9 +210,9 @@ const mapStyles = [
         attribution: 'Locinder'
     },
     {
-        id: 'humanitarian',
-        name: 'Humanitarian',
-        url: 'https://tiles.versatiles.org/assets/styles/colorful/style.json',
+        id: 'lightweight',
+        name: 'Fast',
+        url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
         attribution: 'Locinder'
     },
     {
@@ -438,6 +443,10 @@ const enableGPSFollowMode = (location) => {
     }, 2000)
 }
 
+// Improve GPS location tracking with requestAnimationFrame
+let animationFrameId = null
+let lastGPSPosition = null
+
 const updateGPSLocation = async () => {
     if (!gpsModeEnabled.value || !map || !mapInitialized) return
 
@@ -468,13 +477,26 @@ const updateGPSLocation = async () => {
             console.error('GPS location update failed:', err)
         }, {
             enableHighAccuracy: true,
-            timeout: 5000
+            timeout: 5000,
+            maximumAge: 1000 // Add maximum age for smoother updates
         })
-        return // Wait for async callback
+        return
     }
 
-    if (newLocation) {
-        updateMapPosition(newLocation)
+    if (newLocation &&
+        (!lastGPSPosition ||
+            Math.abs(newLocation.lat - lastGPSPosition.lat) > 0.00001 ||
+            Math.abs(newLocation.lng - lastGPSPosition.lng) > 0.00001)) {
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId)
+        }
+
+        animationFrameId = requestAnimationFrame(() => {
+            updateMapPosition(newLocation)
+            lastGPSPosition = newLocation
+            animationFrameId = null
+        })
     }
 }
 
@@ -489,26 +511,51 @@ const updateMapPosition = (location) => {
         userMarker.setLngLat([location.lng, location.lat])
     }
 
-    // Smoothly move map to new location with zoom
+    // Use easeTo with bezier easing for smoother movement
     map.easeTo({
         center: [location.lng, location.lat],
         zoom: lastZoomLevel.value,
-        duration: 800,
+        duration: 1200, // Slightly slower for smoother animation
+        easing: (t) => {
+            // Cubic bezier easing for natural movement
+            return t < 0.5
+                ? 4 * t * t * t
+                : 1 - Math.pow(-2 * t + 2, 3) / 2
+        },
         pitch: currentPitch.value
     })
 
-    // Update bearing if we have heading
+    // Update bearing with smooth rotation
     if (lastHeading !== null) {
         const currentBearing = map.getBearing()
         let delta = lastHeading - currentBearing
 
+        // Take the shortest path
         if (delta > 180) delta -= 360
         if (delta < -180) delta += 360
 
-        map.easeTo({
-            bearing: currentBearing + delta * 0.3,
-            duration: 500
-        })
+        // Smooth rotation with custom easing
+        const startBearing = currentBearing
+        const endBearing = currentBearing + delta * 0.3
+        const startTime = performance.now()
+        const duration = 800
+
+        const animateBearing = (now) => {
+            const elapsed = now - startTime
+            const t = Math.min(1, elapsed / duration)
+            // Ease out cubic
+            const eased = 1 - Math.pow(1 - t, 3)
+            const newBearing = startBearing + (endBearing - startBearing) * eased
+            map.setBearing(newBearing)
+
+            if (t < 1) {
+                requestAnimationFrame(animateBearing)
+            } else {
+                currentBearing.value = endBearing
+            }
+        }
+
+        requestAnimationFrame(animateBearing)
     }
 
     // Update route to destination
@@ -541,13 +588,20 @@ const updateMapRotationForGPS = () => {
 }
 
 // ==================== Rotation Methods ====================
-const setMapBearing = (bearing, options = { animate: true }) => {
+const setMapBearing = (bearing, options = { animate: true, duration: 300 }) => {
     if (!map || !mapInitialized) return
 
     try {
         const normalizedBearing = ((bearing % 360) + 360) % 360
         if (options.animate) {
-            map.easeTo({ bearing: normalizedBearing, duration: 300 })
+            map.easeTo({
+                bearing: normalizedBearing,
+                duration: options.duration || 300,
+                easing: (t) => {
+                    // Smooth easing function
+                    return 1 - Math.pow(1 - t, 3)
+                }
+            })
         } else {
             map.setBearing(normalizedBearing)
         }
@@ -572,20 +626,29 @@ const resetRotation = () => {
 
 const rotateMap = (deltaDegrees) => {
     if (gpsModeEnabled.value) {
-        toggleGPSMode() // Disable GPS mode when manually rotating
+        toggleGPSMode()
     }
     const newBearing = (currentBearing.value + deltaDegrees) % 360
-    setMapBearing(newBearing, { animate: true })
+    setMapBearing(newBearing, { animate: true, duration: 400 })
 }
 
 // ==================== 3D Tilt Methods ====================
-const setMapPitch = (pitch, options = { animate: true }) => {
+const setMapPitch = (pitch, options = { animate: true, duration: 300 }) => {
     if (!map || !mapInitialized) return
 
     try {
         const normalizedPitch = Math.min(maxPitch, Math.max(minPitch, pitch))
         if (options.animate) {
-            map.easeTo({ pitch: normalizedPitch, duration: 300 })
+            map.easeTo({
+                pitch: normalizedPitch,
+                duration: options.duration || 300,
+                easing: (t) => {
+                    // Smooth easing for pitch
+                    return t < 0.5
+                        ? 4 * t * t * t
+                        : 1 - Math.pow(-2 * t + 2, 3) / 2
+                }
+            })
         } else {
             map.setPitch(normalizedPitch)
         }
@@ -1254,7 +1317,7 @@ const startWatchingLocation = () => {
             } catch (err) {
                 console.error('Watch position error:', err)
             }
-        }, 5000)
+        }, LOCATION_WATCH_INTERVAL)
     } else {
         watchId = navigator.geolocation.watchPosition(
             async (position) => {
@@ -1357,23 +1420,107 @@ const initMap = () => {
             bearing: currentBearing.value,
             pitch: currentPitch.value,
             minPitch: minPitch,
-            maxPitch: maxPitch
+            maxPitch: maxPitch,
+            renderWorldCopies: false,
+            antialias: true,
+            preserveDrawingBuffer: false,
+            fadeDuration: 0,
+            crossSourceCollisions: false,
+            dragRotate: true,
+            dragPan: true,
+            touchZoomRotate: true,
+            doubleClickZoom: true,
+            scrollZoom: {
+                around: 'center',
+                smooth: true
+            }
         })
 
-        // Add navigation control (includes rotation and compass)
+        // Add minimal navigation control
         map.addControl(new maplibregl.NavigationControl({
             showCompass: true,
-            showZoom: true
+            showZoom: true,
+            visualizePitch: true
         }), 'top-right')
+
+        // ============ ADD INERTIA EVENT LISTENERS HERE ============
+        
+        // Mouse events for desktop inertia
+        map.on('mousedown', () => {
+            // Cancel any ongoing inertia when user starts new interaction
+            if (inertiaFrame) {
+                cancelAnimationFrame(inertiaFrame)
+                inertiaFrame = null
+            }
+            inertiaVelocity = { x: 0, y: 0 }
+        })
+        
+        map.on('mousemove', (e) => {
+            if (e.originalEvent.buttons === 1) { // Left button pressed
+                trackPanMovement(e.originalEvent)
+            }
+        })
+        
+        map.on('mouseup', () => {
+            stopPanAndApplyInertia()
+        })
+        
+        // Touch events for mobile inertia
+        let touchMoveHandler = null
+        
+        map.getCanvas().addEventListener('touchstart', (e) => {
+            // Cancel inertia on touch start
+            if (inertiaFrame) {
+                cancelAnimationFrame(inertiaFrame)
+                inertiaFrame = null
+            }
+            inertiaVelocity = { x: 0, y: 0 }
+            lastPanPosition = null
+            
+            if (e.touches.length === 1) {
+                touchMoveHandler = (moveEvent) => {
+                    trackPanMovement(moveEvent)
+                }
+                map.getCanvas().addEventListener('touchmove', touchMoveHandler)
+            }
+        })
+        
+        map.getCanvas().addEventListener('touchend', () => {
+            if (touchMoveHandler) {
+                map.getCanvas().removeEventListener('touchmove', touchMoveHandler)
+                touchMoveHandler = null
+            }
+            stopPanAndApplyInertia()
+        })
+        
+        // Optional: Add momentum scrolling with map's built-in events
+        map.on('moveend', () => {
+            // You can add additional logic here if needed
+            if (!isPanning && inertiaFrame) {
+                // Inertia is handling the movement
+            }
+        })
+        
+        // ============ END INERTIA SETUP ============
 
         map.on('load', () => {
             mapInitialized = true
+            
+            if (map.style && map.style.stylesheet) {
+                map.setMaxPitch(maxPitch)
+                map.setMinPitch(minPitch)
+            }
+            
             updateDestinationMarker()
             updateUserMarker()
             startWatchingLocation()
             emit('map-ready')
+            
+            setTimeout(() => {
+                map.resize()
+            }, 100)
         })
-
+        
         map.on('rotate', () => {
             if (!gpsModeEnabled.value) {
                 currentBearing.value = map.getBearing()
@@ -1386,30 +1533,162 @@ const initMap = () => {
             emit('pitch-changed', currentPitch.value)
         })
 
-        map.on('styledata', () => {
-            // Re-render route when style changes (map style selector)
-            if (currentRouteData) {
-                rerenderRouteAfterStyleChange()
+        // Ensure map is responsive to window resize
+        window.addEventListener('resize', () => {
+            if (map) {
+                map.resize()
             }
         })
-
-        setTimeout(() => {
-            if (map) {
-                map.resize()
-            }
-        }, 100)
-
-        setTimeout(() => {
-            if (map) {
-                map.resize()
-            }
-        }, 500)
 
     } catch (err) {
         console.error('Failed to initialize map:', err)
         error.value = 'Failed to load map'
         mapInitialized = false
     }
+}
+
+const setupTouchGestures = () => {
+    const mapElement = document.getElementById('map')
+    if (!mapElement) return
+    
+    mapElement.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            // Pinch gesture detected
+            touchStart = {
+                x1: e.touches[0].clientX,
+                y1: e.touches[0].clientY,
+                x2: e.touches[1].clientX,
+                y2: e.touches[1].clientY,
+                distance: Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                )
+            }
+        }
+    })
+    
+    mapElement.addEventListener('touchmove', (e) => {
+        if (touchStart && e.touches.length === 2) {
+            const newDistance = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+            
+            // Dynamically adjust zoom sensitivity based on pinch speed
+            const delta = newDistance - touchStart.distance
+            const sensitivity = Math.abs(delta) > 50 ? 0.02 : 0.01
+            const zoomDelta = delta * sensitivity
+            
+            if (map && mapInitialized) {
+                const newZoom = Math.min(22, Math.max(1, map.getZoom() + zoomDelta))
+                map.setZoom(newZoom)
+            }
+            
+            touchStart.distance = newDistance
+        }
+    })
+    
+    mapElement.addEventListener('touchend', () => {
+        touchStart = null
+    })
+}
+
+const startInertia = () => {
+    if (inertiaFrame) cancelAnimationFrame(inertiaFrame)
+    
+    // Only apply inertia if there's significant velocity
+    if (Math.abs(inertiaVelocity.x) < 0.5 && Math.abs(inertiaVelocity.y) < 0.5) {
+        inertiaVelocity = { x: 0, y: 0 }
+        return
+    }
+    
+    const applyInertia = () => {
+        if (!map || !mapInitialized) {
+            inertiaVelocity = { x: 0, y: 0 }
+            return
+        }
+        
+        // Apply friction
+        inertiaVelocity.x *= 0.95
+        inertiaVelocity.y *= 0.95
+        
+        // Stop when velocity is very low
+        if (Math.abs(inertiaVelocity.x) < 0.1 && Math.abs(inertiaVelocity.y) < 0.1) {
+            inertiaVelocity = { x: 0, y: 0 }
+            inertiaFrame = null
+            return
+        }
+        
+        // Calculate new center based on velocity
+        const center = map.getCenter()
+        const zoom = map.getZoom()
+        
+        // Convert screen velocity to geographical delta
+        const metersPerPixel = 156543.03392 * Math.cos(center.lat * Math.PI / 180) / Math.pow(2, zoom)
+        const lngDelta = (inertiaVelocity.x * metersPerPixel * 0.00001) / (Math.cos(center.lat * Math.PI / 180))
+        const latDelta = inertiaVelocity.y * metersPerPixel * 0.00001
+        
+        const newCenter = {
+            lng: center.lng - lngDelta,
+            lat: center.lat - latDelta
+        }
+        
+        // Apply smooth movement
+        map.easeTo({
+            center: [newCenter.lng, newCenter.lat],
+            duration: 16, // 60fps
+            easing: (t) => t // Linear for inertia
+        })
+        
+        inertiaFrame = requestAnimationFrame(applyInertia)
+    }
+    
+    inertiaFrame = requestAnimationFrame(applyInertia)
+}
+
+const trackPanMovement = (e) => {
+    if (!map || !mapInitialized) return
+    
+    const currentTime = Date.now()
+    const currentPos = {
+        x: e.clientX || (e.touches && e.touches[0]?.clientX) || 0,
+        y: e.clientY || (e.touches && e.touches[0]?.clientY) || 0
+    }
+    
+    if (lastPanPosition && lastPanTime) {
+        const timeDiff = Math.max(1, currentTime - lastPanTime)
+        const velocityX = (currentPos.x - lastPanPosition.x) / timeDiff
+        const velocityY = (currentPos.y - lastPanPosition.y) / timeDiff
+        
+        // Smooth velocity to reduce jitter
+        inertiaVelocity.x = inertiaVelocity.x * 0.7 + velocityX * 0.3
+        inertiaVelocity.y = inertiaVelocity.y * 0.7 + velocityY * 0.3
+        
+        // Cap maximum velocity
+        inertiaVelocity.x = Math.min(5, Math.max(-5, inertiaVelocity.x))
+        inertiaVelocity.y = Math.min(5, Math.max(-5, inertiaVelocity.y))
+    }
+    
+    lastPanPosition = currentPos
+    lastPanTime = currentTime
+    isPanning = true
+}
+
+const stopPanAndApplyInertia = () => {
+    if (!isPanning) return
+    
+    isPanning = false
+    
+    // Only apply inertia if dragging ended recently and velocity is significant
+    if (Date.now() - lastPanTime < 100 && 
+        (Math.abs(inertiaVelocity.x) > 0.3 || Math.abs(inertiaVelocity.y) > 0.3)) {
+        startInertia()
+    } else {
+        inertiaVelocity = { x: 0, y: 0 }
+    }
+    
+    lastPanPosition = null
+    lastPanTime = 0
 }
 
 const changeMapStyle = (style) => {
@@ -1507,6 +1786,7 @@ watch(coordinates, () => {
 onMounted(() => {
     setTimeout(() => {
         initMap()
+        setupTouchGestures()
     }, 100)
 })
 
@@ -1553,7 +1833,16 @@ onBeforeUnmount(() => {
     border-radius: 20px;
     overflow: hidden;
     border-bottom: 2px solid #ccc;
-    touch-action: pinch-zoom !important;
+    /* CRITICAL: Enable hardware acceleration */
+    transform: translateZ(0);
+    will-change: transform;
+    
+    /* Improve touch handling */
+    touch-action: none;
+    
+    /* Smoother rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .map-style-selector {
@@ -1948,16 +2237,38 @@ onBeforeUnmount(() => {
 :deep(.maplibregl-canvas) {
     border-radius: 20px !important;
     border: 1px solid #ccc;
+    /* Hardware acceleration for canvas */
+    transform: translateZ(0);
+    will-change: transform;
+    
+    /* Smoother rendering */
+    image-rendering: crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+}
+
+:deep(.maplibregl-canvas-container) {
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 :deep(.maplibregl-ctrl-group) {
     border-radius: 8px !important;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+}
+
+:deep(.maplibregl-ctrl-group:hover) {
+    transform: scale(1.05);
 }
 
 :deep(.maplibregl-ctrl-compass) {
-    transform-origin: center;
+    /* transform-origin: center; */
+    transition: transform 0.3s ease;
+}
+
+:deep(.maplibregl-ctrl-compass:hover) {
+    transform: rotate(15deg);
 }
 
 :deep(.maplibregl-ctrl-compass .maplibregl-ctrl-icon) {
@@ -1971,8 +2282,14 @@ onBeforeUnmount(() => {
     visibility: hidden !important;
 }
 
+:deep(.maplibregl-popup) {
+    will-change: transform;
+    transition: transform 0.2s ease-out;
+}
+
 :deep(.maplibregl-popup-content) {
     z-index: 9999;
+    transition: all 0.2s ease;
 }
 
 :deep(.maplibregl-popup-close-button) {

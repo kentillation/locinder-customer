@@ -199,42 +199,17 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             if (!token.value) {
                 clearAuth();
-                initialized.value = true;
                 return false;
             }
 
-            // Uncomment this if you want to verify the token with your backend
-            /*
-            try {
-                const response = await apiClient.get('v1/customer/verify-token', {
-                    headers: {
-                        Authorization: `Bearer ${token.value}`
-                    }
-                });
-                
-                if (response.status === 200 && response.data.valid) {
-                    initialized.value = true;
-                    return true;
-                } else {
-                    clearAuth();
-                    initialized.value = true;
-                    return false;
-                }
-            } catch (err) {
-                // If token is invalid or expired, clear it
-                if (err.response?.status === 401) {
-                    clearAuth();
-                }
-                initialized.value = true;
+            const isValid = await validateToken();
+
+            if (!isValid) {
+                clearAuth();
                 return false;
             }
-            */
 
-            // Simple validation - just check if token exists
-            // This is faster but less secure
-            initialized.value = true;
             return true;
-
         } catch (err) {
             console.error('Auth check error:', err);
             clearAuth();
@@ -261,33 +236,22 @@ export const useAuthStore = defineStore('auth', () => {
         initialized.value = true;
     };
 
-    const handleUnauthenticated = () => {
-        clearAuth();
-    };
+    const validateToken = async () => {
+        if (!token.value) return false;
 
-    const validateSession = async () => {
-        if (!token.value) {
-            handleUnauthenticated();
-            return false;
-        }
-
-        // Optional: Verify token with backend
         try {
             const response = await apiClient.get('v1/customer/verify-token', {
                 headers: {
                     Authorization: `Bearer ${token.value}`
-                }
+                },
+                timeout: 5000
             });
 
-            if (response.status === 200 && response.data.valid) {
-                return true;
-            } else {
-                handleUnauthenticated();
-                return false;
-            }
+            return response.status === 200;
         } catch (err) {
-            if (err.response?.status === 401) {
-                handleUnauthenticated();
+            console.error('Token validation failed:', err);
+            if (err.response?.status === 401 || err.response?.status === 403) {
+                clearAuth();
             }
             return false;
         }
@@ -313,6 +277,6 @@ export const useAuthStore = defineStore('auth', () => {
         clearAuth,
         syncFromLocalStorage,
         checkAuth,
-        validateSession,
+        validateToken,
     };
 });
