@@ -227,7 +227,7 @@ export const useProductsStore = defineStore('products', {
             this.error = null;
 
             const authStore = useAuthStore();
-            
+
             try {
                 if (!PRODUCTS_API || typeof PRODUCTS_API.fetchBaseCategoriesApi !== 'function') {
                     throw new Error('PRODUCTS_API service is not properly initialized');
@@ -240,6 +240,7 @@ export const useProductsStore = defineStore('products', {
                 }
             } catch (error) {
                 console.error('[store] Failed to fetch base categories:', error);
+                console.log("Origin error:", error);
                 if(error.response?.data?.message === "Unauthenticated.") {
                     authStore.clearAuth();
                     this.$router.replace('/');
