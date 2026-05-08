@@ -410,40 +410,64 @@ const toggleGPSMode = async () => {
 const enableGPSFollowMode = (location) => {
     if (!map || !mapInitialized || !location) return
 
-    // Set tilt for better 3D view
+    // 🔥 NEW: compute route bearing
+    let routeBearing = null
+
+    if (currentRouteData?.coordinates?.length > 1) {
+        routeBearing = getRouteInitialBearing(
+            location,
+            currentRouteData.coordinates
+        )
+    }
+
+    // fallback to device heading if no route yet
+    const finalBearing = routeBearing ?? lastHeading ?? map.getBearing()
+
+    // set orientation BEFORE flying (important for smoothness)
+    setMapBearing(finalBearing, { animate: true, duration: 500 })
+
+    // tilt for navigation feel
     setMapPitch(75, { animate: true })
 
-    // Set zoom to appropriate level for tracking
-    const gpsZoom = 18 // Higher zoom for better tracking
+    const gpsZoom = 18
     lastZoomLevel.value = gpsZoom
 
-    // Fly to current location with appropriate zoom and bearing
     map.flyTo({
         center: [location.lng, location.lat],
         zoom: gpsZoom,
-        bearing: lastHeading || map.getBearing(),
+        bearing: finalBearing, // 🔥 important
         duration: 850,
         essential: true,
         pitch: 75
     })
 
-    // Start continuous location tracking for GPS mode
     if (locationWatchInterval) {
         clearInterval(locationWatchInterval)
     }
 
-    // Update every 2 seconds in GPS mode for smooth following
     locationWatchInterval = setInterval(async () => {
         if (!gpsModeEnabled.value || !map || !mapInitialized) {
-            if (locationWatchInterval) {
-                clearInterval(locationWatchInterval)
-                locationWatchInterval = null
-            }
+            clearInterval(locationWatchInterval)
+            locationWatchInterval = null
             return
         }
 
         await updateGPSLocation()
     }, 1200)
+}
+
+const getRouteInitialBearing = (userLocation, routeCoords) => {
+    if (!routeCoords || routeCoords.length < 2) return 0
+
+    // find nearest route point index (optional improvement)
+    const nextPoint = routeCoords[1] // simple approach
+
+    return calculateHeading(
+        userLocation.lat,
+        userLocation.lng,
+        nextPoint[1],
+        nextPoint[0]
+    )
 }
 
 // Improve GPS location tracking with requestAnimationFrame
