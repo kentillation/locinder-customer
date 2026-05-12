@@ -30,7 +30,7 @@
 
                                 <v-btn :disabled="!isEmailFormValid || submittingEmail" color="primary" type="submit"
                                     size="large" class="login-btn mt-6" height="52" block :loading="submittingEmail">
-                                    <span v-if="!submittingEmail">Submit email</span>
+                                    <span v-if="!submittingEmail">Submit Email</span>
                                     <span v-else>Submitting...</span>
                                 </v-btn>
 
@@ -64,7 +64,7 @@
                                 <v-btn :disabled="!isRecoveryCodeFormValid || submittingRecoveryCode" color="primary"
                                     type="submit" size="large" class="login-btn mt-6" height="52" block
                                     :loading="submittingRecoveryCode">
-                                    <span v-if="!submittingRecoveryCode">Submit recovery code</span>
+                                    <span v-if="!submittingRecoveryCode">Submit Recovery Code</span>
                                     <span v-else>Submitting...</span>
                                 </v-btn>
 
@@ -152,7 +152,7 @@ export default {
     },
     data() {
         return {
-            logo: require('@/assets/Logo.png'),
+            logo: require('@/assets/Locinder-Submark.png'),
             customer_email: '',
             recovery_code: '',
             new_password: '',
@@ -320,6 +320,24 @@ export default {
     background: transparent !important;
 }
 
+.logo-wrapper {
+    position: relative;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-img {
+    width: 100%;
+    max-width: 110px;
+    height: auto;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s ease;
+    border-radius: 15px;
+}
+
 /* Form Section */
 .form-section {
     padding: 48px 40px;
@@ -343,28 +361,9 @@ export default {
 
 .subtitle {
     text-align: left;
-    color: #a2a2a2;
+    color: #707070;
     font-size: 1rem;
     margin-bottom: 25px;
-}
-
-/* Logo Animation */
-.logo-wrapper {
-    position: relative;
-    margin: 0 auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.logo-img {
-    width: 100%;
-    max-width: 200px;
-    height: auto;
-    position: relative;
-    z-index: 1;
-    transition: transform 0.3s ease;
-    border-radius: 15px;
 }
 
 /* Form Elements */

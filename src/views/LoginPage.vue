@@ -11,7 +11,7 @@
                                 <img :src="logo" class="logo-img" loading="lazy" alt="Poofsa Logo" />
                             </div>
 
-                            <h1>Welcome to Locinder!</h1>
+                            <h1>Welcome to <span class="text-accent">Locinder</span></h1>
 
                             <p class="subtitle">A food discovery app for local delicacies in Sagay City</p>
 
@@ -88,7 +88,7 @@ export default {
     },
     data() {
         return {
-            logo: require('@/assets/Logo.png'),
+            logo: require('@/assets/Locinder-Submark.png'),
             customer_email: '',
             customer_password: '',
             error_text: '',
@@ -178,6 +178,29 @@ export default {
     overflow: hidden;
 }
 
+.logo-wrapper {
+    position: relative;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logo-img {
+    width: 100%;
+    max-width: 110px;
+    height: auto;
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s ease;
+    border-radius: 15px;
+}
+
+.text-accent {
+    color:#d46600;
+    font-weight: 600;
+}
+
 /* Login Card */
 .login-card {
     border-radius: 30px;
@@ -203,7 +226,7 @@ export default {
     font-size: 2rem;
     font-weight: 500;
     text-align: center;
-    margin: 20px 0 0;
+    margin: 16px 0 0;
     position: relative;
     display: inline-block;
     width: 100%;
@@ -211,28 +234,9 @@ export default {
 
 .subtitle {
     text-align: center;
-    color: #a2a2a2;
+    color: #707070;
     font-size: 1rem;
     margin-bottom: 25px;
-}
-
-/* Logo Animation */
-.logo-wrapper {
-    position: relative;
-    margin: 0 auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.logo-img {
-    width: 100%;
-    max-width: 200px;
-    height: auto;
-    position: relative;
-    z-index: 1;
-    transition: transform 0.3s ease;
-    border-radius: 15px;
 }
 
 /* Form Elements */
@@ -284,7 +288,7 @@ export default {
 
 .forgot-password {
     font-size: 0.85rem;
-    color: #5c3a21;
+    color: #d46600;
     cursor: pointer;
     font-weight: 500;
     transition: color 0.2s ease;
