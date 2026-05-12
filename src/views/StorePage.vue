@@ -183,7 +183,7 @@
                                     </span>
                                 </div>
                                 <v-divider class="my-4"></v-divider>
-                                <v-btn @click="this.$router.push('/')" height="50" color="#5c3a21" class="mt-5">
+                                <v-btn @click="$router.push('/')" height="50" color="#5c3a21" class="mt-5">
                                     Visit More Stores
                                 </v-btn>
                             </div>
