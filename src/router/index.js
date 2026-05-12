@@ -2,6 +2,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import NotFound from '@/views/NotFound.vue';
 import LoginPage from '@/views/LoginPage.vue';
+import ForgotPassword from '@/views/ForgotPassword.vue';
 import HomePage from '@/views/HomePage.vue';
 import RegisterPage from '@/views/RegisterPage.vue';
 import ShopPage from '@/views/ShopPage.vue';
@@ -15,6 +16,7 @@ const routes = [
   { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
   { path: '/', name: 'LoginPage', component: LoginPage },
   { path: '/register', name: 'RegisterPage', component: RegisterPage },
+  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/home', name: 'HomePage', component: HomePage, meta: { requiresAuth: true } },
   { path: '/shop', name: 'ShopPage', component: ShopPage, meta: { requiresAuth: true } },
   { path: '/store', name: 'StorePage', component: StorePage, meta: { requiresAuth: true } },

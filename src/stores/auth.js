@@ -104,7 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
     const submitRecoveryCode = async (credentials) => {
         error.value = null;
         try {
-            const response = await apiClient.post('v1/public/verify-recovery-code', credentials);
+            const response = await apiClient.post('v1/customer/verify-recovery-code', credentials);
             const data = response.data;
             if (response.status === 200) {
                 return {
@@ -123,7 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
     const submitNewPassword = async (credentials) => {
         error.value = null;
         try {
-            const response = await apiClient.post('v1/public/recover-account', credentials);
+            const response = await apiClient.post('v1/customer/recover-account', credentials);
             if (response.status === 200) {
                 const data = response.data;
 

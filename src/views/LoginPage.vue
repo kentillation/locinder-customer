@@ -1,12 +1,5 @@
 <template>
     <div class="login-container">
-        <!-- Animated background elements -->
-        <div class="animated-bg">
-            <div class="gradient-sphere sphere-1"></div>
-            <div class="gradient-sphere sphere-2"></div>
-            <div class="gradient-sphere sphere-3"></div>
-        </div>
-
         <v-container>
             <v-card class="login-card">
                 <v-row no-gutters>
@@ -56,6 +49,10 @@
                                     </v-text-field>
                                 </div>
 
+                                <div class="forgot-pass-container">
+                                    <p @click="this.$router.push('/forgot-password')" class="forgot-password">Forgot password?</p>
+                                </div>
+
                                 <v-btn :disabled="!isFormValid || loading" color="primary" type="submit" size="large"
                                     class="login-btn mt-6" height="52" block elevation="0">
                                     <span v-if="!loading">Sign In</span>
@@ -81,18 +78,13 @@
 
 <script>
 import Snackbar from '@/components/Snackbar.vue';
-import { useToast } from 'vue-toastification';
 import { useAuthStore } from '@/stores/auth';
 
 export default {
     name: 'LoginPage',
     components: { Snackbar },
     setup() {
-        const toast = useToast();
-
-        return {
-            toast,
-        };
+        //
     },
     data() {
         return {
@@ -148,20 +140,15 @@ export default {
 
                     if (status === 422 && data.errors) {
                         this.handleValidationErrors(data.errors);
-                        // this.toast.error(Object.values(data.errors)[0][0]);
                         this.error_text = Object.values(data.errors)[0][0];
                     } else if (status === 500) {
-                        // this.toast.error(data.message);
                         this.error_text = data.message;
                     } else {
-                        // this.toast.error(data.message);
                         this.error_text = data.message;
                     }
                 } else if (error.request) {
-                    // this.toast.error('Network error. Please check your connection.');
                     this.error_text = 'Network error. Please check your connection.';
                 } else {
-                    // this.toast.error(error.message);
                     this.error_text = error.message;
                 }
             } finally {
@@ -189,53 +176,6 @@ export default {
     position: relative;
     background: linear-gradient(135deg, #faf8f5 0%, #fff6e3 100%);
     overflow: hidden;
-}
-
-/* Animated Background */
-.animated-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    z-index: 0;
-}
-
-.gradient-sphere {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.5;
-    animation: float 20s infinite ease-in-out;
-}
-
-.sphere-1 {
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(212, 162, 0, 0.3) 0%, rgba(180, 126, 0, 0.1) 100%);
-    top: -200px;
-    left: -200px;
-    animation-delay: 0s;
-}
-
-.sphere-2 {
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(220, 147, 0, 0.25) 0%, rgba(180, 126, 0, 0.08) 100%);
-    bottom: -100px;
-    right: -100px;
-    animation-delay: -5s;
-}
-
-.sphere-3 {
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 162, 0, 0.2) 0%, rgba(180, 108, 0, 0.05) 100%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    animation-delay: -10s;
 }
 
 /* Login Card */
@@ -269,6 +209,13 @@ export default {
     width: 100%;
 }
 
+.subtitle {
+    text-align: center;
+    color: #a2a2a2;
+    font-size: 1rem;
+    margin-bottom: 25px;
+}
+
 /* Logo Animation */
 .logo-wrapper {
     position: relative;
@@ -286,46 +233,6 @@ export default {
     z-index: 1;
     transition: transform 0.3s ease;
     border-radius: 15px;
-}
-
-.brand-title {
-    background: linear-gradient(135deg, #5c3a21 0%, #d46600 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    position: relative;
-    font-weight: 800;
-}
-
-.text-accent {
-    background: linear-gradient(135deg, #5c3a21 0%, #d46600 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.text-accent:hover {
-    background: linear-gradient(135deg, #d46600 0%, #5c3a21 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.beta-chip {
-    position: relative;
-    top: -8px;
-    margin-left: 8px;
-    font-weight: 500;
-    background: linear-gradient(135deg, #5c3a21, #d49100);
-    color: white;
-    letter-spacing: 0.5px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #a2a2a2;
-    font-size: 1rem;
-    margin-bottom: 25px;
 }
 
 /* Form Elements */
@@ -422,22 +329,6 @@ export default {
 .register-text:hover {
     color: #d49f00;
     text-decoration: underline;
-}
-
-@keyframes float {
-
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1);
-    }
-
-    33% {
-        transform: translate(30px, -40px) scale(1.1);
-    }
-
-    66% {
-        transform: translate(-20px, 30px) scale(0.95);
-    }
 }
 
 
