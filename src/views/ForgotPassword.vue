@@ -13,14 +13,13 @@
 
                             <h1>Forgot Password</h1>
 
-                            <p class="subtitle">Enter your email address and we will proceed to reset your password.</p>
-
                             <v-form v-show="!showRecoveryForm && !showPasswordsForm" v-model="isEmailFormValid"
                                 @submit.prevent="handleSubmitEmail" class="login-form" ref="email_form">
+                                <h4 class="mb-5">Enter your email address and we will proceed to reset your password.</h4>
                                 <div class="input-wrapper">
                                     <div class="input-label">
                                         <v-icon icon="mdi-email-outline" size="18" class="label-icon" />
-                                        <span>Email address</span>
+                                        <span>Email Address</span>
                                     </div>
                                     <v-text-field v-model="customer_email" :rules="[requiredRule, emailFormatRule]"
                                         placeholder="customer@gmail.com" variant="outlined" density="comfortable"
@@ -42,7 +41,7 @@
 
                             <v-form v-show="showRecoveryForm && !showPasswordsForm" v-model="isRecoveryCodeFormValid"
                                 @submit.prevent="handleSubmitRecoveryCode" class="login-form" ref="recovery_code_form">
-                                <h4 class="mb-3">To continue, we have sent a recovery code to email {{
+                                <h4 class="mb-5">To continue, we have sent a recovery code to email {{
                                     maskEmail(this.customer_email) }}
                                 </h4>
                                 <div class="input-wrapper">
@@ -76,7 +75,7 @@
 
                             <v-form v-show="showPasswordsForm" v-model="isPasswordsFormValid"
                                 @submit.prevent="handleSubmitPasswords" class="login-form" ref="passwords_form">
-                                <h4 class="mb-3">This is your last step to reset your password.</h4>
+                                <h4 class="mb-5">This is your last step to reset your password.</h4>
                                 <div class="input-wrapper">
                                     <div class="input-label">
                                         <v-icon icon="mdi-lock-outline" size="18" class="label-icon" />
@@ -369,6 +368,11 @@ export default {
 /* Form Elements */
 .login-form {
     margin-top: 16px;
+}
+
+.login-form h4 {
+    font-weight: 600;
+    color: #707070;
 }
 
 .input-wrapper {

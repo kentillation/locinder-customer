@@ -20,16 +20,6 @@
         <!-- Scrollable Content -->
         <div ref="scrollContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
-            <!-- Top -->
-            <div class="headline content-between">
-                <div>
-                    <v-btn size="small" icon>
-                        <v-icon @click="goBack">mdi-arrow-left</v-icon>
-                    </v-btn>
-                    <h3>Open {{ shopStore.getShops.length > 1 ? 'Stores' : 'Store' }}</h3>
-                </div>
-                <span><v-img :src="storeImage" width="30"></v-img></span>
-            </div>
 
             <!-- Loading -->
             <template v-if="shopStore.loading || isRefreshing">
@@ -226,10 +216,6 @@ const searchSuggestions = computed(() => {
 const onOnline = () => {
     isOnline.value = true
     toast.info("Internet connection restored.")
-}
-
-const goBack = () => {
-    router.go(-1)
 }
 
 // // In shop search component - find nearby shops based on movement

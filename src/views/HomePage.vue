@@ -384,7 +384,7 @@
                                     A surprise you deserve is <br />
                                     <span>Ang sorpresa nga deserve mo ay ang</span>
                                 </h4>
-                                <v-img :src="productImages[surpriseImage] || moreImage" width="130"></v-img>
+                                <v-img :src="productImages[surpriseImage] || moreImage" width="100"></v-img>
                                 <h3 class="mt-3" style="font-weight: 500;">{{ surpriseProduct }}</h3>
                                 <span class="d-flex align-center">
                                     <h5 class="text-grey mr-1" style="font-weight: 500;">from {{ surpriseShopName }}
@@ -2048,8 +2048,6 @@ export default {
 
 .sheet-content {
     height: calc(100% - 20px);
-    overflow-y: auto;
-    padding: 0 10px !important;
     box-shadow: none !important;
 }
 
@@ -2110,8 +2108,8 @@ export default {
 .sheet-buttons-container .v-container,
 .sheet-content .v-container {
     height: 100%;
-    overflow-y: auto;
-    padding: 12px !important;
+    overflow-y: scroll !important;
+    padding: 14px 14px 80px 14px !important;
 }
 
 .buttons-container .title-skeleton {
@@ -2229,7 +2227,7 @@ export default {
     border-radius: 10px;
     font-weight: 500;
     height: 110px;
-    margin-bottom: 80px;
+    margin-bottom: 20px;
 }
 
 .surprise-btn-cooldown {
@@ -2292,7 +2290,7 @@ export default {
 
 .order-now-btn {
     height: 45px;
-    margin-top: 25px;
+    margin-top: 20px;
     background-color: #5c3a21;
     box-shadow: none !important;
     border-radius: 30px;

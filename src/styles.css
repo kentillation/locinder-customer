@@ -255,7 +255,6 @@ body {
   justify-content: center;
 }
 
-
 .connection-container {
   position: fixed;
   top: 0;
@@ -274,8 +273,6 @@ body {
 .connection-banner {
   width: 100%;
   text-align: center;
-  padding: 4px 25px;
-  /* border-radius: 0 0 30px 30px; */
   font-size: 10px;
   display: flex;
   align-items: center;

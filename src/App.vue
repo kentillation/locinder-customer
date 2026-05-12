@@ -1,14 +1,47 @@
 <template>
   <v-app dark>
+    <!-- Connection Banner -->
     <div v-if="connectionStatus !== 'online'" class="connection-container">
       <div class="connection-banner" :class="connectionStatus">
-        <v-icon left>
+        <v-icon class="mr-1">
           {{ connectionStatusIcon }}
         </v-icon>
-        <span>&nbsp;{{ connectionStatusText }}</span>
+        <span>{{ connectionStatusText }}</span>
       </div>
     </div>
-    <v-main class="main-container" :class="{ 'mt-5' : connectionStatus !== 'online'}">
+
+    <!-- Main -->
+    <v-main class="main-container" :class="{ 'mt-5': connectionStatus !== 'online' }">
+
+      <!-- Bottom Navigation -->
+      <template v-if="!isNotFoundPage">
+        <v-app-bar v-if="showMenu" location="bottom" class="px-4" prominent>
+
+          <!-- Home -->
+          <div class="nav-item" @click="goTo('/home')">
+            <v-icon class="text-grey" :class="{ 'active-icon': currentPage === 'HomePage' }">
+              mdi-home-variant-outline
+            </v-icon>
+            <span class="nav-text" :class="{ 'active-nav-text': currentPage === 'HomePage' }">
+              Home
+            </span>
+          </div>
+
+          <v-spacer />
+
+          <!-- Stores -->
+          <div class="nav-item" @click="goTo('/shop-list')">
+            <v-icon class="text-grey" :class="{ 'active-icon': currentPage === 'ShopList' }">
+              mdi-store-outline
+            </v-icon>
+            <span class="nav-text" :class="{ 'active-nav-text': currentPage === 'ShopList' }">
+              Stores
+            </span>
+          </div>
+        </v-app-bar>
+      </template>
+
+      <!-- Pages -->
       <div class="app-container">
         <transition :name="transitionName" mode="out-in">
           <div :key="$route.fullPath" class="page-wrapper">
@@ -21,91 +54,197 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRouter } from 'vue-router'
-// import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
-// const route = useRoute()
-const updateStatus = () => {
-  if (!navigator.onLine) {
-    connectionStatus.value = 'offline';
-  } else {
-    connectionStatus.value = 'online';
-  }
-};
+const route = useRoute()
 
-let waitingTimeout;
-const simulateWaiting = () => {
-  connectionStatus.value = 'waiting';
-  waitingTimeout = setTimeout(() => {
-    connectionStatus.value = navigator.onLine ? 'online' : 'offline';
-  }, 3000);
-};
+/* ----------------------------------------------------------
+ * Route / Navigation
+ * ---------------------------------------------------------- */
+
+const currentPage = computed(() => route.name)
+
+const isNotFoundPage = computed(() => {
+  return route.name === 'NotFound'
+})
+
+const showMenu = computed(() => {
+  const allowedRoutes = ['HomePage', 'ShopList']
+  return allowedRoutes.includes(route.name)
+})
+
+const goTo = (path) => {
+  if (route.path !== path) {
+    router.push(path)
+  }
+}
+
+/* ----------------------------------------------------------
+ * Page Transition
+ * ---------------------------------------------------------- */
 
 const transitionName = ref('slide-left')
-let historyStack = []
+const historyStack = []
+
 router.beforeEach((to, from, next) => {
   const toIndex = historyStack.indexOf(to.fullPath)
   const fromIndex = historyStack.indexOf(from.fullPath)
+
   if (toIndex === -1) {
     historyStack.push(to.fullPath)
     transitionName.value = 'slide-left'
   } else {
-    transitionName.value = toIndex < fromIndex ? 'slide-right' : 'slide-left'
+    transitionName.value =
+      toIndex < fromIndex ? 'slide-right' : 'slide-left'
   }
+
   next()
 })
+
 window.setPageTransition = (name) => {
   transitionName.value = name
 }
 
-const connectionStatus = ref('online')
+/* ----------------------------------------------------------
+ * Connection Status
+ * ---------------------------------------------------------- */
 
-onMounted(() => {
-  window.addEventListener('online', updateStatus);
-  window.addEventListener('offline', updateStatus);
-  simulateWaiting();
-  if ('connection' in navigator) {
-    navigator.connection.addEventListener('change', () => {
-      if (navigator.connection.downlink < 1) {
-        connectionStatus.value = 'slow';
-      } else if (navigator.onLine) {
-        connectionStatus.value = 'online';
-      }
-    });
+const connectionStatus = ref('waiting')
+
+let waitingTimeout = null
+let connectionListener = null
+
+const updateStatus = () => {
+  if (!navigator.onLine) {
+    connectionStatus.value = 'offline'
+    return
   }
-});
 
-onBeforeUnmount(() => {
-  window.removeEventListener('online', updateStatus);
-  window.removeEventListener('offline', updateStatus);
-  if (waitingTimeout) clearTimeout(waitingTimeout);
-});
+  if ('connection' in navigator) {
+    const downlink = navigator.connection.downlink || 10
+
+    if (downlink < 1) {
+      connectionStatus.value = 'slow'
+    } else {
+      connectionStatus.value = 'online'
+    }
+  } else {
+    connectionStatus.value = 'online'
+  }
+}
+
+const simulateWaiting = () => {
+  connectionStatus.value = 'waiting'
+
+  waitingTimeout = setTimeout(() => {
+    updateStatus()
+  }, 1500)
+}
 
 const connectionStatusText = computed(() => {
   switch (connectionStatus.value) {
     case 'offline':
-      return 'No internet connection';
+      return 'No internet connection'
+
     case 'slow':
-      return 'Low internet connection';
+      return 'Low internet connection'
+
     case 'waiting':
-      return 'Waiting for connection...';
+      return 'Waiting for connection...'
+
     default:
-      return '';
+      return ''
   }
-});
+})
 
 const connectionStatusIcon = computed(() => {
   switch (connectionStatus.value) {
     case 'offline':
-      return 'mdi-wifi-off';
+      return 'mdi-wifi-off'
+
     case 'slow':
-      return 'mdi-wifi-alert';
+      return 'mdi-wifi-alert'
+
     case 'waiting':
-      return 'mdi-timer-sand';
+      return 'mdi-timer-sand'
+
     default:
-      return '';
+      return ''
   }
-});
+})
+
+/* ----------------------------------------------------------
+ * Lifecycle
+ * ---------------------------------------------------------- */
+
+onMounted(() => {
+  simulateWaiting()
+
+  window.addEventListener('online', updateStatus)
+  window.addEventListener('offline', updateStatus)
+
+  if ('connection' in navigator) {
+    connectionListener = () => updateStatus()
+
+    navigator.connection.addEventListener(
+      'change',
+      connectionListener
+    )
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('online', updateStatus)
+  window.removeEventListener('offline', updateStatus)
+
+  if ('connection' in navigator && connectionListener) {
+    navigator.connection.removeEventListener(
+      'change',
+      connectionListener
+    )
+  }
+
+  if (waitingTimeout) {
+    clearTimeout(waitingTimeout)
+  }
+})
 </script>
+
+<style scoped>
+/* ----------------------------------------------------------
+ * Navigation
+ * ---------------------------------------------------------- */
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.v-icon {
+  border-radius: 30px;
+  padding: 15px;
+  font-size: 22px !important;
+  transition: all 0.3s ease;
+}
+
+.active-icon {
+  background-color: #5c3a21 !important;
+  color: white !important;
+}
+
+.nav-text {
+  text-transform: none;
+  font-size: 10px;
+  margin-top: 2px;
+  color: #808080;
+}
+
+.active-nav-text {
+  color: #5c3a21 !important;
+  font-weight: 600;
+}
+</style>
