@@ -5,6 +5,7 @@ import LoginPage from '@/views/LoginPage.vue';
 import HomePage from '@/views/HomePage.vue';
 import RegisterPage from '@/views/RegisterPage.vue';
 import ShopPage from '@/views/ShopPage.vue';
+import StorePage from '@/views/StorePage.vue';
 import ShopList from '@/views/ShopList.vue';
 import ShopWhereToBuy from '@/views/ShopWhereToBuy.vue';
 import MealPage from '@/views/MealPage.vue';
@@ -16,6 +17,7 @@ const routes = [
   { path: '/register', name: 'RegisterPage', component: RegisterPage },
   { path: '/home', name: 'HomePage', component: HomePage, meta: { requiresAuth: true } },
   { path: '/shop', name: 'ShopPage', component: ShopPage, meta: { requiresAuth: true } },
+  { path: '/store', name: 'StorePage', component: StorePage, meta: { requiresAuth: true } },
   { path: '/shop-list', name: 'ShopList', component: ShopList, meta: { requiresAuth: true } },
   { path: '/shop-where-to-buy', name: 'ShopWhereToBuy', component: ShopWhereToBuy, meta: { requiresAuth: true } },
   { path: '/meal', name: 'MealPage', component: MealPage, meta: { requiresAuth: true } },
@@ -49,6 +51,7 @@ router.beforeEach(async (to, from, next) => {
 
   if (!authStore.initialized && !isCheckingAuth) {
     isCheckingAuth = true;
+
     try {
       await authStore.checkAuth();
     } catch (err) {
@@ -60,14 +63,26 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     authStore.clearAuth();
+
     setSlideTransition(to, from);
-    next('/');
+
+    next({
+      path: '/register',
+      query: {
+        redirect: to.fullPath
+      }
+    });
+
     return;
   }
 
   if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
+    const redirectPath = to.query.redirect || '/home';
+
     setSlideTransition(to, from);
-    next('/home');
+
+    next(redirectPath);
+
     return;
   }
 

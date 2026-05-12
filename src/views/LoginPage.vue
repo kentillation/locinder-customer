@@ -129,9 +129,12 @@ export default {
                     customer_password: this.customer_password
                 });
                 if (result.success) {
+                    const redirectPath = this.$route.query.redirect || '/home';
+
                     document.body.style.opacity = '0';
+                    
                     setTimeout(() => {
-                        window.location.href = '/home';
+                        window.location.href = redirectPath;
                     }, 300);
                 } else {
                     this.handleValidationErrors(result.errors);

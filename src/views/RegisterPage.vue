@@ -556,9 +556,12 @@ export default {
                 const result = await authStore.customerRegistration(submissionData);
 
                 if (result.success === true) {
+                    const redirectPath = this.$route.query.redirect || '/home';
+
                     this.toast.success(result.message);
+                    
                     setTimeout(() => {
-                        window.location.href = '/';
+                        window.location.href = redirectPath;
                     }, 2000);
                 } else {
                     this.handleValidationErrors(result.errors);
