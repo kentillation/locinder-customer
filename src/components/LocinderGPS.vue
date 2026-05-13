@@ -211,12 +211,6 @@ const mapStyles = [
         attribution: 'Locinder'
     },
     {
-        id: 'lightweight',
-        name: 'Fast',
-        url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-        attribution: 'Locinder'
-    },
-    {
         id: 'cartodb',
         name: 'Light',
         url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
