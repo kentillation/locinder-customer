@@ -23,7 +23,7 @@
 
             <!-- Loading -->
             <template v-if="shopStore.loading || isRefreshing">
-                <v-row>
+                <v-row class="mt-6">
                     <v-col cols="12">
                         <v-card class="loading-card-search">
                             <v-skeleton-loader type="text" width="200" class="no-background"></v-skeleton-loader>
@@ -50,7 +50,7 @@
             <template v-else>
                 <!-- If no stores found -->
                 <template v-if="shopStore.shop_list.length === 0">
-                    <v-card class="buttons-container">
+                    <v-card class="buttons-container mt-8">
                         <v-row>
                             <v-col cols="12" style="padding: 5px !important;">
                                 <v-card class="no-found">
@@ -116,8 +116,18 @@
                         <v-row>
                             <v-col v-for="(shop) in shopStore.getShops" :key="shop.id" cols="12" lg="6" md="6" sm="6"
                                 style="padding: 5px !important;">
-                                <v-btn @click="toShop(shop)" class="button">
-                                    <v-img :src="storeImage" width="35" class="mr-2 flex-shrink-0"></v-img>
+                                <v-btn @click="toShop(shop)" class="button content-between">
+                                    <v-avatar color="#5c3a21" size="40" class="mr-2 d-flex align-center justify-center">
+                                        <template v-if="shop.image">
+                                            <img :src="shop.image" width="50" alt="Avatar" />
+                                        </template>
+
+                                        <template v-else>
+                                            <span style="color: white; font-weight: bold; font-size: 20px;">
+                                                {{ (shop.name || '?').charAt(0).toUpperCase() }}
+                                            </span>
+                                        </template>
+                                    </v-avatar>
                                     <div class="d-flex flex-column flex-grow-1 text-start overflow-hidden">
                                         <span class="text-wrap mr-15">
                                             {{ shop.name }}
@@ -126,12 +136,12 @@
                                             {{ shop.type }}
                                         </span>
                                     </div>
-                                    <div class="d-flex align-center flex-column"
+                                    <div class="d-flex align-end flex-column"
                                         style="position: absolute; right: 10px;">
-                                        <span class="text-grey-darken-1" style="font-size:10px">
-                                            Starting @
+                                        <span class="text-grey-darken-1" style="font-size: 10px">
+                                            Starts @
                                         </span>
-                                        <span style="font-size:18px">
+                                        <span style="font-size: 18px">
                                             ₱{{ shop.lowest_price }}
                                         </span>
                                     </div>
@@ -171,7 +181,6 @@ const timeInterval = ref(null)
 
 // Images
 const nostoreImage = new URL('@/assets/img/png/food/No Store.png', import.meta.url).href
-const storeImage = new URL('@/assets/img/png/food/Store.png', import.meta.url).href
 
 // Pull to refresh properties
 const scrollContainer = ref(null)

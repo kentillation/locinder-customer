@@ -70,6 +70,7 @@ export const useShopStore = defineStore('shops', {
             return state.shop_list.map(shop => ({
                 id: shop.shop_id,
                 branch_id: shop.branch_id,
+                image: shop.shop_image,
                 name: shop.shop_name,
                 type: shop.shop_type,
                 address: shop.shop_address,

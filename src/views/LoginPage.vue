@@ -17,7 +17,7 @@
 
                             <v-form ref="form" @submit.prevent="handleLogin" v-model="isFormValid" class="login-form">
                                 
-                                <v-alert v-if="error_text" type="error" class="mb-5" 
+                                <v-alert v-if="error_text" type="error" variant="outlined" class="mb-5" 
                                     style="font-size: 13px;">
                                     {{ error_text }}
                                 </v-alert>
@@ -113,6 +113,7 @@ export default {
             const { valid } = await this.$refs.form.validate();
             if (!valid) return;
 
+            this.error_text = '';
             this.loading = true;
             try {
                 const authStore = useAuthStore();

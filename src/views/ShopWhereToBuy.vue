@@ -122,8 +122,18 @@
                         <v-row>
                             <v-col v-for="(shop) in shopStore.getShops" :key="shop.id" cols="12" lg="6" md="6" sm="6"
                                 style="padding: 5px !important;">
-                                <v-btn @click="toShop(shop)" class="button">
-                                    <v-img :src="storeImage" class="mr-2 flex-shrink-0" width="35"></v-img>
+                                <v-btn @click="toShop(shop)" class="button content-between">
+                                    <v-avatar color="#5c3a21" size="40" class="mr-2 d-flex align-center justify-center">
+                                        <template v-if="shop.image">
+                                            <img :src="shop.image" width="50" alt="Avatar" />
+                                        </template>
+
+                                        <template v-else>
+                                            <span style="color: white; font-weight: bold; font-size: 20px;">
+                                                {{ (shop.name || '?').charAt(0).toUpperCase() }}
+                                            </span>
+                                        </template>
+                                    </v-avatar>
                                     <div class="d-flex flex-column flex-grow-1 text-start overflow-hidden">
                                         <span class="text-wrap mr-15">
                                             {{ shop.name }}
@@ -133,12 +143,12 @@
                                             {{ shop.type }}
                                         </span>
                                     </div>
-                                    <div class="d-flex align-center flex-column"
+                                    <div class="d-flex align-end flex-column"
                                         style="position: absolute; right: 10px;">
-                                        <span class="text-grey-darken-1" style="font-size:10px">
-                                            Starting @
+                                        <span class="text-grey-darken-1" style="font-size: 10px">
+                                            Starts @
                                         </span>
-                                        <span style="font-size:18px">
+                                        <span style="font-size: 18px">
                                             ₱{{ shop.lowest_price }}
                                         </span>
                                     </div>
