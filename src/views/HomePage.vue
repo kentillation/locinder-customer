@@ -364,7 +364,6 @@
                 </v-card>
             </div>
         </transition>
-        
         <transition name="fade">
             <div v-if="moreSheet" class="sheet-overlay" @click="moreSheet = false"></div>
         </transition>
@@ -2237,7 +2236,7 @@ export default {
     border-radius: 10px;
     font-weight: 500;
     height: 110px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .surprise-btn-cooldown {

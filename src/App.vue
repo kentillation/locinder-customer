@@ -15,29 +15,30 @@
 
       <!-- Bottom Navigation -->
       <template v-if="!isNotFoundPage">
-        <v-app-bar v-if="showMenu" location="bottom" class="px-4" prominent>
+        <v-app-bar v-if="showMenu" location="bottom" prominent>
 
           <!-- Home -->
-          <div class="nav-item" @click="goTo('/home')">
-            <v-icon class="text-grey" :class="{ 'active-icon': currentPage === 'HomePage' }">
-              mdi-home-variant-outline
-            </v-icon>
-            <span class="nav-text" :class="{ 'active-nav-text': currentPage === 'HomePage' }">
-              Home
-            </span>
+          <div class="nav-item" :class="{ 'active-page': currentPage === 'HomePage' }" @click="goTo('/home')">
+            <v-icon>mdi-home-variant-outline</v-icon>
+            <span class="nav-text">Home</span>
           </div>
 
           <v-spacer />
 
           <!-- Stores -->
-          <div class="nav-item" @click="goTo('/shop-list')">
-            <v-icon class="text-grey" :class="{ 'active-icon': currentPage === 'ShopList' }">
-              mdi-store-outline
-            </v-icon>
-            <span class="nav-text" :class="{ 'active-nav-text': currentPage === 'ShopList' }">
-              Stores
-            </span>
+          <div class="nav-item" :class="{ 'active-page': currentPage === 'ShopList' }" @click="goTo('/shop-list')">
+            <v-icon>mdi-store-outline</v-icon>
+            <span class="nav-text">Stores</span>
           </div>
+
+          <v-spacer />
+
+          <!-- Stores -->
+          <div class="nav-item" :class="{ 'active-page': signoutLoading }"  @click="signingOut">
+            <v-icon>mdi-door-open</v-icon>
+            <span class="nav-text">Signout</span>
+          </div>
+          
         </v-app-bar>
       </template>
 
@@ -56,9 +57,12 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
+let signoutLoading = ref(false)
 
 /* ----------------------------------------------------------
  * Route / Navigation
@@ -79,6 +83,15 @@ const goTo = (path) => {
   if (route.path !== path) {
     router.push(path)
   }
+}
+
+const signingOut = () => {
+  signoutLoading.value = true
+  setTimeout( () => {
+    authStore.logout
+  }, 3000)
+  
+  return
 }
 
 /* ----------------------------------------------------------
@@ -216,35 +229,42 @@ onBeforeUnmount(() => {
 /* ----------------------------------------------------------
  * Navigation
  * ---------------------------------------------------------- */
+:deep(.v-toolbar__content) {
+  /* height: 64px !important; */
+  height: 50px !important;
+  padding: 7px;
+}
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  line-height: 0.3cm;
   cursor: pointer;
+  width: 50px;
+  color: #a1a1a1;
+  padding: 6px 0 6px 0;
 }
 
 .v-icon {
-  border-radius: 30px;
-  padding: 15px;
-  font-size: 22px !important;
+  /* font-size: 22px !important; */
   transition: all 0.3s ease;
 }
 
-.active-icon {
-  background-color: #5c3a21 !important;
-  color: white !important;
+.active-page {
+  /* border-radius: 20%; */
+  /* background-color: #a34400 !important; */
+  color: #a34400 !important;
+  font-weight: 600;
 }
 
 .nav-text {
   text-transform: none;
   font-size: 10px;
-  margin-top: 2px;
-  color: #808080;
+  padding-bottom: 2px !important;
 }
 
 .active-nav-text {
-  color: #5c3a21 !important;
   font-weight: 600;
 }
 </style>
