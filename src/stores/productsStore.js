@@ -129,40 +129,40 @@ export const useProductsStore = defineStore('products', {
         },
 
         async fetchCategoriesByNewProductStore(request) {
-        this.loading = true;
-        this.error = null;
-        try {
-            if (!PRODUCTS_API || typeof PRODUCTS_API.fetchCategoriesByNewProductApi !== 'function') {
-                throw new Error('PRODUCTS_API service is not properly initialized');
-            }
-            const response = await PRODUCTS_API.fetchCategoriesByNewProductApi(request);
-            
-            if (response && response.success === true) {
-                // For categories, we typically don't paginate, but if we do:
-                const isPaginatedRequest = request.page && request.page > 1;
-
-                if (isPaginatedRequest) {
-                    this.product_categories = [...this.product_categories, ...response.data];
-                } else {
-                    this.product_categories = response.data;
+            this.loading = true;
+            this.error = null;
+            try {
+                if (!PRODUCTS_API || typeof PRODUCTS_API.fetchCategoriesByNewProductApi !== 'function') {
+                    throw new Error('PRODUCTS_API service is not properly initialized');
                 }
-                
-                this.isNew = request.is_new;
-                this.pagination = response.pagination;
-                
-                return response;
-            } else {
-                throw new Error(response?.message || 'Failed to fetch categories');
+                const response = await PRODUCTS_API.fetchCategoriesByNewProductApi(request);
+
+                if (response && response.success === true) {
+                    // For categories, we typically don't paginate, but if we do:
+                    const isPaginatedRequest = request.page && request.page > 1;
+
+                    if (isPaginatedRequest) {
+                        this.product_categories = [...this.product_categories, ...response.data];
+                    } else {
+                        this.product_categories = response.data;
+                    }
+
+                    this.isNew = request.is_new;
+                    this.pagination = response.pagination;
+
+                    return response;
+                } else {
+                    throw new Error(response?.message || 'Failed to fetch categories');
+                }
+            } catch (error) {
+                console.error('[store] Error in fetchCategoriesByNewProductApi:', error);
+                this.error = error.message || 'Failed to fetch base categories';
+                this.product_categories = [];
+                throw error;
+            } finally {
+                this.loading = false;
             }
-        } catch (error) {
-            console.error('[store] Error in fetchCategoriesByNewProductApi:', error);
-            this.error = error.message || 'Failed to fetch base categories';
-            this.product_categories = [];
-            throw error;
-        } finally {
-            this.loading = false;
-        }
-    },
+        },
 
         async fetchCategoriesByMealTypeStore(mealType) {
             this.loading = true;
@@ -241,7 +241,7 @@ export const useProductsStore = defineStore('products', {
             } catch (error) {
                 console.error('[store] Failed to fetch base categories:', error);
                 console.log("Origin error:", error);
-                if(error.response?.data?.message === "Unauthenticated.") {
+                if (error.response?.data?.message === "Unauthenticated.") {
                     authStore.clearAuth();
                     this.$router.replace('/');
                 }
