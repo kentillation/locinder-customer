@@ -37,7 +37,7 @@
           <div class="nav-item" :class="{ 'active-page': signoutLoading }" @click="signingOut">
 
             <template v-if="signoutLoading">
-                <v-progress-circular indeterminate color="grey" size="20" />
+                <v-progress-circular indeterminate color="grey" size="30" />
             </template>
 
             <template v-else>
