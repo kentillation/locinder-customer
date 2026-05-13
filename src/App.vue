@@ -33,10 +33,20 @@
 
           <v-spacer />
 
-          <!-- Stores -->
-          <div class="nav-item" :class="{ 'active-page': signoutLoading }"  @click="signingOut">
-            <v-icon>mdi-door-open</v-icon>
-            <span class="nav-text">Signout</span>
+          <!-- Signout -->
+          <div class="nav-item" :class="{ 'active-page': signoutLoading }" @click="signingOut">
+
+            <template v-if="signoutLoading">
+                <v-progress-circular indeterminate color="grey" size="20" />
+            </template>
+
+            <template v-else>
+              <v-icon >mdi-power</v-icon>
+            </template>
+
+            <span class="nav-text">
+              {{ signoutLoading ? '' : 'Signout' }}
+            </span>
           </div>
           
         </v-app-bar>
@@ -85,13 +95,21 @@ const goTo = (path) => {
   }
 }
 
-const signingOut = () => {
+const signingOut = async () => {
   signoutLoading.value = true
-  setTimeout( () => {
-    authStore.logout
-  }, 3000)
-  
-  return
+
+  try {
+    await authStore.logout()
+
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000)
+
+  } catch (error) {
+    console.error('Logout failed:', error)
+  } finally {
+    signoutLoading.value = false
+  }
 }
 
 /* ----------------------------------------------------------
