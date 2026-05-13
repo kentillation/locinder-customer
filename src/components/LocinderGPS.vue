@@ -202,13 +202,20 @@ let lastPanTime = 0
 // Abort controller for route requests
 let currentRouteController = null
 
-// Map styles (using MapLibre style URLs)
+// Map styles
 const mapStyles = [
+    {
+        id: 'maptiler-streets',
+        name: 'Default',
+        url: 'https://api.maptiler.com/maps/streets-v4/style.json?key=DXhktyKvmZuqhtQ8x0ld',
+        attribution: 'Locinder',
+    },
     {
         id: 'osm',
         name: 'Standard',
         url: 'https://tiles.versatiles.org/assets/styles/colorful/style.json',
-        attribution: 'Locinder'
+        attribution: 'Locinder',
+        glyphs: 'https://tiles.versatiles.org/assets/glyphs/{fontstack}/{range}.pbf'
     },
     {
         id: 'cartodb',
@@ -224,7 +231,7 @@ const mapStyles = [
     },
 ]
 
-const currentStyle = ref('osm')
+const currentStyle = ref('maptiler-streets')
 
 // Cache for reverse geocoding
 const addressCache = new Map()
@@ -2313,8 +2320,8 @@ onBeforeUnmount(() => {
     background-repeat: no-repeat;
 }
 
-:deep(.maplibregl-ctrl-attrib.maplibregl-compact-show) {
-    visibility: hidden !important;
+:deep(.maplibregl-ctrl-attrib.maplibregl-compact) {
+    display: none !important;
 }
 
 :deep(.maplibregl-popup) {
