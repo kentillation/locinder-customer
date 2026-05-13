@@ -164,20 +164,21 @@ export const useProductsStore = defineStore('products', {
             }
         },
 
-        async fetchCategoriesByMealTypeStore(mealType) {
+        async fetchCategoriesByMealTypeStore(request) {
             this.loading = true;
             this.error = null;
             try {
                 if (!PRODUCTS_API || typeof PRODUCTS_API.fetchCategoriesByMealTypeApi !== 'function') {
                     throw new Error('PRODUCTS_API service is not properly initialized');
                 }
-                const response = await PRODUCTS_API.fetchCategoriesByMealTypeApi(mealType);
+                const response = await PRODUCTS_API.fetchCategoriesByMealTypeApi(request);
                 if (response && response.success === true) {
                     this.product_categories = response.data;
-                    this.lastFetchedMealType = mealType;
+                    this.lastFetchedMealType = request;
                 } else {
                     throw new Error(response?.message || 'Failed to fetch categories');
                 }
+                return response;
             } catch (error) {
                 console.error('[store] Error in fetchCategoriesByMealTypeApi:', error);
                 this.error = error.message || 'Failed to fetch base categories';
@@ -306,7 +307,7 @@ export const useProductsStore = defineStore('products', {
                 return [];
             };
             return state.product_categories.map(category => ({
-                id: category.category_id,
+                id: category.product_category_id,
                 label: category.category_label,
                 meal_type: parseMealType(category.meal_type),
             }));

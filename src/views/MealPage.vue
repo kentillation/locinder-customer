@@ -396,24 +396,9 @@ const fetchCategories = async () => {
             items_per_page: itemsPerPage.value
         }
         
-        const response = await productsStore.fetchCategoriesByMealTypeStore(request)
+        await productsStore.fetchCategoriesByMealTypeStore(request)
         
-        // Transform the response data
-        if (response && response.data && Array.isArray(response.data)) {
-            const transformedCategories = response.data.map(cat => ({
-                id: cat.product_category_id,
-                label: cat.category_label,  // Map category_label to label
-                meal_type: cat.meal_type,
-                shop_id: cat.shop_id,
-                product_base_category_id: cat.product_base_category_id
-            }))
-            
-            categories.value = transformedCategories
-            productsStore.product_categories = transformedCategories
-        } else {
-            categories.value = []
-            productsStore.product_categories = []
-        }
+        categories.value = productsStore.getProductCategories
         
     } catch (error) {
         console.error('❌ Error fetching categories:', error)
