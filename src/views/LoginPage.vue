@@ -24,7 +24,7 @@
                                 
                                 <div class="input-wrapper">
                                     <div class="input-label">
-                                        <v-icon icon="mdi-email-outline" size="18" class="label-icon" />
+                                        <HugeiconsIcon :icon="Mail01Icon" class="label-icon" />
                                         <span>Email</span>
                                     </div>
                                     <v-text-field v-model="customer_email" :rules="[requiredRule, emailFormatRule]"
@@ -35,7 +35,7 @@
 
                                 <div class="input-wrapper mt-5">
                                     <div class="input-label">
-                                        <v-icon icon="mdi-lock-outline" size="18" class="label-icon" />
+                                        <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
                                         <span>Password</span>
                                     </div>
                                     <v-text-field v-model="customer_password" :rules="[requiredRule]"
@@ -77,6 +77,8 @@
 </template>
 
 <script>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Mail01Icon, LockPasswordIcon } from '@hugeicons/core-free-icons'
 import Snackbar from '@/components/Snackbar.vue';
 import { useAuthStore } from '@/stores/auth';
 
