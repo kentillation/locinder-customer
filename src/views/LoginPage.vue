@@ -76,97 +76,99 @@
     </div>
 </template>
 
-<script>
+<script setup>
+import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Mail01Icon, LockPasswordIcon } from '@hugeicons/core-free-icons'
-import Snackbar from '@/components/Snackbar.vue';
-import { useAuthStore } from '@/stores/auth';
 
-export default {
-    name: 'LoginPage',
-    components: { Snackbar },
-    setup() {
-        //
-    },
-    data() {
-        return {
-            logo: require('@/assets/Locinder-Submark.png'),
-            customer_email: '',
-            customer_password: '',
-            error_text: '',
-            showPassword: false,
-            isFormValid: false,
-            loading: false,
-            emailError: false,
-            validationErrors: {},
-        };
-    },
-    methods: {
-        requiredRule(v) {
-            return !!v || 'This field is required';
-        },
+import Snackbar from '@/components/Snackbar.vue'
+import { useAuthStore } from '@/stores/auth'
 
-        emailFormatRule(v) {
-            const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return pattern.test(v) || 'Please enter a valid email address';
-        },
+const route = useRoute()
 
-        async handleLogin() {
-            const { valid } = await this.$refs.form.validate();
-            if (!valid) return;
+const logo = require('@/assets/Locinder-Submark.png')
 
-            this.error_text = '';
-            this.loading = true;
-            try {
-                const authStore = useAuthStore();
-                const result = await authStore.customerLogin({
-                    customer_email: this.customer_email,
-                    customer_password: this.customer_password
-                });
-                if (result.success) {
-                    const redirectPath = this.$route.query.redirect || '/home';
+const form = ref(null)
+const snackbarRef = ref(null)
 
-                    document.body.style.opacity = '0';
-                    
-                    setTimeout(() => {
-                        window.location.href = redirectPath;
-                    }, 300);
-                } else {
-                    this.handleValidationErrors(result.errors);
-                }
-            } catch (error) {
-                console.error(error);
+const customer_email = ref('')
+const customer_password = ref('')
+const error_text = ref('')
+const showPassword = ref(false)
+const isFormValid = ref(false)
+const loading = ref(false)
+const emailError = ref(false)
+const validationErrors = ref({})
 
-                if (error.response) {
-                    const status = error.response.status;
-                    const data = error.response.data;
+const requiredRule = (v) => {
+    return !!v || 'This field is required'
+}
 
-                    if (status === 422 && data.errors) {
-                        this.handleValidationErrors(data.errors);
-                        this.error_text = Object.values(data.errors)[0][0];
-                    } else if (status === 500) {
-                        this.error_text = data.message;
-                    } else {
-                        this.error_text = data.message;
-                    }
-                } else if (error.request) {
-                    this.error_text = 'Network error. Please check your connection.';
-                } else {
-                    this.error_text = error.message;
-                }
-            } finally {
-                this.loading = false;
-            }
-        },
+const emailFormatRule = (v) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return pattern.test(v) || 'Please enter a valid email address'
+}
 
-        handleValidationErrors(errors) {
-            if (this.$refs.form && this.$refs.form.setErrors) {
-                this.$refs.form.setErrors(errors);
-            }
-            this.validationErrors = errors;
-        },
+const handleValidationErrors = (errors) => {
+    if (form.value && form.value.setErrors) {
+        form.value.setErrors(errors)
     }
-};
+
+    validationErrors.value = errors
+}
+
+const handleLogin = async () => {
+    const { valid } = await form.value.validate()
+
+    if (!valid) return
+
+    error_text.value = ''
+    loading.value = true
+
+    try {
+        const authStore = useAuthStore()
+
+        const result = await authStore.customerLogin({
+            customer_email: customer_email.value,
+            customer_password: customer_password.value
+        })
+
+        if (result.success) {
+            const redirectPath = route.query.redirect || '/home'
+
+            document.body.style.opacity = '0'
+
+            setTimeout(() => {
+                window.location.href = redirectPath
+            }, 300)
+        } else {
+            handleValidationErrors(result.errors)
+        }
+    } catch (error) {
+        console.error(error)
+
+        if (error.response) {
+            const status = error.response.status
+            const data = error.response.data
+
+            if (status === 422 && data.errors) {
+                handleValidationErrors(data.errors)
+                error_text.value = Object.values(data.errors)[0][0]
+            } else if (status === 500) {
+                error_text.value = data.message
+            } else {
+                error_text.value = data.message
+            }
+        } else if (error.request) {
+            error_text.value = 'Network error. Please check your connection.'
+        } else {
+            error_text.value = error.message
+        }
+    } finally {
+        loading.value = false
+    }
+}
 </script>
 
 <style scoped>
