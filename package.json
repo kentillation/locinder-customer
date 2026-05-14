@@ -16,6 +16,8 @@
     "@capacitor/network": "^8.0.1",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
+    "@hugeicons/core-free-icons": "^4.1.4",
+    "@hugeicons/vue": "^1.0.5",
     "@mdi/font": "^5.9.55",
     "axios": "^1.7.2",
     "canvas-confetti": "^1.9.4",

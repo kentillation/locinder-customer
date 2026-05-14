@@ -8,7 +8,8 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
+                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" 
+                        :size="28"
                         :style="{ transform: `rotate(${rotationAngle}deg)` }"
                         style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
                         mdi-loading
@@ -17,17 +18,10 @@
             </div>
         </div>
 
-        <div v-if="locationStore.isMoving" class="movement-indicator" 
-            :class="[locationStore.getMovementStatus, { 'fast-speed': locationStore.movementSpeed >= 60 }]">
-            <v-icon small :class="getSpeedometerIconClass">
-                {{ getSpeedometerIcon }}
-            </v-icon>
-            <span>{{ locationStore.getFormattedSpeed }}</span>
-        </div>
-
         <!-- Scrollable Content -->
         <div ref="scrollContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
+
             <!-- Headline -->
             <div class="headline d-flex align-center">
                 <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog"></v-img></span>
@@ -47,6 +41,14 @@
                         </v-chip>
                     </div>
                 </div>
+            </div>
+
+            <div v-if="locationStore.isMoving" class="movement-indicator" 
+                :class="[locationStore.getMovementStatus, { 'fast-speed': locationStore.movementSpeed >= 60 }]">
+                <v-icon small :class="getSpeedometerIconClass">
+                    {{ getSpeedometerIcon }}
+                </v-icon>
+                <span>{{ locationStore.getFormattedSpeed }}</span>
             </div>
 
             <!-- Show driving warning based on speed -->
@@ -1591,10 +1593,7 @@ export default {
 
 <style scoped>
 .v-container {
-    position: relative;
     padding: 0 !important;
-    height: 100vh;
-    overflow: hidden;
 }
 /* Movement indicator base styles */
 .movement-indicator {
@@ -1882,7 +1881,7 @@ export default {
     height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 0 16px;
+    padding: 16px;
 }
 
 /* Pull to Refresh Progress Styles */
@@ -1931,7 +1930,6 @@ export default {
     width: 100%;
     padding: 5px;
     line-height: 0.6cm;
-    margin-top: 20px;
     margin-bottom: 20px;
     border-radius: 10px;
 }
@@ -2236,7 +2234,6 @@ export default {
     border-radius: 10px;
     font-weight: 500;
     height: 110px;
-    margin-bottom: 10px;
 }
 
 .surprise-btn-cooldown {

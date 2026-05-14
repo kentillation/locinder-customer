@@ -19,7 +19,7 @@
 
           <!-- Home -->
           <div class="nav-item" :class="{ 'active-page': currentPage === 'HomePage' }" @click="goTo('/home')">
-            <v-icon>mdi-home-variant-outline</v-icon>
+            <HugeiconsIcon :icon="Home03Icon" />
             <span class="nav-text">Home</span>
           </div>
 
@@ -27,7 +27,7 @@
 
           <!-- Stores -->
           <div class="nav-item" :class="{ 'active-page': currentPage === 'ShopList' }" @click="goTo('/shop-list')">
-            <v-icon>mdi-store-outline</v-icon>
+            <HugeiconsIcon :icon="Store01Icon" />
             <span class="nav-text">Stores</span>
           </div>
 
@@ -41,7 +41,7 @@
             </template>
 
             <template v-else>
-              <v-icon >mdi-power</v-icon>
+              <HugeiconsIcon :icon="Logout02Icon" />
             </template>
 
             <span class="nav-text">
@@ -65,6 +65,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Home03Icon, Store01Icon, Logout02Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
@@ -248,9 +250,13 @@ onBeforeUnmount(() => {
  * Navigation
  * ---------------------------------------------------------- */
 :deep(.v-toolbar__content) {
-  /* height: 64px !important; */
-  height: 50px !important;
+  height: 60px !important;
   padding: 7px;
+}
+
+:deep(.v-app-bar) {
+  box-shadow: none !important;
+  background-color: #f5f5f5;
 }
 
 .nav-item {
