@@ -1,6 +1,6 @@
 <!-- Change the pagination -->
 <template>
-    <v-container class="pull-to-refresh-container">
+    <v-container>
         <!-- Pull to Refresh Progress Indicator -->
         <div class="refresh-progress" :style="{
             transform: `translateY(${pullProgress}px)`,
@@ -23,7 +23,7 @@
 
             <!-- Loading -->
             <template v-if="shopStore.loading || isRefreshing">
-                <v-row class="mt-6">
+                <v-row>
                     <v-col cols="12">
                         <v-card class="loading-card-search">
                             <v-skeleton-loader type="text" width="200" class="no-background"></v-skeleton-loader>
@@ -36,7 +36,7 @@
                     </div>
                     <v-row>
                         <v-col v-for="n in 10" :key="n" cols="12" lg="6" md="6" sm="6" style="padding: 5px !important;">
-                            <div class="button mb-3">
+                            <div class="button">
                                 <v-skeleton-loader type="avatar, sentences" width="300"
                                     class="no-background"></v-skeleton-loader>
                                 <v-skeleton-loader type="sentences" width="200"
@@ -50,7 +50,7 @@
             <template v-else>
                 <!-- If no stores found -->
                 <template v-if="shopStore.shop_list.length === 0">
-                    <v-card class="buttons-container mt-8">
+                    <v-card class="buttons-container">
                         <v-row>
                             <v-col cols="12" style="padding: 5px !important;">
                                 <v-card class="no-found">
@@ -603,18 +603,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.pull-to-refresh-container {
-    position: relative;
+.v-container {
     padding: 0 !important;
-    height: 100vh;
-    overflow: hidden;
 }
 
 .scroll-content {
     height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 0 16px;
+    padding: 16px;
 }
 
 /* Pull to Refresh Progress Styles */
@@ -658,30 +655,6 @@ onUnmounted(() => {
     }
 }
 
-.headline {
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-.headline div {
-    display: flex;
-    align-items: center;
-}
-
-.headline .v-btn {
-    box-shadow: none;
-}
-
-.headline .v-icon {
-    font-size: 20px !important;
-}
-
-.headline h3 {
-    color: #5c3a21;
-    font-weight: 500;
-    margin-left: 15px;
-}
-
 .loading-card-search {
     border-radius: 10px;
     box-shadow: none !important;
@@ -690,15 +663,10 @@ onUnmounted(() => {
 }
 
 .search-box {
-    position: sticky;
-    position: -webkit-sticky;
-    top: 20px;
     z-index: 999;
     border-radius: 10px;
     box-shadow: none !important;
     height: 52px;
-    padding-left: 10px;
-    margin-top: 20px;
     margin-bottom: 20px;
 }
 
@@ -765,8 +733,8 @@ onUnmounted(() => {
 .buttons-container {
     border-radius: 10px;
     box-shadow: none !important;
-    margin-bottom: 80px;
-    padding: 25px;
+    margin-bottom: 20px;
+    padding: 20px;
 }
 
 .buttons-container h4 {
