@@ -300,7 +300,7 @@
             </v-card>
 
             <!-- Open -->
-            <v-btn @click="this.$router.push('shop-list')" class="open-shop-btn content-between">
+            <v-btn @click="openShops" class="open-shop-btn content-between">
                 <span class="text-wrap">
                     These stores are open now <br />
                     <span class="subtitle">Mga baligyaan nga abri subong</span>
@@ -948,6 +948,15 @@ export default {
             } finally {
                 this.searching = false;
             }
+        },
+
+        async openShops() {
+            this.$router.push({
+                path: '/shop-list',
+                query: {
+                    requested_time_between: `${this.currentHour}:${this.currentMinute}`
+                }
+            });
         },
 
         async handleSearchBox() {

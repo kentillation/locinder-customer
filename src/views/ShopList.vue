@@ -108,7 +108,11 @@
 
                     <!-- Stores List -->
                     <v-card class="buttons-container">
-                        <h4>
+                        <h4 v-if="!requestedTimeBetween">
+                            Various stores in Sagay <br />
+                            <span>Mga baligyaan sa Sagay</span>
+                        </h4>
+                        <h4 v-else>
                             {{ shopStore.getShops.length > 1 ? 'These stores are' : 'This store is' }} open now <br />
                             <span> {{ shopStore.getShops.length > 1 ? 'Mga baligyaan' : 'Baligyaan' }} nga abri
                                 subong</span>
@@ -136,7 +140,7 @@
                                             {{ shop.type }}
                                         </span>
                                     </div>
-                                    <div class="d-flex align-end flex-column"
+                                    <div :class="!shop.lowest_price ? 'd-none' : 'd-flex align-end flex-column'"
                                         style="position: absolute; right: 10px;">
                                         <span class="text-grey-darken-1" style="font-size: 10px">
                                             Starts @
@@ -158,16 +162,18 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
 import { useToast } from 'vue-toastification'
 
 // Router & Store
 const router = useRouter()
+const route = useRoute()
 const shopStore = useShopStore()
 const toast = useToast()
 
 // State
+const requestedTimeBetween = ref('')
 const isOnline = ref(navigator.onLine)
 const searchBox = ref(null)
 const searchTimeout = ref(null)
@@ -259,7 +265,7 @@ const fetchShops = async (forceRefresh = false) => {
     const request = {
         requested_category: null,
         requested_meal_type: null,
-        requested_time_between: `${currentHour.value}:${currentMinute.value}`,
+        requested_time_between: requestedTimeBetween.value,
         items_per_page: itemsPerPage.value
     }
     try {
@@ -584,6 +590,7 @@ const refreshData = async () => {
 
 // Lifecycle
 onMounted(() => {
+    requestedTimeBetween.value = route.query.requested_time_between
     startTimeTracking()
     setupDebouncedSearch()
     window.addEventListener('online', onOnline)
