@@ -523,7 +523,7 @@ export default {
             // overnight case (crosses midnight)
             return currentMinutes >= openMinutes ||
                     currentMinutes < closeMinutes
-            }
+        }
 
         return {
             authStore,

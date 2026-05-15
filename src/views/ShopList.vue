@@ -121,7 +121,7 @@
                             <v-col v-for="(shop) in shopStore.getShops" :key="shop.id" cols="12" lg="6" md="6" sm="6"
                                 style="padding: 5px !important;">
                                 <v-btn @click="toShop(shop)" class="button content-between">
-                                    <span :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
+                                    <span v-if="!requestedTimeBetween" :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
                                     <v-avatar color="#5c3a21" size="40" class="mr-2 d-flex align-center justify-center">
                                         <template v-if="shop.image">
                                             <img :src="shop.image" width="50" alt="Avatar" />
@@ -187,20 +187,22 @@ const currentMinute = ref(new Date().getMinutes())
 const timeInterval = ref(null)
 const isShopOpen = (shop) => {
     const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
-    const currentMinutes =
-        now.getHours() * 60 + now.getMinutes()
-
-    const [openH, openM] =
-        shop.open_at.split(':').map(Number)
-
-    const [closeH, closeM] =
-        shop.close_at.split(':').map(Number)
+    const [openH, openM] = shop.open_at.split(':').map(Number)
+    const [closeH, closeM] = shop.close_at.split(':').map(Number)
 
     const openMinutes = openH * 60 + openM
     const closeMinutes = closeH * 60 + closeM
 
-    return currentMinutes >= openMinutes &&
+    // normal case (same day closing)
+    if (openMinutes < closeMinutes) {
+        return currentMinutes >= openMinutes &&
+            currentMinutes < closeMinutes
+    }
+
+    // overnight case (crosses midnight)
+    return currentMinutes >= openMinutes ||
         currentMinutes < closeMinutes
 }
 
