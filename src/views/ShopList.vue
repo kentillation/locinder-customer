@@ -121,6 +121,7 @@
                             <v-col v-for="(shop) in shopStore.getShops" :key="shop.id" cols="12" lg="6" md="6" sm="6"
                                 style="padding: 5px !important;">
                                 <v-btn @click="toShop(shop)" class="button content-between">
+                                    <span :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
                                     <v-avatar color="#5c3a21" size="40" class="mr-2 d-flex align-center justify-center">
                                         <template v-if="shop.image">
                                             <img :src="shop.image" width="50" alt="Avatar" />
@@ -184,6 +185,24 @@ const debouncedSearch = ref(null)
 const currentHour = ref(new Date().getHours())
 const currentMinute = ref(new Date().getMinutes())
 const timeInterval = ref(null)
+const isShopOpen = (shop) => {
+    const now = new Date()
+
+    const currentMinutes =
+        now.getHours() * 60 + now.getMinutes()
+
+    const [openH, openM] =
+        shop.open_at.split(':').map(Number)
+
+    const [closeH, closeM] =
+        shop.close_at.split(':').map(Number)
+
+    const openMinutes = openH * 60 + openM
+    const closeMinutes = closeH * 60 + closeM
+
+    return currentMinutes >= openMinutes &&
+        currentMinutes < closeMinutes
+}
 
 // Images
 const nostoreImage = new URL('@/assets/img/png/food/No Store.png', import.meta.url).href
@@ -254,7 +273,7 @@ const onOnline = () => {
 
 const fetchShops = async (forceRefresh = false) => {
     // Skip cache check if force refresh is true
-    if (!forceRefresh && 
+    if (!forceRefresh &&
         shopStore.lastCategory === null &&
         shopStore.lastMealType === null &&
         shopStore.lastTimeBetween === `${currentHour.value}:${currentMinute.value}` &&
@@ -797,6 +816,31 @@ onUnmounted(() => {
     display: flex;
     justify-content: center;
     margin-bottom: 20px;
+}
+
+.badge-dot {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 10px;
+    height: 10px;
+    background: #007233;
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
 }
 
 .content-between {

@@ -3,9 +3,7 @@
     <!-- Connection Banner -->
     <div v-if="connectionStatus !== 'online'" class="connection-container">
       <div class="connection-banner" :class="connectionStatus">
-        <v-icon class="mr-1">
-          {{ connectionStatusIcon }}
-        </v-icon>
+        <HugeiconsIcon :icon="connectionStatusIcon" width="17" class="mr-1" />
         <span>{{ connectionStatusText }}</span>
       </div>
     </div>
@@ -19,7 +17,7 @@
 
           <!-- Home -->
           <div class="nav-item" :class="{ 'active-page': currentPage === 'HomePage' }" @click="goTo('/home')">
-            <HugeiconsIcon :icon="Home03Icon" />
+            <HugeiconsIcon :icon="Home03Icon" :class="{ 'active-icon': currentPage === 'HomePage' }" />
             <span class="nav-text">Home</span>
           </div>
 
@@ -27,7 +25,7 @@
 
           <!-- Stores -->
           <div class="nav-item" :class="{ 'active-page': currentPage === 'ShopList' }" @click="goTo('/shop-list')">
-            <HugeiconsIcon :icon="Store01Icon" />
+            <HugeiconsIcon :icon="Store01Icon" :class="{ 'active-icon': currentPage === 'ShopList' }" />
             <span class="nav-text">Stores</span>
           </div>
 
@@ -66,7 +64,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Home03Icon, Store01Icon, Logout02Icon } from '@hugeicons/core-free-icons'
+import { WifiDisconnected01Icon, WifiLowSignalIcon, Loading01Icon, Home03Icon, Store01Icon, Logout02Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
@@ -195,13 +193,13 @@ const connectionStatusText = computed(() => {
 const connectionStatusIcon = computed(() => {
   switch (connectionStatus.value) {
     case 'offline':
-      return 'mdi-wifi-off'
+      return WifiDisconnected01Icon
 
     case 'slow':
-      return 'mdi-wifi-alert'
+      return WifiLowSignalIcon
 
     case 'waiting':
-      return 'mdi-timer-sand'
+      return Loading01Icon
 
     default:
       return ''
@@ -268,18 +266,20 @@ onBeforeUnmount(() => {
   width: 50px;
   color: #a1a1a1;
   padding: 6px 0 6px 0;
+  font-weight: normal;
 }
 
 .v-icon {
-  /* font-size: 22px !important; */
   transition: all 0.3s ease;
 }
 
 .active-page {
-  /* border-radius: 20%; */
-  /* background-color: #a34400 !important; */
   color: #a34400 !important;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.active-icon {
+  font-weight: bold;
 }
 
 .nav-text {
