@@ -1,5 +1,5 @@
 <template>
-    <v-container class="pull-to-refresh-container">
+    <v-container>
         <!-- Pull to Refresh Progress Indicator (Only visible in Shop Products tab) -->
         <div class="refresh-progress" :style="{
             transform: `translateY(${pullProgress}px)`,
@@ -838,11 +838,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.pull-to-refresh-container {
-    position: relative;
+.v-container {
     padding: 0 !important;
-    height: 100vh;
-    overflow: hidden;
 }
 
 .scroll-content {
