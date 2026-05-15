@@ -588,7 +588,9 @@ onMounted(() => {
     setupDebouncedSearch()
     window.addEventListener('online', onOnline)
     fetchShops()
-    scrollContainer.value = document.querySelector('.scroll-content')
+    nextTick(() => {
+        scrollContainer.value = document.querySelector('.scroll-content')
+    })
 })
 
 onUnmounted(() => {
