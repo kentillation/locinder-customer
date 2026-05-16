@@ -62,7 +62,7 @@
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
                         <v-btn class="close-btn" @click="closeKrisantaDialog" size="small" elivation="0" icon>
-                            <v-icon style="font-size: 14px !important;">mdi-close</v-icon>
+                            <HugeiconsIcon :icon="CancelCircleIcon" size="20" />
                         </v-btn>
                         <div class="bubble-text">
                             Meow! 🐾 My name is <strong>Krisanta</strong>, isa ko ka stray cat. Soon, pwede taka

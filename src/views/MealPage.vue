@@ -35,7 +35,7 @@
             <v-card class="search-box">
                 <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product...">
                     <template v-slot:prepend-inner>
-                        <v-icon class="me-1">mdi-magnify</v-icon>
+                        <HugeiconsIcon :icon="Search01Icon" size="20" class="mr-2" />
                     </template>
                 </v-text-field>
             </v-card>
@@ -160,7 +160,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Loading03Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
+import { Loading03Icon, ArrowLeft02Icon, Search01Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/productsStore'
