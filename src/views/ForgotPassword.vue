@@ -1,7 +1,7 @@
 <template>
     <div class="login-container">
         <v-container>
-            <v-card class="login-card">
+            <v-card class="forgotpass-card">
                 <v-row no-gutters>
                     <!-- Form Section -->
                     <v-col cols="12" class="form-section">
@@ -310,7 +310,7 @@ export default {
 }
 
 /* Login Card */
-.login-card {
+.forgotpass-card {
     border-radius: 30px;
     overflow: hidden;
     box-shadow: none;

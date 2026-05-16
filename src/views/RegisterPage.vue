@@ -177,7 +177,7 @@
 
                                 <div class="login-link">
                                     <span>Has already an account?</span>
-                                    <span class="route-text" @click="$router.push('/')">Sign in here</span>
+                                    <span class="route-text" @click="router.push('/')">Sign in here</span>
                                 </div>
                             </v-form>
                         </div>
@@ -398,205 +398,184 @@
     </div>
 </template>
 
-<script>
-import { useToast } from 'vue-toastification';
-import { useAuthStore } from '@/stores/auth';
+<script setup>
+import { ref, reactive, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useToast } from 'vue-toastification'
+import { useAuthStore } from '@/stores/auth'
 
-export default {
-    name: 'RegisterPage',
+// Assets
+const logo = require('@/assets/Locinder-Submark.png')
 
-    components: {
-        // 
-    },
+// Composables
+const router = useRouter()
+const route = useRoute()
+const toast = useToast()
+const authStore = useAuthStore()
 
-    data() {
-        return {
-            logo: require('@/assets/Locinder-Submark.png'),
-            currentStep: 1,
-            totalSteps: 3,
-            showPassword: false,
-            showConfirmPassword: false,
-            termsSheetVisible: false,
-            acceptTerms: false,
-            loading: false,
-            isFormValid: false,
-            formData: {
-                first_name: '',
-                middle_name: '',
-                last_name: '',
-                pet_name: '',
-                customer_contact_number: '',
-                customer_email: '',
-                customer_password: '',
-            },
-            validationErrors: {},
+// Form ref
+const form = ref(null)
 
-            steps: [
-                { number: 1, label: 'Customer Name' },
-                { number: 2, label: 'Other Info' },
-                { number: 3, label: 'Authorization' }
-            ],
-        };
-    },
+// State
+const currentStep = ref(1)
+const totalSteps = 3
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const termsSheetVisible = ref(false)
+const acceptTerms = ref(false)
+const loading = ref(false)
+const isFormValid = ref(false)
+const validationErrors = ref({})
 
-    setup() {
-        const toast = useToast();
+const formData = reactive({
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    pet_name: '',
+    customer_contact_number: '',
+    customer_email: '',
+    customer_password: '',
+    confirm_password: ''
+})
 
-        return {
-            toast,
-        };
-    },
+const steps = [
+    { number: 1, label: 'Customer Name' },
+    { number: 2, label: 'Other Info' },
+    { number: 3, label: 'Authorization' }
+]
 
-    computed: {
-        isStepValid() {
-            if (this.currentStep === 1) {
-                return !!(this.formData.first_name && this.formData.last_name);
-            }
-            if (this.currentStep === 2) {
-                return !!(this.formData.customer_contact_number);
-            }
-            if (this.currentStep === 3) {
-                return !!(this.formData.customer_email && this.formData.customer_password &&
-                    this.formData.confirm_password && this.formData.customer_password === this.formData.confirm_password);
-            }
-            return false;
-        },
-    },
+// Validation Rules
+const requiredRule = (v) => !!v || 'This field is required'
 
-    mounted() {
-        //
-    },
+const max50Rule = (v) => (v && v.length <= 30) || 'Maximum 50 characters only'
 
-    methods: {
+const leaveBlank = (v) => {
+    if (!v || v.length === 0) return true
+    return (v.length <= 30) || 'Maximum 30 characters only'
+}
 
-        requiredRule(v) {
-            return !!v || 'This field is required';
-        },
+const emailFormatRule = (v) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return pattern.test(v) || 'Please enter a valid email address'
+}
 
-        max50Rule(v) {
-            return (v && v.length <= 30) || 'Maximum 50 characters only';
-        },
+const mobileNumberRule = (v) => {
+    const pattern = /^(\+63|0)[0-9]{10}$/
+    return pattern.test(v.replace(/\s/g, '')) || 'Enter a valid Philippine mobile number (e.g., 09123456789 or +639123456789)'
+}
 
-        leaveBlank(v) {
-            // Allow empty values (null, undefined, or empty string)
-            if (!v || v.length === 0) return true;
-            return (v.length <= 30) || 'Maximum 30 characters only';
-        },
+const passwordRule = (v) => v.length >= 8 || 'Password must be at least 8 characters'
 
-        emailFormatRule(v) {
-            const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return pattern.test(v) || 'Please enter a valid email address';
-        },
+const confirmPasswordRule = () => {
+    return formData.customer_password === formData.confirm_password || 'Passwords do not match'
+}
 
-        mobileNumberRule(v) {
-            const pattern = /^(\+63|0)[0-9]{10}$/;
-            return pattern.test(v.replace(/\s/g, '')) || 'Enter a valid Philippine mobile number (e.g., 09123456789 or +639123456789)';
-        },
-
-        passwordRule(v) {
-            return v.length >= 8 || 'Password must be at least 8 characters';
-        },
-
-        confirmPasswordRule() {
-            return this.formData.customer_password === this.formData.confirm_password || 'Passwords do not match';
-        },
-
-        nextStep() {
-            if (this.isStepValid) {
-                this.currentStep++;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                this.toast.error('Please fill in all required fields before proceeding');
-            }
-        },
-
-        prevStep() {
-            if (this.currentStep > 1) {
-                this.currentStep--;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        },
-
-        goToStep(step) {
-            if (step < this.currentStep) {
-                this.currentStep = step;
-            } else if (step > this.currentStep && this.isStepValid) {
-                this.currentStep = step;
-            } else if (step > this.currentStep) {
-                this.toast.error('Please complete current step first.');
-
-            }
-        },
-
-        async handleRegister() {
-            const isValid = await this.$refs.form.validate();
-            if (!isValid.valid) return;
-
-            this.loading = true;
-            try {
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                const authStore = useAuthStore();
-
-                const submissionData = {
-                    ...this.formData,
-                };
-
-                // Remove confirm_password as it's not needed in the backend
-                delete submissionData.confirm_password;
-
-                const result = await authStore.customerRegistration(submissionData);
-
-                if (result.success === true) {
-                    const redirectPath = this.$route.query.redirect || '/home';
-
-                    this.toast.success(result.message);
-                    
-                    setTimeout(() => {
-                        window.location.href = redirectPath;
-                    }, 2000);
-                } else {
-                    this.handleValidationErrors(result.errors);
-                }
-
-            } catch (error) {
-                console.error(error);
-
-                if (error.response) {
-                    const status = error.response.status;
-                    const data = error.response.data;
-
-                    if (status === 422 && data.errors) {
-                        this.handleValidationErrors(data.errors);
-                        this.toast.error(Object.values(data.errors)[0][0]);
-                    } else if (status === 500) {
-                        this.toast.error(data.message || 'Server error occurred');
-                    } else {
-                        this.toast.error(data.message || 'Registration failed');
-                    }
-                } else if (error.request) {
-                    this.toast.error('Network error. Please check your connection.');
-                } else {
-                    this.toast.error(error.message || 'An unexpected error occurred');
-                }
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        handleValidationErrors(errors) {
-            if (this.$refs.form && this.$refs.form.setErrors) {
-                this.$refs.form.setErrors(errors);
-            }
-            this.validationErrors = errors;
-        },
-
-        openTermsSheet() {
-            this.termsSheetVisible = true
-        },
-
+// Computed
+const isStepValid = computed(() => {
+    if (currentStep.value === 1) {
+        return !!(formData.first_name && formData.last_name)
     }
-};
+    if (currentStep.value === 2) {
+        return !!(formData.customer_contact_number)
+    }
+    if (currentStep.value === 3) {
+        return !!(formData.customer_email && formData.customer_password &&
+            formData.confirm_password && formData.customer_password === formData.confirm_password)
+    }
+    return false
+})
+
+// Methods
+const nextStep = () => {
+    if (isStepValid.value) {
+        currentStep.value++
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+        toast.error('Please fill in all required fields before proceeding')
+    }
+}
+
+const prevStep = () => {
+    if (currentStep.value > 1) {
+        currentStep.value--
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+}
+
+const goToStep = (step) => {
+    if (step < currentStep.value) {
+        currentStep.value = step
+    } else if (step > currentStep.value && isStepValid.value) {
+        currentStep.value = step
+    } else if (step > currentStep.value) {
+        toast.error('Please complete current step first.')
+    }
+}
+
+const handleValidationErrors = (errors) => {
+    if (form.value && form.value.setErrors) {
+        form.value.setErrors(errors)
+    }
+    validationErrors.value = errors
+}
+
+const openTermsSheet = () => {
+    termsSheetVisible.value = true
+}
+
+const handleRegister = async () => {
+    const isValid = await form.value.validate()
+    if (!isValid.valid) return
+
+    loading.value = true
+    try {
+        await new Promise(resolve => setTimeout(resolve, 1500))
+
+        const submissionData = {
+            ...formData,
+        }
+
+        // Remove confirm_password as it's not needed in the backend
+        delete submissionData.confirm_password
+
+        const result = await authStore.customerRegistration(submissionData)
+
+        if (result.success === true) {
+            const redirectPath = route.query.redirect || '/home'
+
+            toast.success(result.message)
+
+            setTimeout(() => {
+                window.location.href = redirectPath
+            }, 2000)
+        } else {
+            handleValidationErrors(result.errors)
+        }
+
+    } catch (error) {
+        console.error(error)
+
+        if (error.response) {
+            const status = error.response.status
+            const data = error.response.data
+
+            if (status === 422 && data.errors) {
+                handleValidationErrors(data.errors)
+                toast.error(Object.values(data.errors)[0][0])
+            } else if (status === 500) {
+                toast.error(data.message || 'Server error occurred')
+            } else {
+                toast.error(data.message || 'Registration failed')
+            }
+        } else if (error.request) {
+            toast.error('Network error. Please check your connection.')
+        } else {
+            toast.error(error.message || 'An unexpected error occurred')
+        }
+    } finally {
+        loading.value = false
+    }
+}
 </script>
 
 <style scoped>
@@ -832,13 +811,12 @@ export default {
 .next-btn,
 .register-btn {
     background: linear-gradient(135deg, #5c3a21 0%, #d46600 100%);
-    box-shadow: 0 4px 12px rgba(212, 102, 0, 0.3);
+    box-shadow:  none;
 }
 
 .next-btn:hover,
 .register-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(212, 102, 0, 0.4);
 }
 
 .login-link {
