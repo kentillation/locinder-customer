@@ -7,11 +7,12 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
-                        :style="{ transform: `rotate(${rotationAngle}deg)` }"
-                        style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
-                        mdi-loading
-                    </v-icon>
+                    <HugeiconsIcon :icon="Loading03Icon" size="40" :style="{
+                        transform: `rotate(${rotationAngle}deg)`,
+                        color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                        background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
+                    }"
+                        style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -22,8 +23,8 @@
             <!-- Headline -->
             <div class="headline content-between">
                 <div>
-                    <v-btn size="small" icon>
-                        <v-icon @click="goBack">mdi-arrow-left</v-icon>
+                    <v-btn size="small" style="background: transparent !important;" icon>
+                        <HugeiconsIcon @click="goBack" :icon="ArrowLeft02Icon" size="20" />
                     </v-btn>
                     <h3>{{ meal_type }}</h3>
                 </div>
@@ -103,14 +104,14 @@
                                         <span style="color: #5c3a21;">{{ product.product_name }}</span>
                                     </span>
                                     <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
-                                    }}</span>
+                                        }}</span>
                                     <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
-                                    }}</em></span>
+                                            }}</em></span>
                                 </div>
                                 <div class="d-flex align-center">
                                     <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
                                         product.base_price
-                                        }}</span>
+                                    }}</span>
                                 </div>
                             </v-btn>
                         </v-col>
@@ -158,6 +159,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Loading03Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/productsStore'
@@ -320,7 +323,7 @@ const reloadProductsAndCategories = () => {
 }
 
 const fetchProducts = async (page = 1, isLoadMore = false) => {
-    
+
     if ((isProductsLoading.value || isFetching.value) && !isLoadMore) return
 
     if (isLoadMore) {
@@ -389,17 +392,17 @@ const loadMoreProducts = async () => {
 
 const fetchCategories = async () => {
     isCategoriesLoading.value = true
-    
+
     try {
         const request = {
             meal_type: meal_type.value,
             items_per_page: itemsPerPage.value
         }
-        
+
         await productsStore.fetchCategoriesByMealTypeStore(request)
-        
+
         categories.value = productsStore.getProductCategories
-        
+
     } catch (error) {
         console.error('❌ Error fetching categories:', error)
         categories.value = []

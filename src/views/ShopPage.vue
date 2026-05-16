@@ -7,11 +7,12 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
-                        :style="{ transform: `rotate(${rotationAngle}deg)` }"
-                        style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
-                        mdi-loading
-                    </v-icon>
+                    <HugeiconsIcon :icon="Loading03Icon" size="40" :style="{
+                        transform: `rotate(${rotationAngle}deg)`,
+                        color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                        background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
+                    }"
+                        style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -21,8 +22,8 @@
             @touchend="handleTouchEnd">
             <!-- Top -->
             <div class="headline content-between">
-                <v-btn size="small" icon>
-                    <v-icon @click="goBack">mdi-arrow-left</v-icon>
+                <v-btn size="small" style="background: transparent !important;" icon>
+                    <HugeiconsIcon @click="goBack" :icon="ArrowLeft02Icon" size="20" />
                 </v-btn>
                 <span class="d-flex align-center flex-column">
                     <h3 class="text-wrap">{{ shop_name }}</h3>
@@ -36,7 +37,7 @@
                     :class="{ 'active-tab': activeTab === tab.value }"
                     @click="tab.clickHandler ? tab.clickHandler() : null" size="small">
                     <v-icon style="font-size: 20px !important;">{{ tab.value === "ourproducts" ? 'mdi-food' : 'mdi-map'
-                        }}</v-icon>&nbsp;{{ tab.label }}
+                    }}</v-icon>&nbsp;{{ tab.label }}
                 </v-tab>
             </v-tabs>
 
@@ -200,7 +201,8 @@
                         <v-card class="flex-center-column">
                             <h4 class="mb-2">{{ selectedProductName }}</h4>
                             <v-img :src="selectedProductImage || productImages[selectedProductImageFallBack]"
-                                class="product-image" style="width: 150px !important; height: 150px !important;"></v-img>
+                                class="product-image"
+                                style="width: 150px !important; height: 150px !important;"></v-img>
                             <h5 class="mt-2 text-grey">{{ selectedProductSize }}</h5>
                             <h4 class="mt-2">₱{{ selectedProductPrice }}</h4>
                         </v-card>
@@ -218,6 +220,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Loading03Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
@@ -1061,8 +1065,10 @@ onUnmounted(() => {
     border-radius: 30px 30px 0 0;
     box-shadow: none;
     z-index: 1000;
-    transition: height 0.1s linear !important; /* Faster transition */
-    touch-action: none; /* Prevents page scroll while dragging */
+    transition: height 0.1s linear !important;
+    /* Faster transition */
+    touch-action: none;
+    /* Prevents page scroll while dragging */
     overflow: hidden;
 }
 
@@ -1084,19 +1090,23 @@ onUnmounted(() => {
 }
 
 /* Transitions */
-.slide-up-enter-active, .slide-up-leave-active {
+.slide-up-enter-active,
+.slide-up-leave-active {
     transition: transform 0.2s ease-out;
 }
 
-.slide-up-enter-from, .slide-up-leave-to {
+.slide-up-enter-from,
+.slide-up-leave-to {
     transform: translateY(100%);
 }
 
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
     transition: opacity 0.2s ease;
 }
 
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
     opacity: 0;
 }
 

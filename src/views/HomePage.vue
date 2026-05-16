@@ -7,12 +7,11 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <HugeiconsIcon :icon="Loading03Icon"
-                        size="40"
-                        strokeWidth="3"
-                        :style="{ transform: `rotate(${rotationAngle}deg)`, 
-                            color : pullProgress >= 100 ? '#fff !important' : '#ccc !important',
-                            background : pullProgress >= 100 ? '#5c3a21' : '#f8f8f8' }"
+                    <HugeiconsIcon :icon="Loading03Icon" size="40" :style="{
+                        transform: `rotate(${rotationAngle}deg)`,
+                        color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                        background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
+                    }"
                         style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
@@ -34,9 +33,9 @@
                             <h6>{{ locationStore.getAddress }}</h6>
                         </div>
                         <v-chip v-if="locationStore.permissionDenied" @click="requestLocation"
-                            style="border: 1px solid #6cff00; font-size: 10px;" color="#6cff00" class="pl-1 pr-3"
+                            style="border: 1px solid #6cff00; font-size: 10px;" color="#6cff00" class="pl-1 pr-5"
                             size="small" variant="outline">
-                            <v-icon style="font-size: 13px !important;">mdi-map-marker</v-icon>
+                            <v-icon style="font-size: 13px !important;">mdi-map-marker-outline</v-icon>
                             Enable Location
                         </v-chip>
                     </div>
@@ -87,15 +86,10 @@
                     @keyup.enter="handleSearchBox" @keydown="handleKeyDown" @input="handleSearchInput"
                     :loading="searching">
                     <template v-slot:prepend-inner>
-                        <HugeiconsIcon :icon="Search01Icon" 
-                            size="20" 
-                            class="mr-2" />
+                        <HugeiconsIcon :icon="Search01Icon" size="20" class="mr-2" />
                     </template>
                     <template v-slot:append-inner>
-                        <HugeiconsIcon v-if="searchBox" 
-                            :icon="CancelCircleIcon" 
-                            @click="clearSearch" 
-                            size="20" 
+                        <HugeiconsIcon v-if="searchBox" :icon="CancelCircleIcon" @click="clearSearch" size="20"
                             class="mr-2" />
                     </template>
                 </v-text-field>
@@ -383,7 +377,7 @@
                             <template v-if="surprising">
                                 <p style="color: #5c3a21; font-size: 16px; margin-bottom: 16px;" class="mt-3">{{
                                     loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
-                                    }}
+                                }}
                                 </p>
                                 <div class="mt-3 flex-center-column">
                                     <v-skeleton-loader type="image" width="200"
@@ -419,7 +413,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Search01Icon, Store01Icon, CancelCircleIcon, ArrowRight02Icon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { Loading03Icon, Search01Icon, Store01Icon, CancelCircleIcon, ArrowRight02Icon } from '@hugeicons/core-free-icons'
 import { useAuthStore } from '@/stores/auth';
 import { useLocationStore } from '@/stores/locationStore';
 import { useRouter } from 'vue-router';

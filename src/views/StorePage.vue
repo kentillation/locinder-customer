@@ -7,11 +7,12 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
-                        :style="{ transform: `rotate(${rotationAngle}deg)` }"
-                        style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
-                        mdi-loading
-                    </v-icon>
+                    <HugeiconsIcon :icon="Loading03Icon" size="40" :style="{
+                        transform: `rotate(${rotationAngle}deg)`,
+                        color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                        background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
+                    }"
+                        style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -229,6 +230,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Loading03Icon,  } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'

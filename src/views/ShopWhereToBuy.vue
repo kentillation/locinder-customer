@@ -7,11 +7,12 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
-                        :style="{ transform: `rotate(${rotationAngle}deg)` }"
-                        style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
-                        mdi-loading
-                    </v-icon>
+                    <HugeiconsIcon :icon="Loading03Icon" size="40" :style="{
+                        transform: `rotate(${rotationAngle}deg)`,
+                        color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                        background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
+                    }"
+                        style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -22,8 +23,8 @@
             <!-- Top -->
             <div class="headline content-between">
                 <div>
-                    <v-btn size="small" icon>
-                        <v-icon @click="goBack">mdi-arrow-left</v-icon>
+                    <v-btn size="small" style="background: transparent !important;" icon>
+                        <HugeiconsIcon @click="goBack" :icon="ArrowLeft02Icon" size="20" />
                     </v-btn>
                     <h3>{{ requested_category }}</h3>
                 </div>
@@ -123,6 +124,7 @@
                             <v-col v-for="(shop) in shopStore.getShops" :key="shop.id" cols="12" lg="6" md="6" sm="6"
                                 style="padding: 5px !important;">
                                 <v-btn @click="toShop(shop)" class="button content-between">
+                                    <span :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
                                     <v-avatar color="#5c3a21" size="40" class="mr-2 d-flex align-center justify-center">
                                         <template v-if="shop.image">
                                             <img :src="shop.image" width="50" alt="Avatar" />
@@ -163,6 +165,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Loading03Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
@@ -281,6 +285,27 @@ const fetchShops = async () => {
     } catch (error) {
         console.error('Error fetching stores:', error)
     }
+}
+
+const isShopOpen = (shop) => {
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+    const [openH, openM] = shop.open_at.split(':').map(Number)
+    const [closeH, closeM] = shop.close_at.split(':').map(Number)
+
+    const openMinutes = openH * 60 + openM
+    const closeMinutes = closeH * 60 + closeM
+
+    // normal case (same day closing)
+    if (openMinutes < closeMinutes) {
+        return currentMinutes >= openMinutes &&
+            currentMinutes < closeMinutes
+    }
+
+    // overnight case (crosses midnight)
+    return currentMinutes >= openMinutes ||
+        currentMinutes < closeMinutes
 }
 
 const sanitizeSearchTerm = (term) => {
@@ -812,7 +837,28 @@ onUnmounted(() => {
 }
 
 .badge-dot {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 10px;
+    height: 10px;
+    background: #007233;
+    border-radius: 50%;
+    animation: blink 1.5s infinite;
+}
 
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
 }
 
 .content-between {

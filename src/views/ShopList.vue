@@ -8,11 +8,11 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
-                        :style="{ transform: `rotate(${rotationAngle}deg)` }"
-                        style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
-                        mdi-loading
-                    </v-icon>
+                    <HugeiconsIcon :icon="Loading03Icon" size="40" :style="{
+                        transform: `rotate(${rotationAngle}deg)`,
+                        color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                        background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
+                    }" style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -121,7 +121,8 @@
                             <v-col v-for="(shop) in shopStore.getShops" :key="shop.id" cols="12" lg="6" md="6" sm="6"
                                 style="padding: 5px !important;">
                                 <v-btn @click="toShop(shop)" class="button content-between">
-                                    <span v-if="!requestedTimeBetween" :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
+                                    <span v-if="!requestedTimeBetween"
+                                        :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
                                     <v-avatar color="#5c3a21" size="40" class="mr-2 d-flex align-center justify-center">
                                         <template v-if="shop.image">
                                             <img :src="shop.image" width="50" alt="Avatar" />
@@ -162,6 +163,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Loading03Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
