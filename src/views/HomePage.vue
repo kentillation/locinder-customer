@@ -1,6 +1,5 @@
 <template>
     <v-container>
-
         <!-- Pull to Refresh Progress Indicator -->
         <div class="refresh-progress" :style="{
             transform: `translateY(${pullProgress}px)`,
@@ -205,7 +204,7 @@
             </v-card>
 
             <!-- New -->
-            <v-btn @click="this.$router.push('new-products')" class="new-product-btn content-between">
+            <v-btn @click="router.push('new-products')" class="new-product-btn content-between">
                 <span class="text-wrap">
                     Check these new products<br />
                     <span class="subtitle">Lantawa mga bag-o nga produkto</span>
@@ -348,7 +347,7 @@
                             </v-col>
                         </v-row>
                         <!-- New -->
-                        <v-btn @click="this.$router.push('new-products')" class="new-product-btn content-between">
+                        <v-btn @click="router.push('new-products')" class="new-product-btn content-between">
                             <span>
                                 Check these new products<br />
                                 <span class="subtitle">Lantawa mga bag-o nga produkto</span>
@@ -376,7 +375,7 @@
                             <template v-if="surprising">
                                 <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;" class="mt-3">{{
                                     loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
-                                }}
+                                    }}
                                 </p>
                                 <div class="mt-3 flex-center-column">
                                     <v-skeleton-loader type="image" width="200"
@@ -410,7 +409,7 @@
     </v-container>
 </template>
 
-<script>
+<script setup>
 import { useAuthStore } from '@/stores/auth';
 import { useLocationStore } from '@/stores/locationStore';
 import { useRouter } from 'vue-router';
@@ -418,794 +417,420 @@ import { useShopStore } from '@/stores/shopStore';
 import { useProductsStore } from '@/stores/productsStore';
 import confetti from 'canvas-confetti';
 import { useToast } from 'vue-toastification'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
-export default {
-    name: 'HomePage',
-    data() {
-        return {
-            authCheckDone: false,
-            isOnline: navigator.onLine,
-            krisantaDialog: false,
-            searchBox: null,
-            searchTimeout: null,
-            searching: false,
-            debouncedSearch: null,
-            selectedSuggestionIndex: -1,
-            selectedBaseCategory: null,
-            itemsPerPage: 20,
-            moreSheet: false,
-            sheetHeight: 60,
-            startY: 0,
-            startHeight: 60,
-            SNAP_POINTS: {
-                half: 60,
-                full: 95,
-            },
-            activeSheet: null,
-            surpriseSheet: false,
-            surpriseImage: null,
-            surpriseProduct: null,
-            surpriseProductId: null,
-            surpriseShopName: null,
-            surpriseShopId: null,
-            surpriseShopBranchId: null,
-            surpriseShopType: null,
-            surpriseShopAddress: null,
-            surpriseOpenAt: null,
-            surpriseCloseAt: null,
-            surprising: false,
-            loadingSurpriseMessages: [
-                "🎉 Ginahanda na ang imo sorpresa...",
-                "🎉 May ara kami sorpresa nga namit...",
-                "🎉 Kadali lang gid, ari na imo sorpresa..."
-            ],
-            currentTimeImage: require('@/assets/img/png/food/Current Time.png'),
-            moreImage: require('@/assets/img/png/food/Cutlery.png'),
-            storeImage: require('@/assets/img/png/food/Store.png'),
-            openboxImage: require('@/assets/img/png/box/Open Box.png'),
-            nostoreImage: require('@/assets/img/png/food/No Store.png'),
-            nofastfoodImage: require('@/assets/img/png/food/No Fast Food.png'),
-            happyKrisantaImage: require('@/assets/img/png/krisanta/Happy Krisanta.png'),
-            tiredKrisantaImage: require('@/assets/img/png/krisanta/Tired Krisanta.png'),
-            sleepingKrisantaImage: require('@/assets/img/png/krisanta/Sleeping Krisanta.png'),
-            currentHour: new Date().getHours(),
-            currentMinute: new Date().getMinutes(),
-            timeInterval: null,
-            // Pull to refresh properties
-            isRefreshing: false,
-            pullProgress: 0,
-            scrollContainer: null,
-            touchStartY: 0,
-            isPulling: false,
-            PULL_THRESHOLD: 200,
-            showProgressThreshold: 100,
-            rotationAngle: 0,
-            rotationInterval: null,
-            surpriseCooldown: false,
-            surpriseCooldownInterval: null,
-            surpriseCooldownEndTime: null,
-        }
-    },
+const authStore = useAuthStore();
+const locationStore = useLocationStore();
+const shopStore = useShopStore();
+const productsStore = useProductsStore();
+const toast = useToast();
+const router = useRouter();
 
-    setup() {
-        const authStore = useAuthStore();
-        const locationStore = useLocationStore();
-        const shopStore = useShopStore();
-        const productsStore = useProductsStore();
-        const toast = useToast();
-        const router = useRouter();
-        const isShopOpen = (shop) => {
-            const now = new Date()
-            const currentMinutes = now.getHours() * 60 + now.getMinutes()
+const isShopOpen = (shop) => {
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
-            const [openH, openM] = shop.open_at.split(':').map(Number)
-            const [closeH, closeM] = shop.close_at.split(':').map(Number)
+    const [openH, openM] = shop.open_at.split(':').map(Number)
+    const [closeH, closeM] = shop.close_at.split(':').map(Number)
 
-            const openMinutes = openH * 60 + openM
-            const closeMinutes = closeH * 60 + closeM
+    const openMinutes = openH * 60 + openM
+    const closeMinutes = closeH * 60 + closeM
 
-            // normal case (same day closing)
-            if (openMinutes < closeMinutes) {
-                return currentMinutes >= openMinutes &&
-                    currentMinutes < closeMinutes
-            }
+    // normal case (same day closing)
+    if (openMinutes < closeMinutes) {
+        return currentMinutes >= openMinutes &&
+            currentMinutes < closeMinutes
+    }
 
-            // overnight case (crosses midnight)
-            return currentMinutes >= openMinutes ||
-                currentMinutes < closeMinutes
-        }
+    // overnight case (crosses midnight)
+    return currentMinutes >= openMinutes ||
+        currentMinutes < closeMinutes
+}
 
-        return {
-            authStore,
-            locationStore,
-            shopStore,
-            productsStore,
-            toast,
-            router,
-            isShopOpen
-        };
-    },
+// Data properties
+const authCheckDone = ref(false);
+const isOnline = ref(navigator.onLine);
+const krisantaDialog = ref(false);
+const searchBox = ref(null);
+const searchTimeout = ref(null);
+const searching = ref(false);
+const debouncedSearch = ref(null);
+const selectedSuggestionIndex = ref(-1);
+const selectedBaseCategory = ref(null);
+const itemsPerPage = ref(20);
+const moreSheet = ref(false);
+const sheetHeight = ref(60);
+const startY = ref(0);
+const startHeight = ref(60);
+const SNAP_POINTS = {
+    half: 60,
+    full: 95,
+};
+const activeSheet = ref(null);
+const surpriseSheet = ref(false);
+const surpriseImage = ref(null);
+const surpriseProduct = ref(null);
+const surpriseProductId = ref(null);
+const surpriseShopName = ref(null);
+const surpriseShopId = ref(null);
+const surpriseShopBranchId = ref(null);
+const surpriseShopType = ref(null);
+const surpriseShopAddress = ref(null);
+const surpriseOpenAt = ref(null);
+const surpriseCloseAt = ref(null);
+const surprising = ref(false);
+const loadingSurpriseMessages = ref([
+    "🎉 Ginahanda na ang imo sorpresa...",
+    "🎉 May ara kami sorpresa nga namit...",
+    "🎉 Kadali lang gid, ari na imo sorpresa..."
+]);
+const currentTimeImage = ref(require('@/assets/img/png/food/Current Time.png'));
+const moreImage = ref(require('@/assets/img/png/food/Cutlery.png'));
+const storeImage = ref(require('@/assets/img/png/food/Store.png'));
+const openboxImage = ref(require('@/assets/img/png/box/Open Box.png'));
+const nostoreImage = ref(require('@/assets/img/png/food/No Store.png'));
+const nofastfoodImage = ref(require('@/assets/img/png/food/No Fast Food.png'));
+const happyKrisantaImage = ref(require('@/assets/img/png/krisanta/Happy Krisanta.png'));
+const tiredKrisantaImage = ref(require('@/assets/img/png/krisanta/Tired Krisanta.png'));
+const sleepingKrisantaImage = ref(require('@/assets/img/png/krisanta/Sleeping Krisanta.png'));
+const currentHour = ref(new Date().getHours());
+const currentMinute = ref(new Date().getMinutes());
+const timeInterval = ref(null);
+// Pull to refresh properties
+const isRefreshing = ref(false);
+const pullProgress = ref(0);
+const scrollContainer = ref(null);
+const touchStartY = ref(0);
+const isPulling = ref(false);
+const PULL_THRESHOLD = 200;
+const showProgressThreshold = 100;
+const rotationAngle = ref(0);
+const rotationInterval = ref(null);
+const surpriseCooldown = ref(false);
+const surpriseCooldownInterval = ref(null);
+const surpriseCooldownEndTime = ref(null);
 
-    async mounted() {
-        await this.checkAuthentication();
+// Computed properties
+const getSpeedometerIcon = computed(() => {
+    const speed = locationStore.movementSpeed;
 
-        if (!this.authCheckDone) {
-            return; // Stop execution if not authenticated
-        }
+    if (speed < 5) {
+        return 'mdi-speedometer-slow';
+    } else if (speed < 30) {
+        return 'mdi-speedometer-medium';
+    } else {
+        return 'mdi-speedometer';
+    }
+});
 
-        await this.initializeLocationWithMovementTracking();
+const getSpeedometerIconClass = computed(() => {
+    const speed = locationStore.movementSpeed;
 
-        this.startTimeTracking();
+    return {
+        'speed-icon-slow': speed < 5,
+        'speed-icon-medium': speed >= 5 && speed < 30,
+        'speed-icon-fast': speed >= 30,
+        'speed-icon-very-fast': speed >= 60
+    };
+});
 
-        this.setupDebouncedSearch();
+const getSpeedAlertType = computed(() => {
+    const speed = locationStore.movementSpeed;
 
-        window.addEventListener('online', this.onOnline);
+    if (speed >= 60) {
+        return 'error';
+    } else if (speed >= 40) {
+        return 'warning';
+    } else {
+        return 'info';
+    }
+});
 
-        await Promise.all([
-            this.fetchProductBaseCategories(),
-            this.fetchShops(),
-        ]);
+const getSpeedWarningMessage = computed(() => {
+    const speed = locationStore.movementSpeed;
 
-        this.scrollContainer = this.$refs.scrollContainer;
+    if (speed >= 80) {
+        return '⚠️ High speed detected! Please drive safely and don\'t use the app while driving!';
+    } else if (speed >= 60) {
+        return '🚗 You\'re driving quite fast. Please focus on the road!';
+    } else if (speed >= 40) {
+        return '🚙 Driving detected. Please be safe on the road!';
+    } else {
+        return '🚶 Moving detected. Stay safe!';
+    }
+});
 
-        this.checkAndRestoreCooldown();
+const allCategories = computed(() => {
+    return productsStore.getBaseCategories.slice(10);
+});
 
-    },
+const sortedCategories = computed(() => {
+    const others = allCategories.value.find(c => c.label === 'Other');
+    const rest = allCategories.value.filter(c => c.label !== 'Other');
+    return others ? [...rest, others] : rest;
+});
 
-    beforeUnmount() {
-        this.locationStore.stopContinuousTracking();
+const limitedCategories = computed(() => {
+    return productsStore.getBaseCategories.slice(0, 10);
+});
 
-        window.removeEventListener('online', this.onOnline);
+const limitedStores = computed(() => {
+    return shopStore.getShops.slice(0, 20);
+});
 
-        if (this.timeInterval) {
-            clearInterval(this.timeInterval);
-        }
+const searchSuggestions = computed(() => {
+    if (!searchBox.value || searchBox.value.length < 2) return [];
 
-        if (this.rotationInterval) {
-            clearInterval(this.rotationInterval);
-        }
-    },
+    const searchLower = searchBox.value.toLowerCase();
+    const suggestions = [];
 
-    computed: {
-
-        getSpeedometerIcon() {
-            const speed = this.locationStore.movementSpeed;
-
-            if (speed < 5) {
-                return 'mdi-speedometer-slow'; // Walking or very slow
-            } else if (speed < 30) {
-                return 'mdi-speedometer-medium'; // Normal driving speed
-            } else {
-                return 'mdi-speedometer'; // Fast driving
-            }
-        },
-
-        // Additional class for animation intensity
-        getSpeedometerIconClass() {
-            const speed = this.locationStore.movementSpeed;
-
-            return {
-                'speed-icon-slow': speed < 5,
-                'speed-icon-medium': speed >= 5 && speed < 30,
-                'speed-icon-fast': speed >= 30,
-                'speed-icon-very-fast': speed >= 60
-            };
-        },
-
-        // Alert type based on speed
-        getSpeedAlertType() {
-            const speed = this.locationStore.movementSpeed;
-
-            if (speed >= 60) {
-                return 'error';
-            } else if (speed >= 40) {
-                return 'warning';
-            } else {
-                return 'info';
-            }
-        },
-
-        // Warning message based on speed
-        getSpeedWarningMessage() {
-            const speed = this.locationStore.movementSpeed;
-
-            if (speed >= 80) {
-                return '⚠️ High speed detected! Please drive safely and don\'t use the app while driving!';
-            } else if (speed >= 60) {
-                return '🚗 You\'re driving quite fast. Please focus on the road!';
-            } else if (speed >= 40) {
-                return '🚙 Driving detected. Please be safe on the road!';
-            } else {
-                return '🚶 Moving detected. Stay safe!';
-            }
-        },
-
-        allCategories() {
-            return this.productsStore.getBaseCategories.slice(10);
-        },
-
-        sortedCategories() {
-            const others = this.allCategories.find(c => c.label === 'Other');
-            const rest = this.allCategories.filter(c => c.label !== 'Other');
-            return others ? [...rest, others] : rest;
-        },
-
-        limitedCategories() {
-            return this.productsStore.getBaseCategories.slice(0, 10);
-        },
-
-        limitedStores() {
-            return this.shopStore.getShops.slice(0, 20);
-        },
-
-        availableCategoriesLower() {
-            return this.productsStore.getBaseCategories.map(category => ({
-                ...category,
-                labelLower: category.label.toLowerCase()
+    if (productsStore.getBaseCategories && Array.isArray(productsStore.getBaseCategories)) {
+        const categorySuggestions = productsStore.getBaseCategories
+            .filter(category => category && category.label && category.label.toLowerCase().includes(searchLower))
+            .map(category => ({
+                type: 'category',
+                label: category.label,
+                value: category.label
             }));
-        },
+        suggestions.push(...categorySuggestions);
+    }
 
-        searchSuggestions() {
-            if (!this.searchBox || this.searchBox.length < 2) return [];
+    const shopsArray = shopStore.getShops;
 
-            const searchLower = this.searchBox.toLowerCase();
-            const suggestions = [];
-
-            if (this.productsStore.getBaseCategories && Array.isArray(this.productsStore.getBaseCategories)) {
-                const categorySuggestions = this.productsStore.getBaseCategories
-                    .filter(category => category && category.label && category.label.toLowerCase().includes(searchLower))
-                    .map(category => ({
-                        type: 'category',
-                        label: category.label,
-                        value: category.label
-                    }));
-                suggestions.push(...categorySuggestions);
-            }
-
-            const shopsArray = this.shopStore.getShops;
-
-            if (shopsArray && shopsArray.length > 0) {
-                const storeSuggestions = shopsArray
-                    .filter(shop => {
-                        if (!shop) return false;
-                        const shopName = shop.name;
-                        return shopName && shopName.toLowerCase().includes(searchLower);
-                    })
-                    .map(shop => ({
-                        type: 'store',
-                        label: shop.name,
-                        value: shop.id,
-                        shopData: shop
-                    }));
-                suggestions.push(...storeSuggestions);
-            }
-
-            return suggestions.slice(0, 10);
-        },
-
-        productImages() {
-            const images = require.context('@/assets/img/png/food', false, /\.png$/)
-            const map = {}
-            images.keys().forEach(fileName => {
-
-                const cleanName = fileName
-                    .replace('./', '')
-                    .replace('.png', '')
-                map[cleanName] = images(fileName)
+    if (shopsArray && shopsArray.length > 0) {
+        const storeSuggestions = shopsArray
+            .filter(shop => {
+                if (!shop) return false;
+                const shopName = shop.name;
+                return shopName && shopName.toLowerCase().includes(searchLower);
             })
-            return map
-        },
+            .map(shop => ({
+                type: 'store',
+                label: shop.name,
+                value: shop.id,
+                shopData: shop
+            }));
+        suggestions.push(...storeSuggestions);
+    }
 
-        currentDayGreeting() {
-            const hour = this.currentHour;
+    return suggestions.slice(0, 10);
+});
 
-            if (hour >= 0 && hour < 5) {
-                return 'Si Krisanta tulog na, ikaw pud';
-            }
-            else if (hour >= 5 && hour < 12) {
-                return 'Maayong aga';
-            }
-            else if (hour >= 12 && hour < 14) {
-                return 'Maayong udto';
-            }
-            else if (hour >= 14 && hour < 18) {
-                return 'Maayong hapon';
-            }
-            else {
-                return 'Maayong gab-i';
-            }
-        },
+const productImages = computed(() => {
+    const images = require.context('@/assets/img/png/food', false, /\.png$/);
+    const map = {};
+    images.keys().forEach(fileName => {
+        const cleanName = fileName
+            .replace('./', '')
+            .replace('.png', '');
+        map[cleanName] = images(fileName);
+    });
+    return map;
+});
 
-        currentKrisantaImage() {
-            const hour = this.currentHour;
+const currentDayGreeting = computed(() => {
+    const hour = currentHour.value;
 
-            if (hour === 22 || hour === 23) {        // 10 PM - 11:59 PM
-                return this.tiredKrisantaImage;
-            }
-            else if (hour >= 0 && hour <= 5) {       // 12:00 AM - 6:00 AM (0, 1, 2, 3, 4, 5, 6)
-                return this.sleepingKrisantaImage;
-            }
-            else {
-                return this.happyKrisantaImage;      // All other times
-            }
-        },
+    if (hour >= 0 && hour < 5) {
+        return 'Si Krisanta tulog na, ikaw pud';
+    }
+    else if (hour >= 5 && hour < 12) {
+        return 'Maayong aga';
+    }
+    else if (hour >= 12 && hour < 14) {
+        return 'Maayong udto';
+    }
+    else if (hour >= 14 && hour < 18) {
+        return 'Maayong hapon';
+    }
+    else {
+        return 'Maayong gab-i';
+    }
+});
 
-        currentTimeMeal() {
-            const hour = this.currentHour;
+const currentKrisantaImage = computed(() => {
+    const hour = currentHour.value;
 
-            if (hour >= 6 && hour < 12) {
-                return 'Breakfast';
-            }
+    if (hour === 22 || hour === 23) {
+        return tiredKrisantaImage.value;
+    }
+    else if (hour >= 0 && hour <= 5) {
+        return sleepingKrisantaImage.value;
+    }
+    else {
+        return happyKrisantaImage.value;
+    }
+});
 
-            else if (hour >= 12 && hour < 14) {
-                return 'Lunch';
-            }
+const currentTimeMeal = computed(() => {
+    const hour = currentHour.value;
 
-            else if (hour >= 14 && hour < 18) {
-                return 'Snacks';
-            }
+    if (hour >= 6 && hour < 12) {
+        return 'Breakfast';
+    }
+    else if (hour >= 12 && hour < 14) {
+        return 'Lunch';
+    }
+    else if (hour >= 14 && hour < 18) {
+        return 'Snacks';
+    }
+    else if (hour >= 18 && hour < 23) {
+        return 'Dinner';
+    }
+    else {
+        return 'Not meal time';
+    }
+});
 
-            else if (hour >= 18 && hour < 23) {
-                return 'Dinner';
-            }
 
-            // else if (hour >= 23 || hour < 0) {
-            //     return 'Midnight Snacks';
-            // }
+// Methods
+const checkAuthentication = async () => {
+    if (!authStore.token) {
+        authStore.clearAuth();
+        router.replace('/');
+        return false;
+    }
 
-            else {
-                return 'Not meal time';
-            }
-        },
+    authCheckDone.value = true;
+    return true;
+};
 
-        baseCategoriesForCurrentMeal() {
-            if (!this.currentTimeMeal) return [];
+const initializeLocationWithMovementTracking = async () => {
+    try {
+        const trackingPreference = localStorage.getItem('location_tracking_preference');
 
-            const categories = this.productsStore.getBaseCategories;
-
-            if (!categories || categories.length === 0) return [];
-
-            return categories.filter(category => {
-                if (!category.meal_type) return false;
-
-                let mealTypes = category.meal_type;
-                if (typeof mealTypes === 'string') {
-                    try {
-                        mealTypes = JSON.parse(mealTypes);
-                    } catch (e) {
-                        mealTypes = [mealTypes];
-                    }
-                }
-
-                return Array.isArray(mealTypes) && mealTypes.includes(this.currentTimeMeal);
+        if (trackingPreference === 'always') {
+            await locationStore.startContinuousTracking({
+                highAccuracy: true,
+                adaptiveInterval: true
             });
-        },
-    },
+        } else {
+            await locationStore.getCurrentLocation({ force: false });
+        }
+    } catch (error) {
+        console.error('Location initialization failed:', error);
+    }
+};
 
-    watch: {
-        searchBox() {
-            this.selectedBaseCategory = this.searchBox;
-        },
-    },
+const requestLocation = async () => {
+    try {
+        const wantTracking = confirm('Do you want to keep tracking your location while moving? This will help provide better recommendations.');
 
-    methods: {
-
-        async checkAuthentication() {
-            if (!this.authStore.token) {
-                this.authStore.clearAuth();
-                this.$router.replace('/');
-                return false;
-            }
-
-            this.authCheckDone = true;
-            return true;
-        },
-
-        async initializeLocationWithMovementTracking() {
-            try {
-                const trackingPreference = localStorage.getItem('location_tracking_preference');
-
-                if (trackingPreference === 'always') {
-                    await this.locationStore.startContinuousTracking({
-                        highAccuracy: true,
-                        adaptiveInterval: true
-                    });
-                } else {
-                    await this.locationStore.getCurrentLocation({ force: false });
-                }
-            } catch (error) {
-                console.error('Location initialization failed:', error);
-            }
-        },
-
-        async requestLocation() {
-            try {
-                const wantTracking = confirm('Do you want to keep tracking your location while moving? This will help provide better recommendations.');
-
-                if (wantTracking) {
-                    localStorage.setItem('location_tracking_preference', 'always');
-                    await this.locationStore.startContinuousTracking({
-                        highAccuracy: true,
-                        adaptiveInterval: true
-                    });
-                } else {
-                    localStorage.setItem('location_tracking_preference', 'once');
-                    await this.locationStore.getCurrentLocation({ force: true });
-                }
-
-                this.toast.success('Location enabled successfully!');
-            } catch (error) {
-                this.toast.error('Unable to get location. Please enable location permissions.');
-            }
-        },
-
-        onOnline() {
-            this.isOnline = true;
-            this.toast.info('Internet connection restored');
-        },
-
-        showKrisantaDialog() {
-            this.krisantaDialog = true;
-        },
-
-        closeKrisantaDialog() {
-            this.krisantaDialog = false;
-        },
-
-        async fetchShops() {
-            if (this.shouldSkipFetch(null)) return;
-
-            try {
-                const request = this.buildShopRequest(null);
-                await this.shopStore.fetchShopListStore(request);
-            } catch (error) {
-                console.error('Error fetching stores:', error);
-            }
-        },
-
-        async fetchProductBaseCategories() {
-            if (this.productsStore.base_categories && this.productsStore.base_categories.length > 0) {
-                return;
-            }
-            try {
-                await this.productsStore.fetchBaseCategoriesStore();
-            } catch (error) {
-                console.error('Error fetching categories:', error);
-            }
-        },
-
-        sanitizeSearchTerm(term) {
-            if (!term) return '';
-            return term.trim()
-                .replace(/[^\w\s]/gi, '')
-                .replace(/\s+/g, ' ')
-                .toLowerCase();
-        },
-
-        handleSearchInput() {
-            if (this.searchTimeout) {
-                clearTimeout(this.searchTimeout);
-            }
-
-            this.searchTimeout = setTimeout(() => {
-                if (this.searchBox && this.searchBox.length >= 2) {
-                    const suggestions = this.searchSuggestions;
-                    if (suggestions.length > 0) {
-                        console.log('Suggestions:', suggestions);
-                    }
-                }
-            }, 300);
-        },
-
-        debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        },
-
-        setupDebouncedSearch() {
-            this.debouncedSearch = this.debounce(() => {
-                if (this.searchBox && this.searchBox.trim()) {
-                    this.handleSearchBox();
-                }
-            }, 500);
-        },
-
-        async handleStoreSearch(suggestion) {
-            if (!suggestion || !suggestion.value) {
-                this.toast.error('Invalid store selection');
-                return;
-            }
-
-            this.searching = true;
-            try {
-                const shopsArray = this.shopStore.getShops;
-
-                if (!shopsArray || !Array.isArray(shopsArray)) {
-                    this.toast.error('Store data not available');
-                    return;
-                }
-
-                const shop = shopsArray.find(s => s && s.id === suggestion.value);
-
-                if (shop) {
-                    await this.$nextTick();
-                    this.$router.push({
-                        path: '/shop/',
-                        query: {
-                            shopId: shop.id,
-                            branchId: shop.branch_id,
-                            shopName: shop.name,
-                            shopType: shop.type,
-                            shopAddress: shop.address,
-                            openAt: shop.open_at,
-                            closeAt: shop.close_at,
-                        }
-                    });
-                } else {
-                    console.error('Store not found. Looking for ID:', suggestion.value);
-                    console.error('Available shops:', shopsArray);
-                    this.toast.error('Store not found');
-
-                }
-            } catch (error) {
-                console.error("Error navigating to store:", error);
-                this.toast.error('An error occurred while searching for the store');
-            } finally {
-                this.searching = false;
-            }
-        },
-
-        async openShops() {
-            this.$router.push({
-                path: '/shop-list',
-                query: {
-                    requested_time_between: `${this.currentHour}:${this.currentMinute}`
-                }
+        if (wantTracking) {
+            localStorage.setItem('location_tracking_preference', 'always');
+            await locationStore.startContinuousTracking({
+                highAccuracy: true,
+                adaptiveInterval: true
             });
-        },
+        } else {
+            localStorage.setItem('location_tracking_preference', 'once');
+            await locationStore.getCurrentLocation({ force: true });
+        }
 
-        async handleSearchBox() {
-            if (!this.searchBox || !this.searchBox.trim()) {
-                this.toast.error('Please enter text on the search box');
-                return;
+        toast.success('Location enabled successfully!');
+    } catch (error) {
+        toast.error('Unable to get location. Please enable location permissions.');
+    }
+};
+
+const onOnline = () => {
+    isOnline.value = true;
+    toast.info('Internet connection restored');
+};
+
+const showKrisantaDialog = () => {
+    krisantaDialog.value = true;
+};
+
+const closeKrisantaDialog = () => {
+    krisantaDialog.value = false;
+};
+
+const fetchShops = async () => {
+    if (shouldSkipFetch(null)) return;
+
+    try {
+        const request = buildShopRequest(null);
+        await shopStore.fetchShopListStore(request);
+    } catch (error) {
+        console.error('Error fetching stores:', error);
+    }
+};
+
+const fetchProductBaseCategories = async () => {
+    if (productsStore.base_categories && productsStore.base_categories.length > 0) {
+        return;
+    }
+    try {
+        await productsStore.fetchBaseCategoriesStore();
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+    }
+};
+
+const sanitizeSearchTerm = (term) => {
+    if (!term) return '';
+    return term.trim()
+        .replace(/[^\w\s]/gi, '')
+        .replace(/\s+/g, ' ')
+        .toLowerCase();
+};
+
+const handleSearchInput = () => {
+    if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value);
+    }
+
+    searchTimeout.value = setTimeout(() => {
+        if (searchBox.value && searchBox.value.length >= 2) {
+            const suggestions = searchSuggestions.value;
+            if (suggestions.length > 0) {
+                console.log('Suggestions:', suggestions);
             }
+        }
+    }, 300);
+};
 
-            this.searching = true;
+const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+};
 
-            const rawSearchTerm = this.searchBox.trim();
-            const sanitizedTerm = this.sanitizeSearchTerm(rawSearchTerm);
+const setupDebouncedSearch = () => {
+    debouncedSearch.value = debounce(() => {
+        if (searchBox.value && searchBox.value.trim()) {
+            handleSearchBox();
+        }
+    }, 500);
+};
 
-            if (!sanitizedTerm) {
-                this.toast.error('Please enter a valid text on the search box');
-                this.searching = false;
-                return;
-            }
+const handleStoreSearch = async (suggestion) => {
+    if (!suggestion || !suggestion.value) {
+        toast.error('Invalid store selection');
+        return;
+    }
 
-            try {
-                // First, check for exact category matches
-                let exactCategoryMatch = null;
-                if (this.productsStore.getBaseCategories && Array.isArray(this.productsStore.getBaseCategories)) {
-                    exactCategoryMatch = this.productsStore.getBaseCategories.find(
-                        category => category && category.label &&
-                            category.label.toLowerCase() === sanitizedTerm
-                    );
-                }
+    searching.value = true;
+    try {
+        const shopsArray = shopStore.getShops;
 
-                // If there's an exact category match, go to category view
-                if (exactCategoryMatch) {
-                    await this.$nextTick();
-                    this.$router.push({
-                        path: '/shop-where-to-buy/',
-                        query: {
-                            baseCategory: exactCategoryMatch.label
-                        }
-                    });
-                    this.searching = false;
-                    return;
-                }
+        if (!shopsArray || !Array.isArray(shopsArray)) {
+            toast.error('Store data not available');
+            return;
+        }
 
-                // If no exact category match, then check for store matches
-                const shopsArray = this.shopStore.getShops;
-                let matchingStore = null;
-                if (shopsArray && Array.isArray(shopsArray)) {
-                    matchingStore = shopsArray.find(shop => {
-                        if (!shop) return false;
-                        const shopName = (shop.name || '').toLowerCase();
-                        return shopName === sanitizedTerm || shopName.includes(sanitizedTerm);
-                    });
-                }
+        const shop = shopsArray.find(s => s && s.id === suggestion.value);
 
-                if (matchingStore) {
-                    this.$router.push({
-                        path: '/shop/',
-                        query: {
-                            shopId: matchingStore.id,
-                            branchId: matchingStore.branch_id,
-                            shopName: matchingStore.name,
-                            shopType: matchingStore.type,
-                            shopAddress: matchingStore.address,
-                            openAt: matchingStore.open_at,
-                            closeAt: matchingStore.close_at,
-                        }
-                    });
-                    this.searching = false;
-                    return;
-                }
-
-                // Finally, check for partial category matches
-                let partialCategoryMatch = null;
-                if (this.productsStore.getBaseCategories && Array.isArray(this.productsStore.getBaseCategories)) {
-                    partialCategoryMatch = this.productsStore.getBaseCategories.find(
-                        category => category && category.label &&
-                            category.label.toLowerCase().includes(sanitizedTerm)
-                    );
-                }
-
-                // If no matches at all, search with the raw term
-                await this.$nextTick();
-                this.$router.push({
-                    path: '/shop-where-to-buy/',
-                    query: {
-                        ...(partialCategoryMatch ? { baseCategory: partialCategoryMatch.label } : { baseCategory: rawSearchTerm })
-                    }
-                });
-            } catch (error) {
-                console.error("Error in search filtering:", error);
-                this.toast.error('An error occurred while searching. Please try again!');
-            } finally {
-                this.searching = false;
-            }
-        },
-
-        async handleCategorySearch(suggestion) {
-            if (!suggestion || !suggestion.label) {
-                this.toast.error('Invalid category selection');
-                return;
-            }
-
-            this.searching = true;
-            try {
-                await this.$nextTick();
-                this.$router.push({
-                    path: '/shop-where-to-buy/',
-                    query: {
-                        baseCategory: suggestion.label
-                    }
-                });
-            } catch (error) {
-                console.error("Error navigating to category:", error);
-                this.toast.error('An error occurred while searching for the category');
-            } finally {
-                this.searching = false;
-            }
-        },
-
-        highlightMatch(suggestion, searchTerm) {
-            if (!suggestion || !searchTerm) return suggestion || '';
-
-            const suggestionStr = String(suggestion);
-            const searchTermStr = String(searchTerm);
-
-            const searchLower = searchTermStr.toLowerCase();
-            const suggestionLower = suggestionStr.toLowerCase();
-            const index = suggestionLower.indexOf(searchLower);
-
-            if (index === -1) return suggestionStr;
-
-            const before = suggestionStr.substring(0, index);
-            const match = suggestionStr.substring(index, index + searchTermStr.length);
-            const after = suggestionStr.substring(index + searchTermStr.length);
-
-            return {
-                before,
-                match,
-                after
-            };
-        },
-
-        getMatchingCategory(searchTerm) {
-            if (!searchTerm) return null;
-
-            const searchLower = searchTerm.toLowerCase().trim();
-            return this.productsStore.getBaseCategories.find(
-                category => category.label.toLowerCase() === searchLower
-            );
-        },
-
-        selectSuggestion(suggestion) {
-            this.searchBox = suggestion.label;
-            if (suggestion.type === 'category') {
-                this.handleCategorySearch(suggestion);
-            } else if (suggestion.type === 'store') {
-                this.handleStoreSearch(suggestion);
-            }
-            this.selectedSuggestionIndex = -1;
-        },
-
-        handleKeyDown(event) {
-            if (!this.searchSuggestions.length) return;
-
-            if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                this.selectedSuggestionIndex =
-                    (this.selectedSuggestionIndex + 1) % this.searchSuggestions.length;
-            } else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                this.selectedSuggestionIndex =
-                    this.selectedSuggestionIndex <= 0
-                        ? this.searchSuggestions.length - 1
-                        : this.selectedSuggestionIndex - 1;
-            } else if (event.key === 'Enter' && this.selectedSuggestionIndex >= 0) {
-                event.preventDefault();
-                const suggestion = this.searchSuggestions[this.selectedSuggestionIndex];
-                this.selectSuggestion(suggestion);
-                this.selectedSuggestionIndex = -1;
-            }
-        },
-
-        async handleCategorySelect(category) {
-            if (!category || !category.label) {
-                this.toast.error('Invalid category selected');
-                return;
-            }
-
-            const categoryExists = this.productsStore.getBaseCategories.some(
-                cat => cat.label === category.label
-            );
-
-            if (!categoryExists) {
-                this.toast.error('Selected category is not available');
-                return;
-            }
-
-            try {
-                await this.$nextTick();
-                this.selectedBaseCategory = category.label;
-                this.searchBox = '';
-
-                this.$router.push({
-                    path: '/shop-where-to-buy/',
-                    query: {
-                        baseCategory: category.label,
-                    }
-                });
-            } catch (error) {
-                console.error('Error navigating to category:', error);
-                this.toast.error('Error loading product category');
-            }
-        },
-
-        async handleMealType() {
-            if (!this.currentTimeMeal) {
-                this.toast.error('No current meal type');
-                return;
-            }
-
-            try {
-                await this.$nextTick();
-
-                this.$router.push({
-                    path: '/meal/',
-                    query: {
-                        mealType: this.currentTimeMeal
-                    }
-                });
-
-            } catch (error) {
-                console.error('Error navigating to meal type:', error);
-                this.toast.error('Error loading meal type products');
-            }
-        },
-
-        toShop(shop) {
-            this.$router.push({
+        if (shop) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            router.push({
                 path: '/shop/',
                 query: {
                     shopId: shop.id,
@@ -1217,399 +842,681 @@ export default {
                     closeAt: shop.close_at,
                 }
             });
-        },
+        } else {
+            console.error('Store not found. Looking for ID:', suggestion.value);
+            console.error('Available shops:', shopsArray);
+            toast.error('Store not found');
+        }
+    } catch (error) {
+        console.error("Error navigating to store:", error);
+        toast.error('An error occurred while searching for the store');
+    } finally {
+        searching.value = false;
+    }
+};
 
-        orderNow() {
-            this.toast.warning('Ordering feature is unavailable.');
-            setTimeout(() => {
-                this.toast.warning('Redirecting to shop page');
-                setTimeout(() => {
-                    this.$router.push({
-                        path: '/shop/',
-                        query: {
-                            shopId: this.surpriseShopId,
-                            branchId: this.surpriseShopBranchId,
-                            shopName: this.surpriseShopName,
-                            shopType: this.surpriseShopType,
-                            shopAddress: this.surpriseShopAddress,
-                            openAt: this.surpriseOpenAt,
-                            closeAt: this.surpriseCloseAt,
-                            requestedCategory: this.surpriseImage,
-                        }
-                    })
-                }, 1000);
-            }, 3000);
-        },
+const openShops = async () => {
+    router.push({
+        path: '/shop-list',
+        query: {
+            requested_time_between: `${currentHour.value}:${currentMinute.value}`
+        }
+    });
+};
 
-        clearSearch() {
-            this.searchBox = null;
-            this.selectedBaseCategory = null;
-        },
+const handleSearchBox = async () => {
+    if (!searchBox.value || !searchBox.value.trim()) {
+        toast.error('Please enter text on the search box');
+        return;
+    }
 
-        startTimeTracking() {
-            this.updateTime();
-            this.timeInterval = setInterval(this.updateTime, 60000);
-        },
+    searching.value = true;
 
-        updateTime() {
-            const now = new Date();
-            this.currentHour = now.getHours();
-            this.currentMinute = now.getMinutes();
-        },
+    const rawSearchTerm = searchBox.value.trim();
+    const sanitizedTerm = sanitizeSearchTerm(rawSearchTerm);
 
-        buildShopRequest(timeBetween = null) {
-            return {
-                requested_category: null,
-                requested_meal_type: null,
-                requested_time_between: timeBetween,
-                items_per_page: this.itemsPerPage,
-            };
-        },
+    if (!sanitizedTerm) {
+        toast.error('Please enter a valid text on the search box');
+        searching.value = false;
+        return;
+    }
 
-        shouldSkipFetch(timeBetween = null) {
-            const store = this.shopStore;
-
-            return (
-                store.lastCategory === null &&
-                store.lastMealType === null &&
-                store.lastTimeBetween === timeBetween &&
-                store.shop_list.length > 0
+    try {
+        // First, check for exact category matches
+        let exactCategoryMatch = null;
+        if (productsStore.getBaseCategories && Array.isArray(productsStore.getBaseCategories)) {
+            exactCategoryMatch = productsStore.getBaseCategories.find(
+                category => category && category.label &&
+                    category.label.toLowerCase() === sanitizedTerm
             );
-        },
+        }
 
-        onSurpriseSheetClosed() {
-            this.activeSheet = null;
-            this.sheetHeight = this.SNAP_POINTS.half;
-            // Reset surprise data when closed
-            this.surprising = false;
-            this.surpriseImage = null;
-            this.surpriseProduct = null;
-            this.surpriseProductId = null;
-            this.surpriseShopId = null;
-            this.surpriseShopName = null;
-            this.surpriseShopBranchId = null;
-            this.surpriseShopType = null;
-            this.surpriseShopAddress = null;
-            this.surpriseOpenAt = null;
-            this.surpriseCloseAt = null;
-        },
+        // If there's an exact category match, go to category view
+        if (exactCategoryMatch) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+            router.push({
+                path: '/shop-where-to-buy/',
+                query: {
+                    baseCategory: exactCategoryMatch.label
+                }
+            });
+            searching.value = false;
+            return;
+        }
 
-        startSurpriseCooldown() {
-            this.surpriseCooldown = true;
-            this.surpriseCooldownEndTime = Date.now() + 60000;
+        // If no exact category match, then check for store matches
+        const shopsArray = shopStore.getShops;
+        let matchingStore = null;
+        if (shopsArray && Array.isArray(shopsArray)) {
+            matchingStore = shopsArray.find(shop => {
+                if (!shop) return false;
+                const shopName = (shop.name || '').toLowerCase();
+                return shopName === sanitizedTerm || shopName.includes(sanitizedTerm);
+            });
+        }
 
-            // Save to localStorage
-            localStorage.setItem('surpriseCooldownEndTime', this.surpriseCooldownEndTime);
+        if (matchingStore) {
+            router.push({
+                path: '/shop/',
+                query: {
+                    shopId: matchingStore.id,
+                    branchId: matchingStore.branch_id,
+                    shopName: matchingStore.name,
+                    shopType: matchingStore.type,
+                    shopAddress: matchingStore.address,
+                    openAt: matchingStore.open_at,
+                    closeAt: matchingStore.close_at,
+                }
+            });
+            searching.value = false;
+            return;
+        }
 
-            this.updateCooldownProgress();
+        // Finally, check for partial category matches
+        let partialCategoryMatch = null;
+        if (productsStore.getBaseCategories && Array.isArray(productsStore.getBaseCategories)) {
+            partialCategoryMatch = productsStore.getBaseCategories.find(
+                category => category && category.label &&
+                    category.label.toLowerCase().includes(sanitizedTerm)
+            );
+        }
 
-            this.surpriseCooldownInterval = setInterval(() => {
-                this.updateCooldownProgress();
-            }, 100);
-        },
+        // If no matches at all, search with the raw term
+        await new Promise(resolve => setTimeout(resolve, 0));
+        router.push({
+            path: '/shop-where-to-buy/',
+            query: {
+                ...(partialCategoryMatch ? { baseCategory: partialCategoryMatch.label } : { baseCategory: rawSearchTerm })
+            }
+        });
+    } catch (error) {
+        console.error("Error in search filtering:", error);
+        toast.error('An error occurred while searching. Please try again!');
+    } finally {
+        searching.value = false;
+    }
+};
 
-        updateCooldownProgress() {
-            if (!this.surpriseCooldownEndTime) return;
+const handleCategorySearch = async (suggestion) => {
+    if (!suggestion || !suggestion.label) {
+        toast.error('Invalid category selection');
+        return;
+    }
 
-            const now = Date.now();
-            const remaining = this.surpriseCooldownEndTime - now;
+    searching.value = true;
+    try {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        router.push({
+            path: '/shop-where-to-buy/',
+            query: {
+                baseCategory: suggestion.label
+            }
+        });
+    } catch (error) {
+        console.error("Error navigating to category:", error);
+        toast.error('An error occurred while searching for the category');
+    } finally {
+        searching.value = false;
+    }
+};
 
-            if (remaining <= 0) {
-                this.stopSurpriseCooldown();
-            } else {
-                // Calculate progress percentage
+const highlightMatch = (suggestion, searchTerm) => {
+    if (!suggestion || !searchTerm) return suggestion || '';
+
+    const suggestionStr = String(suggestion);
+    const searchTermStr = String(searchTerm);
+
+    const searchLower = searchTermStr.toLowerCase();
+    const suggestionLower = suggestionStr.toLowerCase();
+    const index = suggestionLower.indexOf(searchLower);
+
+    if (index === -1) return suggestionStr;
+
+    const before = suggestionStr.substring(0, index);
+    const match = suggestionStr.substring(index, index + searchTermStr.length);
+    const after = suggestionStr.substring(index + searchTermStr.length);
+
+    return {
+        before,
+        match,
+        after
+    };
+};
+
+const selectSuggestion = (suggestion) => {
+    searchBox.value = suggestion.label;
+    if (suggestion.type === 'category') {
+        handleCategorySearch(suggestion);
+    } else if (suggestion.type === 'store') {
+        handleStoreSearch(suggestion);
+    }
+    selectedSuggestionIndex.value = -1;
+};
+
+const handleKeyDown = (event) => {
+    if (!searchSuggestions.value.length) return;
+
+    if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        selectedSuggestionIndex.value = (selectedSuggestionIndex.value + 1) % searchSuggestions.value.length;
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        selectedSuggestionIndex.value = selectedSuggestionIndex.value <= 0
+            ? searchSuggestions.value.length - 1
+            : selectedSuggestionIndex.value - 1;
+    } else if (event.key === 'Enter' && selectedSuggestionIndex.value >= 0) {
+        event.preventDefault();
+        const suggestion = searchSuggestions.value[selectedSuggestionIndex.value];
+        selectSuggestion(suggestion);
+        selectedSuggestionIndex.value = -1;
+    }
+};
+
+const handleCategorySelect = async (category) => {
+    if (!category || !category.label) {
+        toast.error('Invalid category selected');
+        return;
+    }
+
+    const categoryExists = productsStore.getBaseCategories.some(
+        cat => cat.label === category.label
+    );
+
+    if (!categoryExists) {
+        toast.error('Selected category is not available');
+        return;
+    }
+
+    try {
+        await new Promise(resolve => setTimeout(resolve, 0));
+        selectedBaseCategory.value = category.label;
+        searchBox.value = '';
+
+        router.push({
+            path: '/shop-where-to-buy/',
+            query: {
+                baseCategory: category.label,
+            }
+        });
+    } catch (error) {
+        console.error('Error navigating to category:', error);
+        toast.error('Error loading product category');
+    }
+};
+
+const handleMealType = async () => {
+    if (!currentTimeMeal.value) {
+        toast.error('No current meal type');
+        return;
+    }
+
+    try {
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        router.push({
+            path: '/meal/',
+            query: {
+                mealType: currentTimeMeal.value
+            }
+        });
+
+    } catch (error) {
+        console.error('Error navigating to meal type:', error);
+        toast.error('Error loading meal type products');
+    }
+};
+
+const toShop = (shop) => {
+    router.push({
+        path: '/shop/',
+        query: {
+            shopId: shop.id,
+            branchId: shop.branch_id,
+            shopName: shop.name,
+            shopType: shop.type,
+            shopAddress: shop.address,
+            openAt: shop.open_at,
+            closeAt: shop.close_at,
+        }
+    });
+};
+
+const orderNow = () => {
+    toast.warning('Ordering feature is unavailable.');
+    setTimeout(() => {
+        toast.warning('Redirecting to shop page');
+        setTimeout(() => {
+            router.push({
+                path: '/shop/',
+                query: {
+                    shopId: surpriseShopId.value,
+                    branchId: surpriseShopBranchId.value,
+                    shopName: surpriseShopName.value,
+                    shopType: surpriseShopType.value,
+                    shopAddress: surpriseShopAddress.value,
+                    openAt: surpriseOpenAt.value,
+                    closeAt: surpriseCloseAt.value,
+                    requestedCategory: surpriseImage.value,
+                }
+            })
+        }, 1000);
+    }, 3000);
+};
+
+const clearSearch = () => {
+    searchBox.value = null;
+    selectedBaseCategory.value = null;
+};
+
+const startTimeTracking = () => {
+    updateTime();
+    timeInterval.value = setInterval(updateTime, 60000);
+};
+
+const updateTime = () => {
+    const now = new Date();
+    currentHour.value = now.getHours();
+    currentMinute.value = now.getMinutes();
+};
+
+const buildShopRequest = (timeBetween = null) => {
+    return {
+        requested_category: null,
+        requested_meal_type: null,
+        requested_time_between: timeBetween,
+        items_per_page: itemsPerPage.value,
+    };
+};
+
+const shouldSkipFetch = (timeBetween = null) => {
+    const store = shopStore;
+
+    return (
+        store.lastCategory === null &&
+        store.lastMealType === null &&
+        store.lastTimeBetween === timeBetween &&
+        store.shop_list.length > 0
+    );
+};
+
+const startSurpriseCooldown = () => {
+    surpriseCooldown.value = true;
+    surpriseCooldownEndTime.value = Date.now() + 60000;
+
+    // Save to localStorage
+    localStorage.setItem('surpriseCooldownEndTime', surpriseCooldownEndTime.value);
+
+    updateCooldownProgress();
+
+    surpriseCooldownInterval.value = setInterval(() => {
+        updateCooldownProgress();
+    }, 100);
+};
+
+const updateCooldownProgress = () => {
+    if (!surpriseCooldownEndTime.value) return;
+
+    const now = Date.now();
+    const remaining = surpriseCooldownEndTime.value - now;
+
+    if (remaining <= 0) {
+        stopSurpriseCooldown();
+    } else {
+        // Calculate progress percentage
+        const progress = (remaining / 60000) * 100;
+        // Update CSS variable for animation
+        const sheetEl = document.querySelector('.surprise-btn-cooldown');
+        if (sheetEl) {
+            sheetEl.style.setProperty('--cooldown-progress', `${progress}%`);
+        }
+    }
+};
+
+const stopSurpriseCooldown = () => {
+    surpriseCooldown.value = false;
+    surpriseCooldownEndTime.value = null;
+
+    // Remove from localStorage
+    localStorage.removeItem('surpriseCooldownEndTime');
+
+    if (surpriseCooldownInterval.value) {
+        clearInterval(surpriseCooldownInterval.value);
+        surpriseCooldownInterval.value = null;
+    }
+
+    // Reset CSS variable
+    const sheetEl = document.querySelector('.surprise-btn-cooldown');
+    if (sheetEl) {
+        sheetEl.style.removeProperty('--cooldown-progress');
+    }
+};
+
+const checkAndRestoreCooldown = () => {
+    // Check localStorage for saved cooldown
+    const savedEndTime = localStorage.getItem('surpriseCooldownEndTime');
+    if (savedEndTime) {
+        surpriseCooldownEndTime.value = parseInt(savedEndTime);
+    }
+
+    if (surpriseCooldownEndTime.value) {
+        const now = Date.now();
+        const remaining = surpriseCooldownEndTime.value - now;
+
+        if (remaining > 0) {
+            // Cooldown is still active, restore it
+            surpriseCooldown.value = true;
+
+            // Update the animation progress immediately
+            setTimeout(() => {
                 const progress = (remaining / 60000) * 100;
-                // Update CSS variable for animation
-                const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
+                const sheetEl = document.querySelector('.surprise-btn-cooldown');
                 if (sheetEl) {
                     sheetEl.style.setProperty('--cooldown-progress', `${progress}%`);
                 }
-            }
-        },
+            }, 0);
 
-        stopSurpriseCooldown() {
-            this.surpriseCooldown = false;
-            this.surpriseCooldownEndTime = null;
-
-            // Remove from localStorage
-            localStorage.removeItem('surpriseCooldownEndTime');
-
-            if (this.surpriseCooldownInterval) {
-                clearInterval(this.surpriseCooldownInterval);
-                this.surpriseCooldownInterval = null;
+            // Restart the interval
+            if (surpriseCooldownInterval.value) {
+                clearInterval(surpriseCooldownInterval.value);
             }
 
-            // Reset CSS variable
-            const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
-            if (sheetEl) {
-                sheetEl.style.removeProperty('--cooldown-progress');
-            }
-        },
+            surpriseCooldownInterval.value = setInterval(() => {
+                updateCooldownProgress();
+            }, 100);
+        } else {
+            // Cooldown expired
+            stopSurpriseCooldown();
+        }
+    }
+};
 
-        checkAndRestoreCooldown() {
-            // Check localStorage for saved cooldown
-            const savedEndTime = localStorage.getItem('surpriseCooldownEndTime');
-            if (savedEndTime) {
-                this.surpriseCooldownEndTime = parseInt(savedEndTime);
-            }
+const openSurpriseSheet = async () => {
+    if (surpriseCooldown.value) {
+        const remainingSeconds = Math.ceil((surpriseCooldownEndTime.value - Date.now()) / 1000);
+        toast.warning(`Please wait ${remainingSeconds} seconds before trying again.`);
+        return;
+    }
 
-            if (this.surpriseCooldownEndTime) {
-                const now = Date.now();
-                const remaining = this.surpriseCooldownEndTime - now;
+    const time = `${currentHour.value}:${currentMinute.value}`;
 
-                if (remaining > 0) {
-                    // Cooldown is still active, restore it
-                    this.surpriseCooldown = true;
+    sheetHeight.value = 60;
+    surprising.value = true;
+    surpriseSheet.value = true;
 
-                    // Update the animation progress immediately
-                    this.$nextTick(() => {
-                        const progress = (remaining / 60000) * 100;
-                        const sheetEl = this.$el?.querySelector('.surprise-btn-cooldown');
-                        if (sheetEl) {
-                            sheetEl.style.setProperty('--cooldown-progress', `${progress}%`);
-                        }
+    try {
+        const request = buildShopRequest(time);
+
+        await shopStore.fetchShopListStore(request, true);
+
+        setTimeout(() => {
+            if (currentTimeMeal.value === 'Not meal time') {
+                surprising.value = false;
+                surpriseSheet.value = false;
+                sheetHeight.value = 60;
+            } else {
+                const shops = shopStore.getSurpriseShops;
+                if (shops && shops.length > 0) {
+                    const randomCategory = shops[Math.floor(Math.random() * shops.length)];
+                    surpriseImage.value = randomCategory.category_label;
+                    surpriseProduct.value = randomCategory.product;
+                    surpriseProductId.value = randomCategory.productId;
+                    surpriseShopName.value = randomCategory.name;
+                    surpriseShopId.value = randomCategory.id;
+                    surpriseShopBranchId.value = randomCategory.branch_id;
+                    surpriseShopType.value = randomCategory.type;
+                    surpriseShopAddress.value = randomCategory.address;
+                    surpriseOpenAt.value = randomCategory.open_at;
+                    surpriseCloseAt.value = randomCategory.close_at;
+                    confetti({
+                        particleCount: 200,
+                        spread: 100,
+                        origin: { x: 0.5, y: 0.5 },
+                        zIndex: 9999,
+                        startVelocity: 20,
+                        colors: [
+                            '#db0000',
+                            '#d3d700',
+                            '#6dd301',
+                            '#00dcce',
+                            '#0017e3',
+                            '#bc00dd',
+                        ]
                     });
 
-                    // Restart the interval
-                    if (this.surpriseCooldownInterval) {
-                        clearInterval(this.surpriseCooldownInterval);
-                    }
-
-                    this.surpriseCooldownInterval = setInterval(() => {
-                        this.updateCooldownProgress();
-                    }, 100);
+                    startSurpriseCooldown();
                 } else {
-                    // Cooldown expired
-                    this.stopSurpriseCooldown();
+                    toast.error('No product available. Please try again!');
+                    surpriseSheet.value = false;
                 }
             }
-        },
-
-        async openSurpriseSheet() {
-
-            if (this.surpriseCooldown) {
-                const remainingSeconds = Math.ceil((this.surpriseCooldownEndTime - Date.now()) / 1000);
-                this.toast.warning(`Please wait ${remainingSeconds} seconds before trying again.`);
-                return;
-            }
-
-            const time = `${this.currentHour}:${this.currentMinute}`;
-
-            this.sheetHeight = 60;
-            this.surprising = true;
-            this.surpriseSheet = true;
-
-            try {
-                const request = this.buildShopRequest(time);
-
-                await this.shopStore.fetchShopListStore(request, true);
-
-                setTimeout(() => {
-                    if (this.currentTimeMeal === 'Not meal time') {
-                        this.surprising = false;
-                        this.surpriseSheet = false;
-                        this.sheetHeight = 60;
-                    } else {
-                        const shops = this.shopStore.getSurpriseShops;
-                        if (shops && shops.length > 0) {
-                            const randomCategory = shops[Math.floor(Math.random() * shops.length)];
-                            this.surpriseImage = randomCategory.category_label;
-                            this.surpriseProduct = randomCategory.product;
-                            this.surpriseProductId = randomCategory.productId;
-                            this.surpriseShopName = randomCategory.name;
-                            this.surpriseShopId = randomCategory.id;
-                            this.surpriseShopBranchId = randomCategory.branch_id;
-                            this.surpriseShopType = randomCategory.type;
-                            this.surpriseShopAddress = randomCategory.address;
-                            this.surpriseOpenAt = randomCategory.open_at;
-                            this.surpriseCloseAt = randomCategory.close_at;
-                            confetti({
-                                particleCount: 200,
-                                spread: 100,
-                                origin: { x: 0.5, y: 0.5 },
-                                zIndex: 9999,
-                                startVelocity: 20,
-                                colors: [
-                                    '#db0000',
-                                    '#d3d700',
-                                    '#6dd301',
-                                    '#00dcce',
-                                    '#0017e3',
-                                    '#bc00dd',
-                                ]
-                            });
-
-                            this.startSurpriseCooldown();
-                        } else {
-                            this.toast.error('No product available. Please try agaian!');
-                            this.surpriseSheet = false;
-                        }
-                    }
-                    this.surprising = false;
-                }, 4000);
-            } catch (error) {
-                console.error('Error fetching stores:', error);
-                this.surprising = false;
-                this.surpriseSheet = false;
-                this.sheetHeight = 60;
-            }
-        },
-
-        startDrag(e) {
-            if (this.surprising) return;
-
-            // Determine which sheet is active
-            if (this.moreSheet) {
-                this.activeSheet = 'more';
-            } else if (this.surpriseSheet) {
-                this.activeSheet = 'surprise';
-            } else {
-                return;
-            }
-
-            this.startY = e.touches[0].clientY
-            this.startHeight = this.sheetHeight
-        },
-
-        onDrag(e) {
-            if (this.surprising) return;
-
-            if (!this.activeSheet) return;
-
-            const currentY = e.touches[0].clientY
-            const delta = this.startY - currentY
-            let newHeight = this.startHeight + delta / 6
-            newHeight = Math.max(0, Math.min(95, newHeight))
-            this.sheetHeight = newHeight
-        },
-
-        endDrag() {
-            if (this.surprising) return;
-
-            if (!this.activeSheet) return;
-
-            const shthght = this.sheetHeight
-            if (shthght < 10) {
-                if (this.activeSheet === 'more') {
-                    this.moreSheet = false;
-                } else if (this.activeSheet === 'surprise') {
-                    this.surpriseSheet = false;
-                }
-                this.sheetHeight = this.SNAP_POINTS.half;
-                this.activeSheet = null;
-                return;
-            }
-            if (shthght < 60) {
-                this.sheetHeight = this.SNAP_POINTS.half
-            } else {
-                this.sheetHeight = this.SNAP_POINTS.full
-            }
-            this.activeSheet = null;
-        },
-
-        // Pull to Refresh Methods
-        handleTouchStart(e) {
-            if (this.scrollContainer && this.scrollContainer.scrollTop === 0 && !this.isRefreshing) {
-                this.touchStartY = e.touches[0].clientY;
-                this.isPulling = true;
-                this.startRotationAnimation();
-            }
-        },
-
-        handleTouchMove(e) {
-            if (!this.isPulling || this.isRefreshing) return;
-
-            const currentY = e.touches[0].clientY;
-            const diff = currentY - this.touchStartY;
-
-            if (diff > 0 && this.scrollContainer && this.scrollContainer.scrollTop === 0) {
-                e.preventDefault();
-
-                let progress = Math.min(diff, this.PULL_THRESHOLD);
-
-                if (progress > this.showProgressThreshold) {
-                    this.pullProgress = progress - this.showProgressThreshold;
-                } else {
-                    this.pullProgress = 0;
-                }
-
-                if (this.pullProgress > 0) {
-                    const progressPercent = (this.pullProgress / (this.PULL_THRESHOLD - this.showProgressThreshold)) * 100;
-                    this.rotationAngle = (progressPercent / 100) * 360;
-                } else {
-                    this.rotationAngle = 0;
-                }
-            }
-        },
-
-        async handleTouchEnd() {
-            if (!this.isPulling || this.isRefreshing) {
-                this.isPulling = false;
-                this.stopRotationAnimation();
-                return;
-            }
-
-            this.isPulling = false;
-
-            if (this.pullProgress >= (this.PULL_THRESHOLD - this.showProgressThreshold)) {
-                await this.refreshData();
-            } else {
-                this.pullProgress = 0;
-                this.rotationAngle = 0;
-                this.stopRotationAnimation();
-            }
-        },
-
-        startRotationAnimation() {
-            if (this.rotationInterval) {
-                clearInterval(this.rotationInterval);
-            }
-        },
-
-        stopRotationAnimation() {
-            if (this.rotationInterval) {
-                clearInterval(this.rotationInterval);
-                this.rotationInterval = null;
-            }
-        },
-
-        startRefreshingAnimation() {
-            let angle = 0;
-            this.rotationInterval = setInterval(() => {
-                angle = (angle + 45) % 360;
-                this.rotationAngle = angle;
-            }, 100);
-        },
-
-        async refreshData() {
-            this.isRefreshing = true;
-            this.startRefreshingAnimation();
-
-            try {
-                await Promise.all([
-                    this.fetchProductBaseCategories(),
-                    this.fetchShops()
-                ]);
-
-                setTimeout(() => {
-                    this.isRefreshing = false;
-                    this.pullProgress = 0;
-                    this.rotationAngle = 0;
-                    this.stopRotationAnimation();
-                }, 1500);
-            } catch (error) {
-                console.error('Refresh failed:', error);
-
-                setTimeout(() => {
-                    this.isRefreshing = false;
-                    this.pullProgress = 0;
-                    this.rotationAngle = 0;
-                    this.stopRotationAnimation();
-                }, 1500);
-            }
-        },
+            surprising.value = false;
+        }, 4000);
+    } catch (error) {
+        console.error('Error fetching stores:', error);
+        surprising.value = false;
+        surpriseSheet.value = false;
+        sheetHeight.value = 60;
     }
-}
+};
+
+const startDrag = (e) => {
+    if (surprising.value) return;
+
+    // Determine which sheet is active
+    if (moreSheet.value) {
+        activeSheet.value = 'more';
+    } else if (surpriseSheet.value) {
+        activeSheet.value = 'surprise';
+    } else {
+        return;
+    }
+
+    startY.value = e.touches[0].clientY;
+    startHeight.value = sheetHeight.value;
+};
+
+const onDrag = (e) => {
+    if (surprising.value) return;
+
+    if (!activeSheet.value) return;
+
+    const currentY = e.touches[0].clientY;
+    const delta = startY.value - currentY;
+    let newHeight = startHeight.value + delta / 6;
+    newHeight = Math.max(0, Math.min(95, newHeight));
+    sheetHeight.value = newHeight;
+};
+
+const endDrag = () => {
+    if (surprising.value) return;
+
+    if (!activeSheet.value) return;
+
+    const shthght = sheetHeight.value;
+    if (shthght < 10) {
+        if (activeSheet.value === 'more') {
+            moreSheet.value = false;
+        } else if (activeSheet.value === 'surprise') {
+            surpriseSheet.value = false;
+        }
+        sheetHeight.value = SNAP_POINTS.half;
+        activeSheet.value = null;
+        return;
+    }
+    if (shthght < 60) {
+        sheetHeight.value = SNAP_POINTS.half;
+    } else {
+        sheetHeight.value = SNAP_POINTS.full;
+    }
+    activeSheet.value = null;
+};
+
+// Pull to Refresh Methods
+const handleTouchStart = (e) => {
+    if (scrollContainer.value && scrollContainer.value.scrollTop === 0 && !isRefreshing.value) {
+        touchStartY.value = e.touches[0].clientY;
+        isPulling.value = true;
+        startRotationAnimation();
+    }
+};
+
+const handleTouchMove = (e) => {
+    if (!isPulling.value || isRefreshing.value) return;
+
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.value;
+
+    if (diff > 0 && scrollContainer.value && scrollContainer.value.scrollTop === 0) {
+        e.preventDefault();
+
+        let progress = Math.min(diff, PULL_THRESHOLD);
+
+        if (progress > showProgressThreshold) {
+            pullProgress.value = progress - showProgressThreshold;
+        } else {
+            pullProgress.value = 0;
+        }
+
+        if (pullProgress.value > 0) {
+            const progressPercent = (pullProgress.value / (PULL_THRESHOLD - showProgressThreshold)) * 100;
+            rotationAngle.value = (progressPercent / 100) * 360;
+        } else {
+            rotationAngle.value = 0;
+        }
+    }
+};
+
+const handleTouchEnd = async () => {
+    if (!isPulling.value || isRefreshing.value) {
+        isPulling.value = false;
+        stopRotationAnimation();
+        return;
+    }
+
+    isPulling.value = false;
+
+    if (pullProgress.value >= (PULL_THRESHOLD - showProgressThreshold)) {
+        await refreshData();
+    } else {
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
+        stopRotationAnimation();
+    }
+};
+
+const startRotationAnimation = () => {
+    if (rotationInterval.value) {
+        clearInterval(rotationInterval.value);
+    }
+};
+
+const stopRotationAnimation = () => {
+    if (rotationInterval.value) {
+        clearInterval(rotationInterval.value);
+        rotationInterval.value = null;
+    }
+};
+
+const startRefreshingAnimation = () => {
+    let angle = 0;
+    rotationInterval.value = setInterval(() => {
+        angle = (angle + 45) % 360;
+        rotationAngle.value = angle;
+    }, 100);
+};
+
+const refreshData = async () => {
+    isRefreshing.value = true;
+    startRefreshingAnimation();
+
+    try {
+        await Promise.all([
+            fetchProductBaseCategories(),
+            fetchShops()
+        ]);
+
+        setTimeout(() => {
+            isRefreshing.value = false;
+            pullProgress.value = 0;
+            rotationAngle.value = 0;
+            stopRotationAnimation();
+        }, 1500);
+    } catch (error) {
+        console.error('Refresh failed:', error);
+
+        setTimeout(() => {
+            isRefreshing.value = false;
+            pullProgress.value = 0;
+            rotationAngle.value = 0;
+            stopRotationAnimation();
+        }, 1500);
+    }
+};
+
+// Watchers
+watch(searchBox, () => {
+    selectedBaseCategory.value = searchBox.value;
+});
+
+// Lifecycle
+onMounted(async () => {
+    await checkAuthentication();
+
+    if (!authCheckDone.value) {
+        return; // Stop execution if not authenticated
+    }
+
+    await initializeLocationWithMovementTracking();
+
+    startTimeTracking();
+
+    setupDebouncedSearch();
+
+    window.addEventListener('online', onOnline);
+
+    await Promise.all([
+        fetchProductBaseCategories(),
+        fetchShops(),
+    ]);
+
+    scrollContainer.value = document.querySelector('.scroll-content');
+
+    checkAndRestoreCooldown();
+});
+
+onBeforeUnmount(() => {
+    locationStore.stopContinuousTracking();
+
+    window.removeEventListener('online', onOnline);
+
+    if (timeInterval.value) {
+        clearInterval(timeInterval.value);
+    }
+
+    if (rotationInterval.value) {
+        clearInterval(rotationInterval.value);
+    }
+});
 </script>
 
 <style scoped>
