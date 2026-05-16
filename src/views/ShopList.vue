@@ -669,7 +669,7 @@ onUnmounted(() => {
 .loading-card-search {
     border-radius: 10px;
     box-shadow: none !important;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding: 5px;
 }
 
@@ -678,7 +678,7 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     height: 52px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .search-box .v-icon {
@@ -744,14 +744,14 @@ onUnmounted(() => {
 .buttons-container {
     border-radius: 10px;
     box-shadow: none !important;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding: 20px;
 }
 
 .buttons-container h4 {
     line-height: 0.5cm;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     color: #5c3a21;
 }
 
@@ -798,7 +798,7 @@ onUnmounted(() => {
 .buttons-container .title-skeleton {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .badge-dot {

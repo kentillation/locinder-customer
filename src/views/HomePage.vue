@@ -7,11 +7,13 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
-                        :style="{ transform: `rotate(${rotationAngle}deg)` }"
-                        style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
-                        mdi-loading
-                    </v-icon>
+                    <HugeiconsIcon :icon="Loading03Icon"
+                        size="40"
+                        strokeWidth="3"
+                        :style="{ transform: `rotate(${rotationAngle}deg)`, 
+                            color : pullProgress >= 100 ? '#fff !important' : '#ccc !important',
+                            background : pullProgress >= 100 ? '#5c3a21' : '#f8f8f8' }"
+                        style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -85,12 +87,16 @@
                     @keyup.enter="handleSearchBox" @keydown="handleKeyDown" @input="handleSearchInput"
                     :loading="searching">
                     <template v-slot:prepend-inner>
-                        <v-icon size="small">mdi-magnify</v-icon>
+                        <HugeiconsIcon :icon="Search01Icon" 
+                            size="20" 
+                            class="mr-2" />
                     </template>
                     <template v-slot:append-inner>
-                        <v-icon v-if="searchBox" @click="clearSearch" class="mr-2" size="small">
-                            mdi-close-circle
-                        </v-icon>
+                        <HugeiconsIcon v-if="searchBox" 
+                            :icon="CancelCircleIcon" 
+                            @click="clearSearch" 
+                            size="20" 
+                            class="mr-2" />
                     </template>
                 </v-text-field>
                 <v-card v-if="searchSuggestions.length && searchBox?.length >= 2" class="suggestions-dropdown"
@@ -100,10 +106,11 @@
                             :key="suggestion.type + (suggestion.value || index)" @click="selectSuggestion(suggestion)"
                             :class="{ 'v-list-item--active': index === selectedSuggestionIndex }"
                             :style="index === selectedSuggestionIndex ? 'background-color: #f5f5f5;' : ''">
-                            <v-list-item-title>
-                                <v-icon>
-                                    {{ suggestion.type === 'category' ? 'mdi-magnify' : 'mdi-store' }}
-                                </v-icon>
+                            <v-list-item-title class="d-flex align-center">
+
+                                <HugeiconsIcon :icon="suggestion.type === 'category' ? Search01Icon : Store01Icon"
+                                    size="20" class="mr-2" />
+
                                 <template v-if="searchBox && suggestion.label">
                                     <span>{{ highlightMatch(suggestion.label, searchBox).before }}</span>
                                     <strong>{{ highlightMatch(suggestion.label, searchBox).match }}</strong>
@@ -211,7 +218,7 @@
                     <span class="subtitle">Lantawa mga bag-o nga produkto</span>
                 </span>
                 <template v-slot:append>
-                    <v-icon>mdi-arrow-right</v-icon>
+                    <HugeiconsIcon :icon=ArrowRight02Icon size="25" style="color: #fff !important;" />
                 </template>
             </v-btn>
 
@@ -301,7 +308,7 @@
                     <span class="subtitle">Mga baligyaan nga abri subong</span>
                 </span>
                 <template v-slot:append>
-                    <v-icon>mdi-arrow-right</v-icon>
+                    <HugeiconsIcon :icon=ArrowRight02Icon size="25" style="color: #fff !important;" />
                 </template>
             </v-btn>
 
@@ -354,7 +361,7 @@
                                 <span class="subtitle">Lantawa mga bag-o nga produkto</span>
                             </span>
                             <template v-slot:append>
-                                <v-icon>mdi-arrow-right</v-icon>
+                                <HugeiconsIcon :icon=ArrowRight02Icon size="25" style="color: #fff !important;" />
                             </template>
                         </v-btn>
                     </v-container>
@@ -374,7 +381,7 @@
                     <v-container>
                         <div class="flex-center-column">
                             <template v-if="surprising">
-                                <p style="color: #5c3a21; font-size: 16px; margin-bottom: 20px;" class="mt-3">{{
+                                <p style="color: #5c3a21; font-size: 16px; margin-bottom: 16px;" class="mt-3">{{
                                     loadingSurpriseMessages[Math.floor(Math.random() * loadingSurpriseMessages.length)]
                                     }}
                                 </p>
@@ -411,6 +418,8 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Search01Icon, Store01Icon, CancelCircleIcon, ArrowRight02Icon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { useAuthStore } from '@/stores/auth';
 import { useLocationStore } from '@/stores/locationStore';
 import { useRouter } from 'vue-router';
@@ -1871,7 +1880,7 @@ onBeforeUnmount(() => {
     width: 100%;
     padding: 5px;
     line-height: 0.6cm;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     border-radius: 10px;
 }
 
@@ -1907,7 +1916,7 @@ onBeforeUnmount(() => {
     box-shadow: none !important;
     height: 52px;
     padding-left: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     /* mb-5 */
     z-index: 100;
 }
@@ -2057,7 +2066,7 @@ onBeforeUnmount(() => {
 
 .buttons-container {
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding: 20px;
 }
 
@@ -2088,7 +2097,7 @@ onBeforeUnmount(() => {
 .buttons-container .title-skeleton {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .buttons-container h4,
@@ -2171,7 +2180,7 @@ onBeforeUnmount(() => {
     width: 100%;
     line-height: 0.4cm;
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     text-align: left;
     height: 110px;
     overflow: hidden;
@@ -2262,7 +2271,7 @@ onBeforeUnmount(() => {
 
 .order-now-btn {
     height: 45px;
-    margin-top: 20px;
+    margin-top: 16px;
     background-color: #5c3a21;
     box-shadow: none !important;
     border-radius: 30px;
@@ -2280,6 +2289,10 @@ onBeforeUnmount(() => {
     background: #adadad;
     border-radius: 10px;
     margin: 10px auto;
+}
+
+:deep(svg) {
+    color: #747474;
 }
 
 .content-between {

@@ -667,8 +667,8 @@ onUnmounted(() => {
 }
 
 .headline {
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin-top: 16px;
+    margin-bottom: 16px;
 }
 
 .headline div {
@@ -699,8 +699,7 @@ onUnmounted(() => {
     box-shadow: none !important;
     height: 52px;
     padding-left: 10px;
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin: 16px 0 16px 0;
 }
 
 .search-box .v-icon {
@@ -738,7 +737,7 @@ onUnmounted(() => {
 .buttons-container {
     border-radius: 10px;
     box-shadow: none !important;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     padding: 20px;
     position: relative;
     overflow: hidden;
@@ -761,7 +760,7 @@ onUnmounted(() => {
 .buttons-container .title-skeleton {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .buttons-container .button {

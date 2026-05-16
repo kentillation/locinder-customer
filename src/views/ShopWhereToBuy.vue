@@ -668,8 +668,7 @@ onUnmounted(() => {
 }
 
 .headline {
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin: 16px 0 16px 0;
 }
 
 .headline div {
@@ -707,8 +706,7 @@ onUnmounted(() => {
     box-shadow: none !important;
     height: 52px;
     padding-left: 10px;
-    margin-top: 20px;
-    margin-bottom: 20px;
+    margin: 16px 0 16px 0;
 }
 
 .search-box .v-icon {
@@ -811,6 +809,10 @@ onUnmounted(() => {
     display: flex;
     justify-content: center;
     margin-bottom: 20px;
+}
+
+.badge-dot {
+
 }
 
 .content-between {

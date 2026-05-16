@@ -929,7 +929,7 @@ onUnmounted(() => {
 
 /* Keep all your existing styles below */
 .headline {
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
 .headline div {
@@ -1010,8 +1010,7 @@ onUnmounted(() => {
     box-shadow: none !important;
     height: 52px;
     padding-left: 20px;
-    margin-top: 15px;
-    margin-bottom: 20px;
+    margin: 16px 0 16px 0;
 }
 
 .search-box .v-icon {
