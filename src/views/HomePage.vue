@@ -8,8 +8,7 @@
         }">
             <div class="progress-content">
                 <div class="pull-icon" :class="{ 'rotating': isRefreshing || pullProgress >= 100 }">
-                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" 
-                        :size="28"
+                    <v-icon :color="pullProgress >= 100 ? '#ff893a' : '#3352ff'" :size="28"
                         :style="{ transform: `rotate(${rotationAngle}deg)` }"
                         style="background-color: #5c3a21; border-radius: 50%; padding: 20px;">
                         mdi-loading
@@ -43,7 +42,7 @@
                 </div>
             </div>
 
-            <div v-if="locationStore.isMoving" class="movement-indicator" 
+            <div v-if="locationStore.isMoving" class="movement-indicator"
                 :class="[locationStore.getMovementStatus, { 'fast-speed': locationStore.movementSpeed >= 60 }]">
                 <v-icon small :class="getSpeedometerIconClass">
                     {{ getSpeedometerIcon }}
@@ -52,22 +51,22 @@
             </div>
 
             <!-- Show driving warning based on speed -->
-            <v-alert v-if="locationStore.isMoving && locationStore.movementSpeed > 10"
-                :type="getSpeedAlertType"
-                variant="outlined"
-                density="compact"
-                class="mb-5">
+            <v-alert v-if="locationStore.isMoving && locationStore.movementSpeed > 10" :type="getSpeedAlertType"
+                variant="outlined" density="compact" class="mb-5">
                 {{ getSpeedWarningMessage }}
             </v-alert>
 
-            <div v-if="krisantaDialog" :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'" @click="closeKrisantaDialog">
+            <div v-if="krisantaDialog"
+                :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'"
+                @click="closeKrisantaDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
                         <v-btn class="close-btn" @click="closeKrisantaDialog" size="small" elivation="0" icon>
                             <v-icon style="font-size: 14px !important;">mdi-close</v-icon>
                         </v-btn>
                         <div class="bubble-text">
-                            Meow! 🐾 My name is <strong>Krisanta</strong>, isa ko ka stray cat. Soon, pwede taka ma-guide sa pag explore
+                            Meow! 🐾 My name is <strong>Krisanta</strong>, isa ko ka stray cat. Soon, pwede taka
+                            ma-guide sa pag explore
                             sang Locinder, sa subong naga-learn pa ko kung ano mas maayo himuon in the future. Enjoy
                             browsing!
                         </div>
@@ -513,7 +512,7 @@ export default {
 
             // overnight case (crosses midnight)
             return currentMinutes >= openMinutes ||
-                    currentMinutes < closeMinutes
+                currentMinutes < closeMinutes
         }
 
         return {
@@ -571,7 +570,7 @@ export default {
 
         getSpeedometerIcon() {
             const speed = this.locationStore.movementSpeed;
-            
+
             if (speed < 5) {
                 return 'mdi-speedometer-slow'; // Walking or very slow
             } else if (speed < 30) {
@@ -580,11 +579,11 @@ export default {
                 return 'mdi-speedometer'; // Fast driving
             }
         },
-        
+
         // Additional class for animation intensity
         getSpeedometerIconClass() {
             const speed = this.locationStore.movementSpeed;
-            
+
             return {
                 'speed-icon-slow': speed < 5,
                 'speed-icon-medium': speed >= 5 && speed < 30,
@@ -592,11 +591,11 @@ export default {
                 'speed-icon-very-fast': speed >= 60
             };
         },
-        
+
         // Alert type based on speed
         getSpeedAlertType() {
             const speed = this.locationStore.movementSpeed;
-            
+
             if (speed >= 60) {
                 return 'error';
             } else if (speed >= 40) {
@@ -605,11 +604,11 @@ export default {
                 return 'info';
             }
         },
-        
+
         // Warning message based on speed
         getSpeedWarningMessage() {
             const speed = this.locationStore.movementSpeed;
-            
+
             if (speed >= 80) {
                 return '⚠️ High speed detected! Please drive safely and don\'t use the app while driving!';
             } else if (speed >= 60) {
@@ -722,10 +721,10 @@ export default {
 
             if (hour === 22 || hour === 23) {        // 10 PM - 11:59 PM
                 return this.tiredKrisantaImage;
-            } 
+            }
             else if (hour >= 0 && hour <= 5) {       // 12:00 AM - 6:00 AM (0, 1, 2, 3, 4, 5, 6)
                 return this.sleepingKrisantaImage;
-            } 
+            }
             else {
                 return this.happyKrisantaImage;      // All other times
             }
@@ -805,7 +804,7 @@ export default {
         async initializeLocationWithMovementTracking() {
             try {
                 const trackingPreference = localStorage.getItem('location_tracking_preference');
-                
+
                 if (trackingPreference === 'always') {
                     await this.locationStore.startContinuousTracking({
                         highAccuracy: true,
@@ -818,11 +817,11 @@ export default {
                 console.error('Location initialization failed:', error);
             }
         },
-        
+
         async requestLocation() {
             try {
                 const wantTracking = confirm('Do you want to keep tracking your location while moving? This will help provide better recommendations.');
-                
+
                 if (wantTracking) {
                     localStorage.setItem('location_tracking_preference', 'always');
                     await this.locationStore.startContinuousTracking({
@@ -833,7 +832,7 @@ export default {
                     localStorage.setItem('location_tracking_preference', 'once');
                     await this.locationStore.getCurrentLocation({ force: true });
                 }
-                
+
                 this.toast.success('Location enabled successfully!');
             } catch (error) {
                 this.toast.error('Unable to get location. Please enable location permissions.');
@@ -1617,6 +1616,7 @@ export default {
 .v-container {
     padding: 0 !important;
 }
+
 /* Movement indicator base styles */
 .movement-indicator {
     position: fixed;
@@ -1683,9 +1683,11 @@ export default {
     0% {
         transform: rotate(0deg);
     }
+
     50% {
         transform: rotate(15deg);
     }
+
     100% {
         transform: rotate(0deg);
     }
@@ -1696,10 +1698,12 @@ export default {
         transform: scale(1);
         opacity: 1;
     }
+
     50% {
         transform: scale(1.1);
         opacity: 0.8;
     }
+
     100% {
         transform: scale(1);
         opacity: 1;
@@ -1707,12 +1711,16 @@ export default {
 }
 
 @keyframes fastShake {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateX(0) rotate(0deg);
     }
+
     25% {
         transform: translateX(-2px) rotate(-5deg);
     }
+
     75% {
         transform: translateX(2px) rotate(5deg);
     }
@@ -1722,6 +1730,7 @@ export default {
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }
@@ -1732,10 +1741,12 @@ export default {
         opacity: 0.7;
         transform: scale(1);
     }
+
     50% {
         opacity: 1;
         transform: scale(1.02);
     }
+
     100% {
         opacity: 0.7;
         transform: scale(1);
@@ -1750,7 +1761,7 @@ export default {
         padding: 6px 10px;
         font-size: 11px;
     }
-    
+
     .movement-indicator .v-icon {
         font-size: 16px !important;
     }
