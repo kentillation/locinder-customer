@@ -51,7 +51,7 @@
                                 </div>
 
                                 <div class="forgot-pass-container">
-                                    <p @click="this.$router.push('/forgot-password')" class="forgot-password">Forgot password?</p>
+                                    <p @click="router.push('forgot-password')" class="forgot-password">Forgot password?</p>
                                 </div>
 
                                 <v-btn :disabled="!isFormValid || loading" color="primary" type="submit" size="large"
@@ -65,7 +65,7 @@
 
                                 <div class="register-link">
                                     <span>Don't have an account?</span>
-                                    <span class="register-text" @click="$router.push('/register')">Create one</span>
+                                    <span class="register-text" @click="router.push('register')">Create one</span>
                                 </div>
                             </v-form>
                         </div>
@@ -79,7 +79,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 
@@ -87,6 +87,7 @@ import Snackbar from '@/components/Snackbar.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
 
 const logo = require('@/assets/Locinder-Submark.png')
 
