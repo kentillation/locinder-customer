@@ -60,11 +60,6 @@
                 {{ getSpeedWarningMessage }}
             </v-alert>
 
-            <!-- <div class="headline">
-                <h3>Taste the best dishes in Sagay</h3>
-                <p>Tilawi ang manamit nga mga pagkaon sa Sagay</p>
-            </div> -->
-
             <div v-if="krisantaDialog" :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'" @click="closeKrisantaDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
@@ -491,10 +486,6 @@ export default {
             surpriseCooldownInterval: null,
             surpriseCooldownEndTime: null,
         }
-    },
-
-    components: {
-        // 
     },
 
     setup() {
