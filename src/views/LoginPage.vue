@@ -43,8 +43,9 @@
                                         autocomplete="customer_password" :type="showPassword ? 'text' : 'password'"
                                         class="custom-input" hide-details="auto">
                                         <template v-slot:append-inner>
-                                            <v-icon :icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                                                @click="showPassword = !showPassword" class="cursor-pointer" />
+                                            <HugeiconsIcon :icon="showPassword ? ViewIcon : ViewOffIcon"
+                                                @click="showPassword = !showPassword"
+                                                class="cursor-pointer label-icon" style="z-index: 999;" />
                                         </template>
                                     </v-text-field>
                                 </div>
@@ -80,7 +81,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Mail01Icon, LockPasswordIcon } from '@hugeicons/core-free-icons'
+import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
 
 import Snackbar from '@/components/Snackbar.vue'
 import { useAuthStore } from '@/stores/auth'
