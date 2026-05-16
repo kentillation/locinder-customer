@@ -1,12 +1,5 @@
 <template>
     <div class="register-container">
-        <!-- Animated background elements -->
-        <div class="animated-bg">
-            <div class="gradient-sphere sphere-1"></div>
-            <div class="gradient-sphere sphere-2"></div>
-            <div class="gradient-sphere sphere-3"></div>
-        </div>
-
         <v-container>
             <v-card class="register-card">
                 <v-row no-gutters>
@@ -418,7 +411,7 @@ export default {
 
     data() {
         return {
-            logo: require('@/assets/Logo.png'),
+            logo: require('@/assets/Locinder-Submark.png'),
             currentStep: 1,
             totalSteps: 3,
             showPassword: false,
@@ -427,7 +420,6 @@ export default {
             acceptTerms: false,
             loading: false,
             isFormValid: false,
-
             formData: {
                 first_name: '',
                 middle_name: '',
@@ -621,61 +613,14 @@ export default {
     justify-content: center;
     position: relative;
     background: linear-gradient(135deg, #faf8f5 0%, #fff6e3 100%);
-    overflow-x: hidden;
-    padding: 40px 0;
-}
-
-/* Animated Background */
-.animated-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    z-index: 0;
-}
-
-.gradient-sphere {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.5;
-    animation: float 20s infinite ease-in-out;
-}
-
-.sphere-1 {
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, rgba(212, 162, 0, 0.3) 0%, rgba(180, 126, 0, 0.1) 100%);
-    top: -200px;
-    left: -200px;
-    animation-delay: 0s;
-}
-
-.sphere-2 {
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(220, 147, 0, 0.25) 0%, rgba(180, 126, 0, 0.08) 100%);
-    bottom: -100px;
-    right: -100px;
-    animation-delay: -5s;
-}
-
-.sphere-3 {
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(255, 162, 0, 0.2) 0%, rgba(180, 108, 0, 0.05) 100%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    animation-delay: -10s;
+    overflow: scroll;
 }
 
 /* Register Card */
 .register-card {
+    height: 100vh;
     border-radius: 30px;
-    overflow: hidden;
+    overflow: scroll;
     box-shadow: none;
     max-width: 500px;
     margin: 0 auto;
@@ -713,7 +658,7 @@ export default {
 
 .logo-img {
     width: 100%;
-    max-width: 200px;
+    max-width: 110px;
     height: auto;
     position: relative;
     z-index: 1;

@@ -182,7 +182,7 @@ const handleLogin = async () => {
     justify-content: center;
     position: relative;
     background: linear-gradient(135deg, #faf8f5 0%, #fff6e3 100%);
-    overflow: hidden;
+    overflow: scroll;
 }
 
 .logo-wrapper {
