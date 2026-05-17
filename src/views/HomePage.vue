@@ -192,7 +192,7 @@
                             </v-col>
 
                             <v-col cols="4" lg="3" md="4" sm="4" style="padding: 5px !important;">
-                                <v-btn @click="moreSheet = true" class="button">
+                                <v-btn @click="openMoreCategorySheet" class="button">
                                     <span class="button-item">
                                         <span><v-img :src="moreImage" width="40"></v-img></span>
                                         <span class="button-text">More</span>
@@ -326,6 +326,7 @@
         </div>
 
         <!-- More Bottom Sheet -->
+
         <transition name="slide-up">
             <div v-if="moreSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
                 @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
@@ -348,7 +349,7 @@
                                 </v-btn>
                             </v-col>
                         </v-row>
-                        <!-- New -->
+
                         <v-btn @click="router.push('new-products')" class="new-product-btn content-between">
                             <span>
                                 Check these new products<br />
@@ -412,6 +413,7 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Loading03Icon, Search01Icon, Store01Icon, CancelCircleIcon, ArrowRight02Icon } from '@hugeicons/core-free-icons'
 import { useAuthStore } from '@/stores/auth';
@@ -419,9 +421,8 @@ import { useLocationStore } from '@/stores/locationStore';
 import { useRouter } from 'vue-router';
 import { useShopStore } from '@/stores/shopStore';
 import { useProductsStore } from '@/stores/productsStore';
-import confetti from 'canvas-confetti';
 import { useToast } from 'vue-toastification'
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import confetti from 'canvas-confetti';
 
 const authStore = useAuthStore();
 const locationStore = useLocationStore();
@@ -771,6 +772,10 @@ const fetchProductBaseCategories = async () => {
         console.error('Error fetching categories:', error);
     }
 };
+
+const openMoreCategorySheet = () => {
+    moreSheet.value = true
+}
 
 const sanitizeSearchTerm = (term) => {
     if (!term) return '';
@@ -1991,9 +1996,7 @@ onBeforeUnmount(() => {
     box-shadow: none;
     z-index: 1000;
     transition: height 0.1s linear !important;
-    /* Faster transition */
     touch-action: none;
-    /* Prevents page scroll while dragging */
     overflow: hidden;
 }
 
