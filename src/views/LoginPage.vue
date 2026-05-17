@@ -57,10 +57,13 @@
                                 <v-btn :disabled="!isFormValid || loading" color="primary" type="submit" size="large"
                                     class="login-btn mt-6" height="52" block elevation="0">
                                     <span v-if="!loading">Sign In</span>
-                                    <template v-else>
-                                        <v-progress-circular indeterminate color="white" size="20" class="mr-2" />
+                                    <span v-else class="d-flex align-center">
+                                        <HugeiconsIcon :icon="Loading03Icon" 
+                                            size="20" 
+                                            color="#fff" 
+                                            class="mr-2 loading-icon" />
                                         Signing In...
-                                    </template>
+                                    </span>
                                 </v-btn>
 
                                 <div class="register-link">
@@ -79,7 +82,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
+import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -241,9 +244,9 @@ const handleLogin = async () => {
 
 .subtitle {
     text-align: center;
-    color: #707070;
-    font-size: 1rem;
-    margin-bottom: 25px;
+    color: #a2a2a2;
+    font-size: 0.85rem;
+    margin-bottom: 24px;
 }
 
 /* Form Elements */
@@ -342,6 +345,19 @@ const handleLogin = async () => {
     text-decoration: underline;
 }
 
+.loading-icon {
+    animation: fastSpin 0.8s linear infinite;
+}
+
+@keyframes fastSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
 
 /* Responsive */
 @media (max-width: 960px) {

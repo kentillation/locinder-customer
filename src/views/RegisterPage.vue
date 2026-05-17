@@ -11,16 +11,19 @@
                                 <img :src="logo" class="logo-img" loading="lazy" alt="Locinder Logo" />
                             </div>
 
-                            <h1>Join the movement of Locinder</h1>
+                            <h1>Join the movement of <span class="text-accent">Locinder</span></h1>
 
                             <p class="subtitle">A food discovery app for local delicacies in Sagay City</p>
 
                             <!-- Step Indicator -->
                             <div class="step-indicator">
-                                <div v-for="step in steps" :key="step.number" class="step-item" :class="{
-                                    active: currentStep === step.number,
-                                    completed: currentStep > step.number
-                                }" @click="goToStep(step.number)">
+                                <div v-for="step in steps" 
+                                    :key="step.number" 
+                                    :disabled="loading" 
+                                    class="step-item" 
+                                    :class="{ active: currentStep === step.number,
+                                    completed: currentStep > step.number }"
+                                    @click="goToStep(step.number)">
                                     <div class="step-circle">
                                         <HugeiconsIcon  v-if="currentStep > step.number"
                                             :icon="Tick02Icon" color="white" />
@@ -36,32 +39,56 @@
                                 <div v-show="currentStep === 1" class="step-content mb-7" key="step1">
                                     <div class="input-wrapper">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="EditUser02Icon" class="label-icon" />
+                                            <HugeiconsIcon :icon="EditUser02Icon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>First name <sup>*</sup></span>
                                         </div>
-                                        <v-text-field v-model="formData.first_name" :rules="[requiredRule, max50Rule]"
-                                            placeholder="e.g. Juan" variant="solo" density="comfortable"
-                                            class="custom-input" maxlength="30" counter="30" />
+                                        <v-text-field v-model="formData.first_name"
+                                            :rules="[requiredRule, max50Rule]"
+                                            :disabled="loading"
+                                            placeholder="e.g. Juan" 
+                                            variant="solo" 
+                                            density="comfortable"
+                                            class="custom-input" 
+                                            maxlength="30" 
+                                            counter="30" />
                                     </div>
 
                                     <div class="input-wrapper mt-3">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="EditUser02Icon" class="label-icon" />
+                                            <HugeiconsIcon :icon="EditUser02Icon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Middle name</span>
                                         </div>
-                                        <v-text-field v-model="formData.middle_name" :rules="[leaveBlank]"
-                                            placeholder="e.g. Flores" variant="solo" density="comfortable"
-                                            class="custom-input" maxlength="30" counter="30" />
+                                        <v-text-field v-model="formData.middle_name" 
+                                            :rules="[leaveBlank]"
+                                            :disabled="loading"
+                                            placeholder="e.g. Flores" 
+                                            variant="solo" 
+                                            density="comfortable"
+                                            class="custom-input" 
+                                            maxlength="30" 
+                                            counter="30" />
                                     </div>
 
                                     <div class="input-wrapper mt-3">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="EditUser02Icon" class="label-icon" />
+                                            <HugeiconsIcon :icon="EditUser02Icon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Last name <sup>*</sup></span>
                                         </div>
-                                        <v-text-field v-model="formData.last_name" :rules="[requiredRule, max50Rule]"
-                                            placeholder="e.g. Dela Cruz" variant="solo" density="comfortable"
-                                            class="custom-input" maxlength="30" counter="30" />
+                                        <v-text-field v-model="formData.last_name" 
+                                            :rules="[requiredRule, max50Rule]"
+                                            :disabled="loading"
+                                            placeholder="e.g. Dela Cruz" 
+                                            variant="solo" 
+                                            density="comfortable"
+                                            class="custom-input" 
+                                            maxlength="30" 
+                                            counter="30" />
                                     </div>
 
                                 </div>
@@ -70,22 +97,36 @@
                                 <div v-show="currentStep === 2" class="step-content mb-7" key="step2">
                                     <div class="input-wrapper">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="GithubIcon" class="label-icon" />
+                                            <HugeiconsIcon :icon="GithubIcon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Pet's name</span>
                                         </div>
-                                        <v-text-field v-model="formData.pet_name" :rules="[leaveBlank]"
-                                            placeholder="e.g. Timmy" variant="solo" density="comfortable"
-                                            class="custom-input" maxlength="30" counter="30" />
+                                        <v-text-field v-model="formData.pet_name" 
+                                            :rules="[leaveBlank]"
+                                            :disabled="loading"
+                                            placeholder="e.g. Timmy" 
+                                            variant="solo" 
+                                            density="comfortable"
+                                            class="custom-input"
+                                            maxlength="30" 
+                                            counter="30" />
                                     </div>
 
                                     <div class="input-wrapper mt-3">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="HoldPhoneIcon" class="label-icon" />
+                                            <HugeiconsIcon :icon="SmartPhone04Icon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Mobile number <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.customer_contact_number"
-                                            :rules="[requiredRule, mobileNumberRule]" placeholder="0912 345 6789"
-                                            variant="solo" density="comfortable" class="custom-input"
+                                            :rules="[requiredRule, mobileNumberRule]"
+                                            :disabled="loading"
+                                            placeholder="0912 345 6789 or +639 123 456 789"
+                                            variant="solo" 
+                                            density="comfortable" 
+                                            class="custom-input"
                                             hide-details="auto" />
                                     </div>
 
@@ -95,24 +136,36 @@
                                 <div v-show="currentStep === 3" class="step-content" key="step3">
                                     <div class="input-wrapper">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="Mail01Icon" class="label-icon" />
+                                            <HugeiconsIcon :icon="Mail01Icon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Email <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.customer_email"
-                                            :rules="[requiredRule, emailFormatRule]" placeholder="admin@example.com"
-                                            variant="solo" density="comfortable" class="custom-input"
+                                            :rules="[requiredRule, emailFormatRule]"
+                                            :disabled="loading"
+                                            placeholder="admin@example.com"
+                                            variant="solo" 
+                                            density="comfortable" 
+                                            class="custom-input"
                                             hide-details="auto" />
                                     </div>
 
                                     <div class="input-wrapper mt-4">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
+                                            <HugeiconsIcon :icon="LockPasswordIcon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Password <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.customer_password"
-                                            :rules="[requiredRule, passwordRule]" placeholder="Create a strong password"
-                                            variant="solo" density="comfortable"
-                                            :type="showPassword ? 'text' : 'password'" class="custom-input"
+                                            :rules="[requiredRule, passwordRule]"
+                                            :disabled="loading"
+                                            placeholder="Create a strong password"
+                                            variant="solo" 
+                                            density="comfortable"
+                                            :type="showPassword ? 'text' : 'password'" 
+                                            class="custom-input"
                                             hide-details="auto">
                                             <template v-slot:append-inner>
                                                 <HugeiconsIcon @click="showPassword = !showPassword"
@@ -125,13 +178,19 @@
 
                                     <div class="input-wrapper mt-4">
                                         <div class="input-label">
-                                            <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
+                                            <HugeiconsIcon :icon="LockPasswordIcon"
+                                            size="20"
+                                            class="label-icon" />
                                             <span>Confirm Password <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.confirm_password"
                                             :rules="[requiredRule, confirmPasswordRule]"
-                                            placeholder="Confirm your password" variant="solo" density="comfortable"
-                                            :type="showConfirmPassword ? 'text' : 'password'" class="custom-input"
+                                            :disabled="loading"
+                                            placeholder="Confirm your password" 
+                                            variant="solo" 
+                                            density="comfortable"
+                                            :type="showConfirmPassword ? 'text' : 'password'" 
+                                            class="custom-input"
                                             hide-details="auto">
                                             <template v-slot:append-inner>
                                                 <HugeiconsIcon @click="showConfirmPassword = !showConfirmPassword"
@@ -171,10 +230,16 @@
                                     </v-btn>
 
                                     <v-btn v-if="currentStep === totalSteps" color="primary" type="submit" size="large"
-                                        class="nav-btn register-btn" :loading="loading"
+                                        class="nav-btn register-btn"
                                         :disabled="!isFormValid || loading || !acceptTerms">
                                         <span v-if="!loading">Create Account</span>
-                                        <span v-else>Creating...</span>
+                                        <span v-else class="d-flex align-center">
+                                            <HugeiconsIcon :icon="Loading03Icon" 
+                                                size="20" 
+                                                color="#fff" 
+                                                class="mr-2 loading-icon" />
+                                            Creating...
+                                        </span>
                                     </v-btn>
                                 </div>
 
@@ -408,9 +473,9 @@
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Tick02Icon, 
-    EditUser02Icon, GithubIcon, HoldPhoneIcon, 
+    EditUser02Icon, GithubIcon, SmartPhone04Icon, 
     Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon,
-    CancelCircleIcon } from '@hugeicons/core-free-icons'
+    CancelCircleIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -636,6 +701,11 @@ const handleRegister = async () => {
     width: 100%;
     color: #000;
     line-height: 0.7cm;
+}
+
+.text-accent {
+    color:#d46600;
+    font-weight: 600;
 }
 
 /* Logo Animation */
@@ -871,6 +941,10 @@ const handleRegister = async () => {
     margin: 0 !important;
 }
 
+.loading-icon {
+    animation: fastSpin 0.8s linear infinite;
+}
+
 /* Animations */
 @keyframes float {
 
@@ -947,6 +1021,16 @@ const handleRegister = async () => {
     to {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes fastSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
     }
 }
 
