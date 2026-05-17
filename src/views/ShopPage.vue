@@ -90,8 +90,11 @@
                                         </v-chip>
                                         <v-chip v-for="(category) in sortedCategories" :key="category.label"
                                             @click="handleCategorySelect(category)"
-                                            :class="{ active: requested_category === category.label }" color="#fff"
-                                            variant="flat" class="me-1 category-chip" style="font-weight: 500;">
+                                            :class="{ active: requested_category === category.label }"
+                                            :ripple="false"
+                                            variant="outlined"
+                                            class="me-1 category-chip" 
+                                            style="font-weight: 500;">
                                             {{ category.label }}
                                         </v-chip>
                                     </v-slide-group-item>
@@ -1039,6 +1042,10 @@ onUnmounted(() => {
     background-color: #5c3a21 !important;
     color: #fff !important;
     transition: 0.5s ease;
+}
+
+.v-chip--variant-outlined {
+    border: thin solid rgb(213 213 213 / 87%) !important;
 }
 
 .v-icon--size-default {

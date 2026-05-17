@@ -59,10 +59,13 @@
                             class="me-1" style="font-weight: 500;">
                             All
                         </v-chip>
-                        <v-chip v-for="(category) in productsStore.getProductCategories" :key="category.label"
+                        <v-chip v-for="(category) in sortedCategories" :key="category.label"
                             @click="handleCategorySelect(category)"
-                            :class="{ active: requested_category === category.label }" color="#fff" variant="flat"
-                            class="me-1 category-chip" style="font-weight: 500;">
+                            :class="{ active: requested_category === category.label }"
+                            :ripple="false" 
+                            variant="outlined"
+                            class="me-1 category-chip"
+                            style="font-weight: 500;">
                             {{ category.label }}
                         </v-chip>
                     </v-slide-group-item>
@@ -375,6 +378,16 @@ const fetchProducts = async (page = 1, isLoadMore = false) => {
         isFetching.value = false
     }
 }
+
+const allCategories = computed(() => {
+    return productsStore.getProductCategories
+})
+
+const sortedCategories = computed(() => {
+    const others = allCategories.value.find(c => c.label === 'Other')
+    const rest = allCategories.value.filter(c => c.label !== 'Other')
+    return others ? [...rest, others] : rest
+})
 
 const loadMoreProducts = async () => {
     if (loadingMore.value || !hasMoreProducts.value || isProductsLoading.value || isFetching.value || isRefreshing.value) {
@@ -727,6 +740,10 @@ onUnmounted(() => {
     background-color: #5c3a21 !important;
     color: #fff !important;
     transition: 0.5s ease;
+}
+
+.v-chip--variant-outlined {
+    border: thin solid rgb(213 213 213 / 87%) !important;
 }
 
 .v-icon--size-default {

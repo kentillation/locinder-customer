@@ -57,7 +57,7 @@
             </v-alert>
 
             <div v-if="krisantaDialog"
-                :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'customer-dialog-overlay'"
+                :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'd-none customer-dialog-overlay'"
                 @click="closeKrisantaDialog">
                 <div class="customer-dialog" @click.stop>
                     <div class="dialog-bubble">
