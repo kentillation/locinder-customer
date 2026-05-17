@@ -326,46 +326,7 @@
         </div>
 
         <!-- More Bottom Sheet -->
-
-        <transition name="slide-up">
-            <div v-if="moreSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
-                @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
-                <div class="drag-handle mt-3"></div>
-                <v-card class="sheet-content">
-                    <v-container>
-                        <h4 class="text-left">
-                            More choices for you<br />
-                            <span>Iban pa nga pili-an para sa imo</span>
-                        </h4>
-                        <v-row class="px-2 mb-5">
-                            <v-col v-for="(category) in sortedCategories" :key="category.label" cols="4" lg="3" md="4"
-                                sm="4" style="padding: 5px !important;">
-                                <v-btn class="button" @click="handleCategorySelect(category)">
-                                    <span class="button-item">
-                                        <span><v-img :src="productImages[category.label] || moreImage"
-                                                width="40"></v-img></span>
-                                        <span class="button-text">{{ category.label }}</span>
-                                    </span>
-                                </v-btn>
-                            </v-col>
-                        </v-row>
-
-                        <v-btn @click="router.push('new-products')" class="new-product-btn content-between">
-                            <span>
-                                Check these new products<br />
-                                <span class="subtitle">Lantawa mga bag-o nga produkto</span>
-                            </span>
-                            <template v-slot:append>
-                                <HugeiconsIcon :icon=ArrowRight02Icon size="25" style="color: #fff !important;" />
-                            </template>
-                        </v-btn>
-                    </v-container>
-                </v-card>
-            </div>
-        </transition>
-        <transition name="fade">
-            <div v-if="moreSheet" class="sheet-overlay" @click="moreSheet = false"></div>
-        </transition>
+        <MoreCategorySheet v-model="moreSheet" />
 
         <!--Surprise Bottom Sheet-->
         <transition name="slide-up">
@@ -423,6 +384,7 @@ import { useShopStore } from '@/stores/shopStore';
 import { useProductsStore } from '@/stores/productsStore';
 import { useToast } from 'vue-toastification'
 import confetti from 'canvas-confetti';
+import MoreCategorySheet from '@/components/BottomSheets/MoreCategorySheet.vue';
 
 const authStore = useAuthStore();
 const locationStore = useLocationStore();
@@ -563,16 +525,6 @@ const getSpeedWarningMessage = computed(() => {
     } else {
         return '🚶 Moving detected. Stay safe!';
     }
-});
-
-const allCategories = computed(() => {
-    return productsStore.getBaseCategories.slice(10);
-});
-
-const sortedCategories = computed(() => {
-    const others = allCategories.value.find(c => c.label === 'Other');
-    const rest = allCategories.value.filter(c => c.label !== 'Other');
-    return others ? [...rest, others] : rest;
 });
 
 const limitedCategories = computed(() => {
