@@ -22,8 +22,8 @@
                                     completed: currentStep > step.number
                                 }" @click="goToStep(step.number)">
                                     <div class="step-circle">
-                                        <v-icon v-if="currentStep > step.number" size="16"
-                                            color="white">mdi-check</v-icon>
+                                        <HugeiconsIcon  v-if="currentStep > step.number"
+                                            :icon="Tick02Icon" color="white" />
                                         <span v-else>{{ step.number }}</span>
                                     </div>
                                     <span class="step-label">{{ step.label }}</span>
@@ -36,7 +36,7 @@
                                 <div v-show="currentStep === 1" class="step-content mb-7" key="step1">
                                     <div class="input-wrapper">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-account-outline" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="EditUser02Icon" class="label-icon" />
                                             <span>First name <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.first_name" :rules="[requiredRule, max50Rule]"
@@ -46,7 +46,7 @@
 
                                     <div class="input-wrapper mt-3">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-account-outline" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="EditUser02Icon" class="label-icon" />
                                             <span>Middle name</span>
                                         </div>
                                         <v-text-field v-model="formData.middle_name" :rules="[leaveBlank]"
@@ -56,7 +56,7 @@
 
                                     <div class="input-wrapper mt-3">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-account-outline" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="EditUser02Icon" class="label-icon" />
                                             <span>Last name <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.last_name" :rules="[requiredRule, max50Rule]"
@@ -70,7 +70,7 @@
                                 <div v-show="currentStep === 2" class="step-content mb-7" key="step2">
                                     <div class="input-wrapper">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-cat" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="GithubIcon" class="label-icon" />
                                             <span>Pet's name</span>
                                         </div>
                                         <v-text-field v-model="formData.pet_name" :rules="[leaveBlank]"
@@ -80,7 +80,7 @@
 
                                     <div class="input-wrapper mt-3">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-cellphone" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="HoldPhoneIcon" class="label-icon" />
                                             <span>Mobile number <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.customer_contact_number"
@@ -95,7 +95,7 @@
                                 <div v-show="currentStep === 3" class="step-content" key="step3">
                                     <div class="input-wrapper">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-email-outline" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="Mail01Icon" class="label-icon" />
                                             <span>Email <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.customer_email"
@@ -106,7 +106,7 @@
 
                                     <div class="input-wrapper mt-4">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-lock-outline" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
                                             <span>Password <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.customer_password"
@@ -115,15 +115,17 @@
                                             :type="showPassword ? 'text' : 'password'" class="custom-input"
                                             hide-details="auto">
                                             <template v-slot:append-inner>
-                                                <v-icon :icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                                                    @click="showPassword = !showPassword" class="cursor-pointer" />
+                                                <HugeiconsIcon @click="showPassword = !showPassword"
+                                                    :icon="showPassword ? ViewIcon : ViewOffIcon" 
+                                                    class="cursor-pointer label-icon" 
+                                                    style="z-index: 999;" />
                                             </template>
                                         </v-text-field>
                                     </div>
 
                                     <div class="input-wrapper mt-4">
                                         <div class="input-label">
-                                            <v-icon icon="mdi-lock-check-outline" size="18" class="label-icon" />
+                                            <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
                                             <span>Confirm Password <sup>*</sup></span>
                                         </div>
                                         <v-text-field v-model="formData.confirm_password"
@@ -132,9 +134,10 @@
                                             :type="showConfirmPassword ? 'text' : 'password'" class="custom-input"
                                             hide-details="auto">
                                             <template v-slot:append-inner>
-                                                <v-icon :icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                                                    @click="showConfirmPassword = !showConfirmPassword"
-                                                    class="cursor-pointer" />
+                                                <HugeiconsIcon @click="showConfirmPassword = !showConfirmPassword"
+                                                    :icon="showConfirmPassword ? ViewIcon : ViewOffIcon" 
+                                                    class="cursor-pointer label-icon" 
+                                                    style="z-index: 999;" />
                                             </template>
                                         </v-text-field>
                                     </div>
@@ -387,8 +390,12 @@
 
                     <v-card-actions class="pa-4">
                         <v-spacer></v-spacer>
-                        <v-btn color="warning" variant="solo" prepend-icon="mdi-close-circle-outline"
-                            @click="termsSheetVisible = false">
+                        <v-btn @click="termsSheetVisible = false" 
+                            color="warning" 
+                            variant="solo"
+                            class="mr-4"
+                            icon>
+                            <HugeiconsIcon :icon="CancelCircleIcon" size="20" class="mr-1" />
                             Close
                         </v-btn>
                     </v-card-actions>
@@ -399,6 +406,11 @@
 </template>
 
 <script setup>
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Tick02Icon, 
+    EditUser02Icon, GithubIcon, HoldPhoneIcon, 
+    Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon,
+    CancelCircleIcon } from '@hugeicons/core-free-icons'
 import { ref, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'vue-toastification'
@@ -702,6 +714,7 @@ const handleRegister = async () => {
     color: #999;
     transition: all 0.3s ease;
     margin-bottom: 8px;
+    padding: 2px;
 }
 
 .step-item.active .step-circle {

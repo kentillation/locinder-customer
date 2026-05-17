@@ -78,10 +78,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon } from '@hugeicons/core-free-icons'
+import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import Snackbar from '@/components/Snackbar.vue'
 import { useAuthStore } from '@/stores/auth'
