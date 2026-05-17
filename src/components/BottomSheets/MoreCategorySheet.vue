@@ -1,6 +1,6 @@
 <template>
     <transition name="slide-up">
-        <div v-if="moreSheet" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
+        <div v-if="modelValue" class="custom-bottom-sheet" :style="{ height: sheetHeight + 'vh' }"
             @touchstart="startDrag" @touchmove="onDrag" @touchend="endDrag">
             <div class="drag-handle mt-3"></div>
             <v-card class="sheet-content">
@@ -36,17 +36,29 @@
         </div>
     </transition>
     <transition name="fade">
-        <div v-if="moreSheet" class="sheet-overlay" @click="moreSheet = false"></div>
+        <div v-if="modelValue" class="sheet-overlay" @click="closeSheet"></div>
     </transition>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+/* eslint-disable */
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router';
 import { useProductsStore } from '@/stores/productsStore';
 import { useToast } from 'vue-toastification'
 import { HugeiconsIcon } from '@hugeicons/vue'
 import { ArrowRight02Icon } from '@hugeicons/core-free-icons'
+
+// Add props definition
+const props = defineProps({
+    modelValue: {
+        type: Boolean,
+        default: false
+    }
+})
+
+// Add emits
+const emit = defineEmits(['update:modelValue'])
 
 const router = useRouter();
 const productsStore = useProductsStore();
@@ -55,7 +67,6 @@ const moreImage = ref(require('@/assets/img/png/food/Cutlery.png'));
 
 const activeSheet = ref(null);
 const surpriseSheet = ref(false);
-const moreSheet = ref(false);
 const sheetHeight = ref(60);
 const surprising = ref(false);
 const startY = ref(0);
@@ -64,6 +75,13 @@ const SNAP_POINTS = {
     half: 60,
     full: 95,
 };
+
+// Watch for when sheet is opened to reset height
+watch(() => props.modelValue, (newVal) => {
+    if (newVal) {
+        sheetHeight.value = 60; // Reset height when opening
+    }
+});
 
 // Computed
 const allCategories = computed(() => {
@@ -89,11 +107,14 @@ const productImages = computed(() => {
 });
 
 // Methods
+const closeSheet = () => {
+    emit('update:modelValue', false)
+}
+
 const startDrag = (e) => {
     if (surprising.value) return;
 
-    // Determine which sheet is active
-    if (moreSheet.value) {
+    if (props.modelValue) {
         activeSheet.value = 'more';
     } else if (surpriseSheet.value) {
         activeSheet.value = 'surprise';
@@ -107,7 +128,6 @@ const startDrag = (e) => {
 
 const onDrag = (e) => {
     if (surprising.value) return;
-
     if (!activeSheet.value) return;
 
     const currentY = e.touches[0].clientY;
@@ -119,13 +139,12 @@ const onDrag = (e) => {
 
 const endDrag = () => {
     if (surprising.value) return;
-
     if (!activeSheet.value) return;
 
     const shthght = sheetHeight.value;
     if (shthght < 10) {
         if (activeSheet.value === 'more') {
-            moreSheet.value = false;
+            closeSheet();
         } else if (activeSheet.value === 'surprise') {
             surpriseSheet.value = false;
         }
@@ -158,7 +177,10 @@ const handleCategorySelect = async (category) => {
 
     try {
         await new Promise(resolve => setTimeout(resolve, 0));
-
+        
+        // Close the sheet before navigating
+        closeSheet();
+        
         router.push({
             path: '/shop-where-to-buy/',
             query: {
