@@ -501,7 +501,7 @@ const smoothBearing = (current, target, factor = 0.12) => {
 const enableGPSFollowMode = (location) => {
     if (!map || !mapInitialized || !location) return
 
-    // 🔥 NEW: compute route bearing
+    // NEW: compute route bearing
     let routeBearing = null
 
     if (currentRouteData?.coordinates?.length > 1) {
@@ -526,7 +526,7 @@ const enableGPSFollowMode = (location) => {
     map.flyTo({
         center: [location.lng, location.lat],
         zoom: gpsZoom,
-        bearing: finalBearing, // 🔥 important
+        bearing: finalBearing, // important
         duration: 850,
         essential: true,
         pitch: 75
