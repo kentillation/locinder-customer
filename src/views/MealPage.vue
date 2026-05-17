@@ -33,7 +33,7 @@
 
             <!-- Search Products -->
             <v-card class="search-box">
-                <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product...">
+                <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product..." autofocus>
                     <template v-slot:prepend-inner>
                         <HugeiconsIcon :icon="Search01Icon" size="20" class="mr-2" />
                     </template>
@@ -590,6 +590,7 @@ watch(searchProduct, (newVal) => {
 // Lifecycle
 onMounted(() => {
     window.addEventListener('online', onOnline)
+    
     nextTick(() => {
         setupInfiniteScroll()
         contentContainer.value = document.querySelector('.scroll-content')

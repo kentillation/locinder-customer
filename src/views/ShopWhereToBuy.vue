@@ -78,7 +78,7 @@
                 <template v-else>
                     <v-card class="search-box">
                         <v-text-field v-model="searchBox" placeholder="Search store..." @keyup.enter="handleSearchBox"
-                            @keydown="handleKeyDown" @input="handleSearchInput" :loading="searching">
+                            @keydown="handleKeyDown" @input="handleSearchInput" :loading="searching" autofocus>
                             <template v-slot:prepend-inner>
                                 <v-icon size="small">mdi-magnify</v-icon>
                             </template>
@@ -321,14 +321,14 @@ const handleSearchInput = () => {
         clearTimeout(searchTimeout.value)
     }
 
-    searchTimeout.value = setTimeout(() => {
-        if (searchBox.value && searchBox.value.length >= 2) {
-            const suggestions = searchSuggestions.value
-            if (suggestions.length > 0) {
-                console.log('Suggestions:', suggestions)
-            }
-        }
-    }, 300)
+    // searchTimeout.value = setTimeout(() => {
+    //     if (searchBox.value && searchBox.value.length >= 2) {
+    //         const suggestions = searchSuggestions.value
+    //         if (suggestions.length > 0) {
+    //             console.log('Suggestions:', suggestions)
+    //         }
+    //     }
+    // }, 300)
 }
 
 const debounce = (func, wait) => {
@@ -622,9 +622,13 @@ watch(searchBox, () => {
 })
 
 // Lifecycle
-onMounted(() => {
-    setupDebouncedSearch()
+onMounted(async () => {
     window.addEventListener('online', onOnline)
+
+    await nextTick()
+    
+    setupDebouncedSearch()
+
     contentContainer.value = document.querySelector('.scroll-content')
 })
 

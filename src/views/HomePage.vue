@@ -84,7 +84,7 @@
             <v-card class="search-box">
                 <v-text-field v-model="searchBox" placeholder="Search food, drinks or stores..."
                     @keyup.enter="handleSearchBox" @keydown="handleKeyDown" @input="handleSearchInput"
-                    :loading="searching">
+                    :loading="searching" autofocus>
                     <template v-slot:prepend-inner>
                         <HugeiconsIcon :icon="Search01Icon" size="20" class="mr-2" />
                     </template>
