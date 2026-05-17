@@ -1,5 +1,5 @@
 <template>
-    <div class="login-container">
+    <div class="forgotpass-container">
         <v-container>
             <v-card class="forgotpass-card">
                 <v-row no-gutters>
@@ -18,7 +18,7 @@
                                 <h4 class="mb-5">Enter your email address and we will proceed to reset your password.</h4>
                                 <div class="input-wrapper">
                                     <div class="input-label">
-                                        <v-icon icon="mdi-email-outline" size="18" class="label-icon" />
+                                        <HugeiconsIcon :icon="Mail01Icon" class="label-icon" />
                                         <span>Email Address</span>
                                     </div>
                                     <v-text-field v-model="customer_email" :rules="[requiredRule, emailFormatRule]"
@@ -28,25 +28,31 @@
                                 </div>
 
                                 <v-btn :disabled="!isEmailFormValid || submittingEmail" color="primary" type="submit"
-                                    size="large" class="login-btn mt-6" height="52" block :loading="submittingEmail">
+                                    size="large" class="login-btn mt-6" height="52" block>
                                     <span v-if="!submittingEmail">Submit Email</span>
-                                    <span v-else>Submitting...</span>
+                                    <span v-else class="d-flex align-center">
+                                        <HugeiconsIcon :icon="Loading03Icon" 
+                                            size="20" 
+                                            color="#fff" 
+                                            class="mr-2 loading-icon" />
+                                        Submitting...
+                                    </span>
                                 </v-btn>
 
                                 <div class="login-link">
                                     <span>Has already an account?</span>
-                                    <span class="login-text" @click="$router.push('/')">Sign in here</span>
+                                    <span class="login-text" @click="router.push('/')">Sign in here</span>
                                 </div>
                             </v-form>
 
                             <v-form v-show="showRecoveryForm && !showPasswordsForm" v-model="isRecoveryCodeFormValid"
                                 @submit.prevent="handleSubmitRecoveryCode" class="login-form" ref="recovery_code_form">
                                 <h4 class="mb-5">To continue, we have sent a recovery code to email {{
-                                    maskEmail(this.customer_email) }}
+                                    maskEmail(customer_email) }}
                                 </h4>
                                 <div class="input-wrapper">
                                     <div class="input-label">
-                                        <v-icon icon="mdi-lock-outline" size="18" class="label-icon" />
+                                        <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
                                         <span>Recovery Code</span>
                                     </div>
                                     <v-text-field v-model="recovery_code" :rules="[requiredRule]"
@@ -54,22 +60,28 @@
                                         autocomplete="recovery_code" :type="showRecoveryCode ? 'text' : 'password'"
                                         class="custom-input" hide-details="auto" maxlength="6" counter="6">
                                         <template v-slot:append-inner>
-                                            <v-icon :icon="showRecoveryCode ? 'mdi-eye-off' : 'mdi-eye'"
-                                                @click="showRecoveryCode = !showRecoveryCode" class="cursor-pointer" />
+                                            <HugeiconsIcon :icon="showRecoveryCode ? ViewIcon : ViewOffIcon"
+                                                @click="showRecoveryCode = !showRecoveryCode"
+                                                class="cursor-pointer label-icon" style="z-index: 999;" />
                                         </template>
                                     </v-text-field>
                                 </div>
 
                                 <v-btn :disabled="!isRecoveryCodeFormValid || submittingRecoveryCode" color="primary"
-                                    type="submit" size="large" class="login-btn mt-6" height="52" block
-                                    :loading="submittingRecoveryCode">
+                                    type="submit" size="large" class="login-btn mt-4" height="52" block>
                                     <span v-if="!submittingRecoveryCode">Submit Recovery Code</span>
-                                    <span v-else>Submitting...</span>
+                                    <span v-else class="d-flex align-center">
+                                        <HugeiconsIcon :icon="Loading03Icon" 
+                                            size="20" 
+                                            color="#fff" 
+                                            class="mr-2 loading-icon" />
+                                        Submitting...
+                                    </span>
                                 </v-btn>
 
                                 <div class="login-link">
                                     <span>Has already an account?</span>
-                                    <span class="login-text" @click="$router.push('/')">Sign in here</span>
+                                    <span class="login-text" @click="router.push('/')">Sign in here</span>
                                 </div>
                             </v-form>
 
@@ -78,7 +90,7 @@
                                 <h4 class="mb-5">This is your last step to reset your password.</h4>
                                 <div class="input-wrapper">
                                     <div class="input-label">
-                                        <v-icon icon="mdi-lock-outline" size="18" class="label-icon" />
+                                        <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
                                         <span>New Password</span>
                                     </div>
                                     <v-text-field v-model="new_password" :rules="[requiredRule, passwordRule]"
@@ -86,15 +98,16 @@
                                         :type="showNewPassword ? 'text' : 'password'" class="custom-input"
                                         hide-details="auto">
                                         <template v-slot:append-inner>
-                                            <v-icon :icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                                                @click="showNewPassword = !showNewPassword" class="cursor-pointer" />
+                                            <HugeiconsIcon :icon="showNewPassword ? ViewIcon : ViewOffIcon"
+                                                @click="showNewPassword = !showNewPassword"
+                                                class="cursor-pointer label-icon" style="z-index: 999;" />
                                         </template>
                                     </v-text-field>
                                 </div>
 
                                 <div class="input-wrapper mt-4">
                                     <div class="input-label">
-                                        <v-icon icon="mdi-lock-check-outline" size="18" class="label-icon" />
+                                        <HugeiconsIcon :icon="LockPasswordIcon" class="label-icon" />
                                         <span>Confirm New Password</span>
                                     </div>
                                     <v-text-field v-model="confirm_new_password"
@@ -103,18 +116,23 @@
                                         :type="showConfirmPassword ? 'text' : 'password'" class="custom-input"
                                         hide-details="auto">
                                         <template v-slot:append-inner>
-                                            <v-icon :icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                                            <HugeiconsIcon :icon="showConfirmPassword ? ViewIcon : ViewOffIcon"
                                                 @click="showConfirmPassword = !showConfirmPassword"
-                                                class="cursor-pointer" />
+                                                class="cursor-pointer label-icon" style="z-index: 999;" />
                                         </template>
                                     </v-text-field>
                                 </div>
 
                                 <v-btn :disabled="!isPasswordsFormValid || submittingNewPassword" color="primary"
-                                    type="submit" size="large" class="login-btn mt-6" height="52" block
-                                    :loading="submittingNewPassword">
+                                    type="submit" size="large" class="login-btn mt-6" height="52" block>
                                     <span v-if="!submittingNewPassword">Reset Password</span>
-                                    <span v-else>Resetting...</span>
+                                    <span v-else class="d-flex align-center">
+                                        <HugeiconsIcon :icon="Loading03Icon" 
+                                            size="20" 
+                                            color="#fff" 
+                                            class="mr-2 loading-icon" />
+                                        Resetting password...
+                                    </span>
                                 </v-btn>
 
                                 <v-btn color="primary" size="large" class="login-btn mt-3" height="52" block
@@ -124,7 +142,7 @@
 
                                 <div class="login-link">
                                     <span>Has already an account?</span>
-                                    <span class="login-text" @click="$router.push('/')">Sign in here</span>
+                                    <span class="login-text" @click="router.push('/')">Sign in here</span>
                                 </div>
                             </v-form>
                         </div>
@@ -135,170 +153,163 @@
     </div>
 </template>
 
-<script>
-import { useToast } from 'vue-toastification';
-import { useAuthStore } from '@/stores/auth';
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon, Loading03Icon } from '@hugeicons/core-free-icons'
+import { useToast } from 'vue-toastification'
+import { useAuthStore } from '@/stores/auth'
 
-export default {
-    name: 'LoginPage',
-    components: {  },
-    setup() {
-        const toast = useToast();
+// Router
+const router = useRouter()
 
-        return {
-            toast,
-        };
-    },
-    data() {
-        return {
-            logo: require('@/assets/Locinder-Submark.png'),
-            customer_email: '',
-            recovery_code: '',
-            new_password: '',
-            confirm_new_password: '',
-            showRecoveryForm: false,
-            showPasswordsForm: false,
-            showNewPassword: false,
-            showConfirmPassword: false,
-            isEmailFormValid: false,
-            isRecoveryCodeFormValid: false,
-            isPasswordsFormValid: false,
-            showRecoveryCode: false,
-            submittingEmail: false,
-            submittingRecoveryCode: false,
-            submittingNewPassword: false,
-            emailError: false,
-        };
-    },
-    methods: {
+// Toast
+const toast = useToast()
 
-        requiredRule(v) {
-            return !!v || 'This field is required';
-        },
+// Reactive data
+const logo = require('@/assets/Locinder-Submark.png')
+const customer_email = ref('')
+const recovery_code = ref('')
+const new_password = ref('')
+const confirm_new_password = ref('')
+const showRecoveryForm = ref(false)
+const showPasswordsForm = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+const isEmailFormValid = ref(false)
+const isRecoveryCodeFormValid = ref(false)
+const isPasswordsFormValid = ref(false)
+const showRecoveryCode = ref(false)
+const submittingEmail = ref(false)
+const submittingRecoveryCode = ref(false)
+const submittingNewPassword = ref(false)
+const emailError = ref(false)
 
-        emailFormatRule(v) {
-            const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return pattern.test(v) || 'Please enter a valid email address';
-        },
+// Form refs
+const email_form = ref(null)
+const recovery_code_form = ref(null)
+const passwords_form = ref(null)
 
-        passwordRule(v) {
-            return v.length >= 8 || 'Password must be at least 8 characters';
-        },
+// Validation rules
+const requiredRule = (v) => !!v || 'This field is required'
 
-        confirmPasswordRule() {
-            return this.new_password === this.confirm_new_password || 'Passwords do not match';
-        },
+const emailFormatRule = (v) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return pattern.test(v) || 'Please enter a valid email address'
+}
 
-        maskEmail(email) {
-            if (!email) return '';
-            const [localPart, domain] = email.split('@');
-            if (localPart.length <= 4) return email;
-            return localPart.slice(0, 2) +
-                '*'.repeat(localPart.length - 4) +
-                localPart.slice(-2) +
-                '@' + domain;
-        },
+const passwordRule = (v) => v.length >= 8 || 'Password must be at least 8 characters'
 
-        tryAgain() {
-            this.isEmailFormValid = false,
-            this.isRecoveryCodeFormValid = false,
-            this.customer_email = null;
-            this.recovery_code = null;
-            this.new_password = null;
-            this.confirm_new_password = null;
-            delete this.confirm_new_password;
-            this.showRecoveryForm = false;
-            this.showPasswordsForm = false;
-        },
+const confirmPasswordRule = () => {
+    return new_password.value === confirm_new_password.value || 'Passwords do not match'
+}
 
-        async handleSubmitEmail() {
-            const { valid } = await this.$refs.email_form.validate();
-            if (!valid) return;
+// Methods
+const maskEmail = (email) => {
+    if (!email) return ''
+    const [localPart, domain] = email.split('@')
+    if (localPart.length <= 4) return email
+    return localPart.slice(0, 2) +
+        '*'.repeat(localPart.length - 4) +
+        localPart.slice(-2) +
+        '@' + domain
+}
 
-            this.submittingEmail = true;
+const tryAgain = () => {
+    isEmailFormValid.value = false
+    isRecoveryCodeFormValid.value = false
+    customer_email.value = null
+    recovery_code.value = null
+    new_password.value = null
+    confirm_new_password.value = null
+    showRecoveryForm.value = false
+    showPasswordsForm.value = false
+}
 
-            try {
-                const authStore = useAuthStore();
-                const result = await authStore.submitEmail({
-                    customer_email: this.customer_email,
-                });
+const handleSubmitEmail = async () => {
+    const { valid } = await email_form.value.validate()
+    if (!valid) return
 
-                if (result.success === true) {
-                    this.showRecoveryForm = true;
-                    this.recovery_code = result.recovery_code; // switch UI
-                }
+    submittingEmail.value = true
 
-            } catch (error) {
-                console.error(error);
-                this.toast.error(error?.message);
+    try {
+        const authStore = useAuthStore()
+        const result = await authStore.submitEmail({
+            customer_email: customer_email.value,
+        })
 
-                this.showRecoveryForm = false; // stay on email form
-            } finally {
-                this.submittingEmail = false;
-            }
-        },
+        if (result.success === true) {
+            showRecoveryForm.value = true
+            recovery_code.value = result.recovery_code // switch UI
+        }
 
-        async handleSubmitRecoveryCode() {
-            const { valid } = await this.$refs.recovery_code_form.validate();
-            if (!valid) return;
+    } catch (error) {
+        console.error(error)
+        toast.error(error?.message)
 
-            this.submittingRecoveryCode = true;
-            try {
-                const authStore = useAuthStore();
-                const result = await authStore.submitRecoveryCode({
-                    customer_email: this.customer_email,
-                    recovery_code: this.recovery_code,
-                });
-                if (result.success === true) {
-                    this.showPasswordsForm = true;
-                }
-            } catch (error) {
-                console.error(error);
-                this.toast.error(error?.message);
-
-                this.showPasswordsForm = false;
-            } finally {
-                this.submittingRecoveryCode = false;
-            }
-        },
-
-        async handleSubmitPasswords() {
-            const { valid } = await this.$refs.passwords_form.validate();
-            if (!valid) return;
-
-            this.submittingNewPassword = true;
-            try {
-                const authStore = useAuthStore();
-
-                delete this.confirm_new_password;
-
-                const result = await authStore.submitNewPassword({
-                    customer_email: this.customer_email,
-                    recovery_code: this.recovery_code,
-                    new_password: this.new_password,
-                });
-
-                if (result.success === true) {
-                    this.toast.success(result.data.message);
-
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
-                }
-            } catch (error) {
-                console.error(error);
-                this.toast.error(error?.message);
-            } finally {
-                this.submittingNewPassword = false;
-            }
-        },
-
+        showRecoveryForm.value = false // stay on email form
+    } finally {
+        submittingEmail.value = false
     }
-};
+}
+
+const handleSubmitRecoveryCode = async () => {
+    const { valid } = await recovery_code_form.value.validate()
+    if (!valid) return
+
+    submittingRecoveryCode.value = true
+    try {
+        const authStore = useAuthStore()
+        const result = await authStore.submitRecoveryCode({
+            customer_email: customer_email.value,
+            recovery_code: recovery_code.value,
+        })
+        if (result.success === true) {
+            showPasswordsForm.value = true
+        }
+    } catch (error) {
+        console.error(error)
+        toast.error(error?.message)
+
+        showPasswordsForm.value = false
+    } finally {
+        submittingRecoveryCode.value = false
+    }
+}
+
+const handleSubmitPasswords = async () => {
+    const { valid } = await passwords_form.value.validate()
+    if (!valid) return
+
+    submittingNewPassword.value = true
+    try {
+        const authStore = useAuthStore()
+
+        const result = await authStore.submitNewPassword({
+            customer_email: customer_email.value,
+            recovery_code: recovery_code.value,
+            new_password: new_password.value,
+        })
+
+        if (result.success === true) {
+            toast.success(result.data.message)
+
+            setTimeout(() => {
+                window.location.href = '/'
+            }, 2000)
+        }
+    } catch (error) {
+        console.error(error)
+        toast.error(error?.message)
+    } finally {
+        submittingNewPassword.value = false
+    }
+}
 </script>
 
 <style scoped>
-.login-container {
+.forgotpass-container {
     height: 100vh;
     width: 100%;
     display: flex;
@@ -306,13 +317,13 @@ export default {
     justify-content: center;
     position: relative;
     background: linear-gradient(135deg, #faf8f5 0%, #fff6e3 100%);
-    overflow: hidden;
+    overflow: scroll;
 }
 
 /* Login Card */
 .forgotpass-card {
     border-radius: 30px;
-    overflow: hidden;
+    overflow: scroll;
     box-shadow: none;
     max-width: 500px;
     margin: 0 auto;
@@ -356,6 +367,20 @@ export default {
     position: relative;
     display: inline-block;
     width: 100%;
+}
+
+.loading-icon {
+    animation: fastSpin 0.8s linear infinite;
+}
+
+@keyframes fastSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .subtitle {
