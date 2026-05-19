@@ -33,7 +33,7 @@
 
             <!-- Search Products -->
             <v-card class="search-box">
-                <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product..." autofocus>
+                <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product...">
                     <template v-slot:prepend-inner>
                         <HugeiconsIcon :icon="Search01Icon" size="20" class="mr-2" />
                     </template>

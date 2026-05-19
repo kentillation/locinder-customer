@@ -33,7 +33,7 @@
 
             <!-- Search Products -->
             <v-card class="search-box">
-                <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product..." autofocus>
+                <v-text-field v-model="searchProduct" @click="noCategory" placeholder="Search product...">
                     <template v-slot:prepend-inner>
                         <v-icon class="me-1">mdi-magnify</v-icon>
                     </template>
