@@ -921,6 +921,7 @@ onUnmounted(() => {
     padding: 0 !important;
     height: 100vh;
     overflow: hidden;
+    overscroll-behavior-y: contain;
 }
 
 .scroll-content {
@@ -928,6 +929,7 @@ onUnmounted(() => {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0 16px;
+    overscroll-behavior-y: contain;
 }
 
 /* Pull to Refresh Progress Styles */

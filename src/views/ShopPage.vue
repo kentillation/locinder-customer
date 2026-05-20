@@ -1,5 +1,5 @@
 <template>
-    <v-container>
+    <v-container class="pull-to-refresh-container">
         <!-- Pull to Refresh Progress Indicator (Only visible in Shop Products tab) -->
         <div class="refresh-progress" :style="{
             transform: `translateY(${pullProgress}px)`,
@@ -11,15 +11,13 @@
                         transform: `rotate(${rotationAngle}deg)`,
                         color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
                         background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
-                    }"
-                        style="border-radius: 50%; padding: 8px;" />
+                    }" style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
 
         <!-- Scrollable Content -->
-        <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd">
+        <div ref="contentContainer" class="scroll-content">
 
             <div class="pull-zone" ref="pullZone"></div>
 
@@ -40,7 +38,7 @@
                     :class="{ 'active-tab': activeTab === tab.value }"
                     @click="tab.clickHandler ? tab.clickHandler() : null" size="small">
                     <v-icon style="font-size: 20px !important;">{{ tab.value === "ourproducts" ? 'mdi-food' : 'mdi-map'
-                    }}</v-icon>&nbsp;{{ tab.label }}
+                        }}</v-icon>&nbsp;{{ tab.label }}
                 </v-tab>
             </v-tabs>
 
@@ -93,11 +91,8 @@
                                         </v-chip>
                                         <v-chip v-for="(category) in sortedCategories" :key="category.label"
                                             @click="handleCategorySelect(category)"
-                                            :class="{ active: requested_category === category.label }"
-                                            :ripple="false"
-                                            variant="outlined"
-                                            class="me-1 category-chip" 
-                                            style="font-weight: 500;">
+                                            :class="{ active: requested_category === category.label }" :ripple="false"
+                                            variant="outlined" class="me-1 category-chip" style="font-weight: 500;">
                                             {{ category.label }}
                                         </v-chip>
                                     </v-slide-group-item>
@@ -287,10 +282,8 @@ const isCategoryLoading = ref(false)
 const requested_category = ref(null)
 
 // Images
-// const fastfoodImage = new URL('@/assets/img/png/food/Fast Food.png', import.meta.url).href
 const storeImage = new URL('@/assets/img/png/food/Store.png', import.meta.url).href
 const nofastfoodImage = new URL('@/assets/img/png/food/No Fast Food.png', import.meta.url).href
-// const moreImage = new URL('@/assets/img/png/food/Cutlery.png', import.meta.url).href
 
 // Scroll handling
 const contentContainer = ref(null)
@@ -300,6 +293,7 @@ const isFetching = ref(false)
 
 // Pull to refresh properties
 const pullZone = ref(null);
+const isTouchingPullZone = ref(false)
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
 const touchStartY = ref(0)
@@ -308,6 +302,7 @@ const rotationAngle = ref(0)
 const rotationInterval = ref(null)
 const PULL_THRESHOLD = 200
 const showProgressThreshold = 100
+const shouldPreventDefault = ref(false)
 
 // Location Permission Properties
 const locinderGPSRef = ref(null)
@@ -364,13 +359,6 @@ const productImages = computed(() => {
     })
     return map
 })
-
-
-// Handle map tab access
-const handleMapTabAccess = async () => {
-    // Wait a bit for the map component to mount
-    await nextTick()
-}
 
 // Methods
 const goBack = () => {
@@ -454,13 +442,10 @@ const initData = async () => {
     }
 }
 
-// Computed property to get working image URL
 const getProductImageUrl = (product) => {
-    // Check if thumbnail_url exists and is not empty
     if (product.thumbnail_url && product.thumbnail_url !== 'null' && product.thumbnail_url !== '') {
         return product.thumbnail_url
     }
-    // Fallback to category image
     return productImages.value[product.category_label]
 }
 
@@ -473,7 +458,7 @@ const loadMoreProducts = async () => {
         return
     }
 
-    const nextPage = Math.floor(productsStore.products.length / itemsPerPage.value) + 1
+    const nextPage = currentPage.value + 1
 
     isFetching.value = true
     loadingMore.value = true
@@ -506,6 +491,7 @@ const loadMoreProducts = async () => {
         }
     } catch (error) {
         console.error('Error loading more products:', error)
+        hasMoreProducts.value = false
     } finally {
         loadingMore.value = false
         isFetching.value = false
@@ -691,38 +677,41 @@ const formatTime = (time) => {
     return `${String(h).padStart(2, '0')}:${minutes} ${ampm}`
 }
 
-// Pull to Refresh Methods - Only active in Shop Products tab
+// Pull to Refresh Methods
 const handleTouchStart = (e) => {
-    
-    if (activeTab.value === 'ourproducts' &&
-        contentContainer.value &&
-        contentContainer.value.scrollTop === 0 &&
-        !isRefreshing.value) {
-        const targetElement = e.target;
-        const scrollElement = contentContainer.value;
-        const isTopOfContent = scrollElement && scrollElement.scrollTop === 0;
-        
-        const touchY = e.touches[0].clientY;
-        const elementRect = scrollElement?.getBoundingClientRect();
-        const isNearTop = elementRect && (touchY - elementRect.top) < 50;
-        
-        if (scrollElement && scrollElement.contains(targetElement) && isTopOfContent && isNearTop && !isRefreshing.value) {
-            touchStartY.value = e.touches[0].clientY;
-            isPulling.value = true;
-        } else {
-            isPulling.value = false;
-        }
+    if (activeTab.value !== 'ourproducts') return
+
+    const scrollElement = contentContainer.value;
+    if (!scrollElement) return;
+
+    const isTopOfContent = scrollElement.scrollTop === 0;
+    const touchY = e.touches[0].clientY;
+    const elementRect = scrollElement?.getBoundingClientRect();
+    const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+
+    if (isTopOfContent && isNearTop && !isRefreshing.value) {
+        touchStartY.value = touchY;
+        isPulling.value = true;
+        isTouchingPullZone.value = true;
+        shouldPreventDefault.value = true;
+    } else {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
     }
-};
+}
 
 const handleTouchMove = (e) => {
-    if (!isPulling.value || isRefreshing.value || activeTab.value !== 'ourproducts') return
+    if (!isPulling.value || isRefreshing.value || activeTab.value !== 'ourproducts' || !isTouchingPullZone.value) return
 
     const currentY = e.touches[0].clientY
     const diff = currentY - touchStartY.value
+    const scrollElement = contentContainer.value;
 
-    if (diff > 0 && contentContainer.value && contentContainer.value.scrollTop === 0) {
-        e.preventDefault()
+    if (diff > 0 && scrollElement && scrollElement.scrollTop === 0) {
+        if (e.cancelable && shouldPreventDefault.value) {
+            e.preventDefault()
+        }
 
         let progress = Math.min(diff, PULL_THRESHOLD);
 
@@ -738,16 +727,26 @@ const handleTouchMove = (e) => {
         } else {
             rotationAngle.value = 0;
         }
+    } else if (diff < 0) {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
 }
 
 const handleTouchEnd = async () => {
     if (!isPulling.value || isRefreshing.value || activeTab.value !== 'ourproducts') {
-        isPulling.value = false
-        return
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
+        return;
     }
 
-    isPulling.value = false
+    isPulling.value = false;
+    isTouchingPullZone.value = false;
+    shouldPreventDefault.value = false;
 
     if (pullProgress.value >= (PULL_THRESHOLD - showProgressThreshold)) {
         await refreshData()
@@ -782,6 +781,10 @@ const refreshData = async () => {
             fetchProducts(true),
             fetchShopLocation()
         ])
+
+        if (contentContainer.value) {
+            contentContainer.value.scrollTop = 0
+        }
 
         setTimeout(() => {
             isRefreshing.value = false
@@ -825,36 +828,55 @@ const fetchShopLocation = async () => {
 // Watchers
 watch(() => route.query, (newQuery, oldQuery) => {
     if (newQuery.shopId !== oldQuery?.shopId) {
+        isInitialized.value = false // Reset initialization flag
         initData()
     }
 }, { immediate: true })
 
 watch(activeTab, (newTab, oldTab) => {
-    // Reset pull to refresh state when switching tabs
     if (newTab !== 'ourproducts') {
         pullProgress.value = 0
         rotationAngle.value = 0
         isPulling.value = false
     }
 
-    // Handle map tab access
     if (newTab === 'map' && oldTab !== 'map') {
-        handleMapTabAccess()
+        nextTick(() => {
+            // Map tab handling
+        })
     }
 })
 
 // Lifecycle
 onMounted(() => {
     window.addEventListener('online', onOnline)
+
     nextTick(() => {
-        setupInfiniteScroll()
         contentContainer.value = document.querySelector('.scroll-content')
+
+        if (contentContainer.value) {
+            // Add touch listeners manually with passive: false
+            contentContainer.value.addEventListener('touchstart', handleTouchStart, { passive: false })
+            contentContainer.value.addEventListener('touchmove', handleTouchMove, { passive: false })
+            contentContainer.value.addEventListener('touchend', handleTouchEnd)
+            contentContainer.value.addEventListener('touchcancel', handleTouchEnd)
+        }
+
+        setupInfiniteScroll()
     })
 })
 
 onUnmounted(() => {
     window.removeEventListener('online', onOnline)
     removeInfiniteScroll()
+
+    if (contentContainer.value) {
+        contentContainer.value.removeEventListener('touchstart', handleTouchStart)
+        contentContainer.value.removeEventListener('touchmove', handleTouchMove)
+        contentContainer.value.removeEventListener('touchend', handleTouchEnd)
+        contentContainer.value.removeEventListener('touchcancel', handleTouchEnd)
+    }
+
     if (rotationInterval.value) {
         clearInterval(rotationInterval.value)
     }
@@ -866,11 +888,20 @@ onUnmounted(() => {
     padding: 0 !important;
 }
 
+.pull-to-refresh-container {
+    position: relative;
+    padding: 0 !important;
+    height: 100vh;
+    overflow: hidden;
+    overscroll-behavior-y: contain;
+}
+
 .scroll-content {
     height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0 16px;
+    overscroll-behavior-y: contain;
 }
 
 /* Pull to Refresh Progress Styles */
