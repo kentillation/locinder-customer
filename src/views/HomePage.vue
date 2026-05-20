@@ -593,7 +593,8 @@ const currentDayGreeting = computed(() => {
     const hour = currentHour.value;
 
     if (hour >= 0 && hour < 5) {
-        return 'Si Krisanta tulog na, ikaw pud';
+        return 'Pag tulog na';
+        // return 'Si Krisanta tulog na, ikaw pud';
     }
     else if (hour >= 5 && hour < 12) {
         return 'Maayong aga';
