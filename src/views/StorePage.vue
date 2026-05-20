@@ -994,7 +994,7 @@ onUnmounted(() => {
 }
 
 .no-more-products {
-    margin-bottom: 80px;
+    margin-bottom: 40px;
 }
 
 .loading-more,
