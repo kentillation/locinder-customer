@@ -20,6 +20,9 @@
         <!-- Scrollable Content -->
         <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
+
+            <div class="pull-zone" ref="pullZone"></div>
+
             <!-- Top -->
             <div class="headline content-between">
                 <v-btn size="small" style="background: transparent !important;" icon>
@@ -296,6 +299,7 @@ const isInitialized = ref(false)
 const isFetching = ref(false)
 
 // Pull to refresh properties
+const pullZone = ref(null);
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
 const touchStartY = ref(0)
@@ -689,14 +693,27 @@ const formatTime = (time) => {
 
 // Pull to Refresh Methods - Only active in Shop Products tab
 const handleTouchStart = (e) => {
+    
     if (activeTab.value === 'ourproducts' &&
         contentContainer.value &&
         contentContainer.value.scrollTop === 0 &&
         !isRefreshing.value) {
-        touchStartY.value = e.touches[0].clientY
-        isPulling.value = true
+        const targetElement = e.target;
+        const scrollElement = contentContainer.value;
+        const isTopOfContent = scrollElement && scrollElement.scrollTop === 0;
+        
+        const touchY = e.touches[0].clientY;
+        const elementRect = scrollElement?.getBoundingClientRect();
+        const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+        
+        if (scrollElement && scrollElement.contains(targetElement) && isTopOfContent && isNearTop && !isRefreshing.value) {
+            touchStartY.value = e.touches[0].clientY;
+            isPulling.value = true;
+        } else {
+            isPulling.value = false;
+        }
     }
-}
+};
 
 const handleTouchMove = (e) => {
     if (!isPulling.value || isRefreshing.value || activeTab.value !== 'ourproducts') return
@@ -934,6 +951,16 @@ onUnmounted(() => {
     font-weight: 500;
 }
 
+.pull-zone {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    z-index: 1;
+}
+
 /* Keep all your existing styles below */
 .headline {
     margin-top: 16px;
@@ -961,14 +988,6 @@ onUnmounted(() => {
     color: #a4a4a4;
     font-weight: 500;
     font-size: 14px;
-}
-
-.sticky-content {
-    position: sticky !important;
-    position: -webkit-sticky !important;
-    top: 0 !important;
-    z-index: 999;
-    padding-top: 10px;
 }
 
 /* Remove the default Vuetify tab underline */

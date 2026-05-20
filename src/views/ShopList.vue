@@ -18,8 +18,10 @@
         </div>
 
         <!-- Scrollable Content -->
-        <div ref="scrollContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
+        <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
+
+            <div class="pull-zone" ref="pullZone"></div>
 
             <!-- Loading -->
             <template v-if="shopStore.loading || isRefreshing">
@@ -213,7 +215,8 @@ const isShopOpen = (shop) => {
 const nostoreImage = new URL('@/assets/img/png/food/No Store.png', import.meta.url).href
 
 // Pull to refresh properties
-const scrollContainer = ref(null)
+const pullZone = ref(null);
+const contentContainer = ref(null)
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
 const touchStartY = ref(0)
@@ -499,11 +502,23 @@ const updateTime = () => {
 
 // Pull to Refresh Methods
 const handleTouchStart = (e) => {
-    if (scrollContainer.value && scrollContainer.value.scrollTop === 0 && !isRefreshing.value) {
-        touchStartY.value = e.touches[0].clientY
-        isPulling.value = true
+    // Check if touch started on the pull zone or very top of scroll-content
+    const targetElement = e.target;
+    const scrollElement = contentContainer.value;
+    const isTopOfContent = scrollElement && scrollElement.scrollTop === 0;
+    
+    // Check if touch is near the top (first 50px of the scrollable area)
+    const touchY = e.touches[0].clientY;
+    const elementRect = scrollElement?.getBoundingClientRect();
+    const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+    
+    if (scrollElement && scrollElement.contains(targetElement) && isTopOfContent && isNearTop && !isRefreshing.value) {
+        touchStartY.value = e.touches[0].clientY;
+        isPulling.value = true;
+    } else {
+        isPulling.value = false;
     }
-}
+};
 
 const handleTouchMove = (e) => {
     if (!isPulling.value || isRefreshing.value) return
@@ -511,7 +526,7 @@ const handleTouchMove = (e) => {
     const currentY = e.touches[0].clientY
     const diff = currentY - touchStartY.value
 
-    if (diff > 0 && scrollContainer.value && scrollContainer.value.scrollTop === 0) {
+    if (diff > 0 && contentContainer.value && contentContainer.value.scrollTop === 0) {
         e.preventDefault()
 
         let progress = Math.min(diff, PULL_THRESHOLD);
@@ -601,7 +616,7 @@ onMounted(() => {
     window.addEventListener('online', onOnline)
     fetchShops()
     nextTick(() => {
-        scrollContainer.value = document.querySelector('.scroll-content')
+        contentContainer.value = document.querySelector('.scroll-content')
     })
 })
 
@@ -674,6 +689,16 @@ onUnmounted(() => {
     box-shadow: none !important;
     margin-bottom: 16px;
     padding: 5px;
+}
+
+.pull-zone {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .search-box {

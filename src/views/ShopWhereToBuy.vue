@@ -11,15 +11,16 @@
                         transform: `rotate(${rotationAngle}deg)`,
                         color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
                         background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
-                    }"
-                        style="border-radius: 50%; padding: 8px;" />
+                    }" style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
 
         <!-- Scrollable Content -->
-        <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd">
+        <div ref="contentContainer" class="scroll-content">
+
+            <div class="pull-zone" ref="pullZone"></div>
+
             <!-- Top -->
             <div class="headline content-between">
                 <div>
@@ -145,8 +146,7 @@
                                             {{ shop.type }}
                                         </span>
                                     </div>
-                                    <div class="d-flex align-end flex-column"
-                                        style="position: absolute; right: 10px;">
+                                    <div class="d-flex align-end flex-column" style="position: absolute; right: 10px;">
                                         <span class="text-grey-darken-1" style="font-size: 10px">
                                             Starts @
                                         </span>
@@ -194,6 +194,8 @@ const storeImage = new URL('@/assets/img/png/food/Store.png', import.meta.url).h
 const nostoreImage = new URL('@/assets/img/png/food/No Store.png', import.meta.url).href
 
 // Pull to refresh properties
+const pullZone = ref(null);
+const isTouchingPullZone = ref(false)
 const contentContainer = ref(null)
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
@@ -203,6 +205,9 @@ const rotationAngle = ref(0)
 const rotationInterval = ref(null)
 const PULL_THRESHOLD = 200
 const showProgressThreshold = 100
+
+// Add this to track if we should prevent default
+const shouldPreventDefault = ref(false)
 
 // Computed
 const searchSuggestions = computed(() => {
@@ -297,15 +302,11 @@ const isShopOpen = (shop) => {
     const openMinutes = openH * 60 + openM
     const closeMinutes = closeH * 60 + closeM
 
-    // normal case (same day closing)
     if (openMinutes < closeMinutes) {
-        return currentMinutes >= openMinutes &&
-            currentMinutes < closeMinutes
+        return currentMinutes >= openMinutes && currentMinutes < closeMinutes
     }
 
-    // overnight case (crosses midnight)
-    return currentMinutes >= openMinutes ||
-        currentMinutes < closeMinutes
+    return currentMinutes >= openMinutes || currentMinutes < closeMinutes
 }
 
 const sanitizeSearchTerm = (term) => {
@@ -320,15 +321,6 @@ const handleSearchInput = () => {
     if (searchTimeout.value) {
         clearTimeout(searchTimeout.value)
     }
-
-    // searchTimeout.value = setTimeout(() => {
-    //     if (searchBox.value && searchBox.value.length >= 2) {
-    //         const suggestions = searchSuggestions.value
-    //         if (suggestions.length > 0) {
-    //             console.log('Suggestions:', suggestions)
-    //         }
-    //     }
-    // }, 300)
 }
 
 const debounce = (func, wait) => {
@@ -385,7 +377,6 @@ const handleStoreSearch = async (suggestion) => {
             })
         } else {
             console.error('Store not found. Looking for ID:', suggestion.value)
-            console.error('Available shops:', shopsArray)
             toast.error("Store not found")
         }
     } catch (error) {
@@ -517,23 +508,43 @@ const clearSearch = () => {
     searchBox.value = null
 }
 
-// Pull to Refresh Methods
+// Pull to Refresh Methods - FIXED VERSION
 const handleTouchStart = (e) => {
-    if (contentContainer.value && contentContainer.value.scrollTop === 0 && !isRefreshing.value) {
-        touchStartY.value = e.touches[0].clientY
-        isPulling.value = true
+    const scrollElement = contentContainer.value;
+    if (!scrollElement) return;
+
+    const isTopOfContent = scrollElement.scrollTop === 0;
+    const touchY = e.touches[0].clientY;
+    const elementRect = scrollElement?.getBoundingClientRect();
+    const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+
+    if (isTopOfContent && isNearTop && !isRefreshing.value) {
+        touchStartY.value = touchY;
+        isPulling.value = true;
+        isTouchingPullZone.value = true;
+        shouldPreventDefault.value = true;
+    } else {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
     }
 }
 
 const handleTouchMove = (e) => {
-    if (!isPulling.value || isRefreshing.value) return
+    // Only handle if we're in pulling mode and not refreshing
+    if (!isPulling.value || isRefreshing.value || !isTouchingPullZone.value) return;
 
-    const currentY = e.touches[0].clientY
-    const diff = currentY - touchStartY.value
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.value;
+    const scrollElement = contentContainer.value;
 
-    if (diff > 0 && contentContainer.value && contentContainer.value.scrollTop === 0) {
-        e.preventDefault()
-
+    // Only activate when pulling down AND at the very top
+    if (diff > 0 && scrollElement && scrollElement.scrollTop === 0) {
+        // Check if event is cancelable before preventing default
+        if (e.cancelable && shouldPreventDefault.value) {
+            e.preventDefault();
+        }
+        
         let progress = Math.min(diff, PULL_THRESHOLD);
 
         if (progress > showProgressThreshold) {
@@ -548,26 +559,33 @@ const handleTouchMove = (e) => {
         } else {
             rotationAngle.value = 0;
         }
-
-        // pullProgress.value = Math.min(diff, PULL_THRESHOLD)
-        // const progressPercent = (pullProgress.value / PULL_THRESHOLD) * 100
-        // rotationAngle.value = (progressPercent / 100) * 360
+    } else if (diff < 0) {
+        // User is scrolling down into content, reset pulling state
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
 }
 
 const handleTouchEnd = async () => {
     if (!isPulling.value || isRefreshing.value) {
-        isPulling.value = false
-        return
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
+        return;
     }
 
-    isPulling.value = false
+    isPulling.value = false;
+    isTouchingPullZone.value = false;
+    shouldPreventDefault.value = false;
 
     if (pullProgress.value >= (PULL_THRESHOLD - showProgressThreshold)) {
-        await refreshData()
+        await refreshData();
     } else {
-        pullProgress.value = 0
-        rotationAngle.value = 0
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
 }
 
@@ -593,6 +611,10 @@ const refreshData = async () => {
     try {
         await fetchShops()
 
+        if (contentContainer.value) {
+            contentContainer.value.scrollTop = 0
+        }
+
         setTimeout(() => {
             isRefreshing.value = false
             pullProgress.value = 0
@@ -617,25 +639,37 @@ watch(() => route.query, () => {
     initData()
 }, { immediate: true })
 
-watch(searchBox, () => {
-    // selectedBaseCategory is not used, so we can remove or keep as is
-})
-
-// Lifecycle
+// Lifecycle - FIXED: Add touchstart and touchend listeners too
 onMounted(async () => {
     window.addEventListener('online', onOnline)
 
     await nextTick()
-    
+
     setupDebouncedSearch()
 
     contentContainer.value = document.querySelector('.scroll-content')
+
+    if (contentContainer.value) {
+        // Add all three touch listeners manually with appropriate options
+        contentContainer.value.addEventListener('touchstart', handleTouchStart, { passive: false });
+        contentContainer.value.addEventListener('touchmove', handleTouchMove, { passive: false });
+        contentContainer.value.addEventListener('touchend', handleTouchEnd);
+        contentContainer.value.addEventListener('touchcancel', handleTouchEnd);
+    }
 })
 
 onUnmounted(() => {
     window.removeEventListener('online', onOnline)
+    
     if (rotationInterval.value) {
         clearInterval(rotationInterval.value)
+    }
+    
+    if (contentContainer.value) {
+        contentContainer.value.removeEventListener('touchstart', handleTouchStart);
+        contentContainer.value.removeEventListener('touchmove', handleTouchMove);
+        contentContainer.value.removeEventListener('touchend', handleTouchEnd);
+        contentContainer.value.removeEventListener('touchcancel', handleTouchEnd);
     }
 })
 </script>
@@ -646,6 +680,7 @@ onUnmounted(() => {
     padding: 0 !important;
     height: 100vh;
     overflow: hidden;
+    overscroll-behavior-y: contain;
 }
 
 .scroll-content {
@@ -653,6 +688,7 @@ onUnmounted(() => {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0 16px;
+    overscroll-behavior-y: contain;
 }
 
 /* Pull to Refresh Progress Styles */
@@ -694,6 +730,16 @@ onUnmounted(() => {
     to {
         transform: rotate(360deg);
     }
+}
+
+.pull-zone {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .headline {

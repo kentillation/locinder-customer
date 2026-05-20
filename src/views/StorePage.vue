@@ -18,8 +18,10 @@
         </div>
 
         <!-- Scrollable Content -->
-        <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd">
+        <div ref="contentContainer" class="scroll-content">
+
+            <div class="pull-zone" ref="pullZone"></div>
+
             <!-- Top -->
             <div class="headline d-flex align-center">
                 <v-avatar color="primary" size="40" class="ml-1 mr-2 d-flex align-center justify-center">
@@ -39,12 +41,12 @@
                 </div>
             </div>
 
-            <v-tabs v-model="activeTab" align-tabs="center" color="#5c3a21" class="mt-2" show-arrows>
+            <v-tabs v-model="activeTab" align-tabs="center" color="#5c3a21" class="mt-4" show-arrows>
                 <v-tab v-for="tab in tabs" :key="tab.value" :value="tab.value" class="this-tab"
                     :class="{ 'active-tab': activeTab === tab.value }"
                     @click="tab.clickHandler ? tab.clickHandler() : null" size="small">
                     <v-icon style="font-size: 20px !important;">{{ tab.value === "ourproducts" ? 'mdi-food' : 'mdi-map'
-                        }}</v-icon><span style="font-size: 15px;">&nbsp;{{ tab.label }}</span>
+                        }}</v-icon><span style="font-size: 12px !important;">&nbsp;{{ tab.label }}</span>
                 </v-tab>
             </v-tabs>
 
@@ -97,8 +99,11 @@
                                         </v-chip>
                                         <v-chip v-for="(category) in sortedCategories" :key="category.label"
                                             @click="handleCategorySelect(category)"
-                                            :class="{ active: requested_category === category.label }" color="#fff"
-                                            variant="flat" class="me-1 category-chip" style="font-weight: 500;">
+                                            :class="{ active: requested_category === category.label }"
+                                            :ripple="false"
+                                            variant="outlined"
+                                            class="me-1 category-chip"
+                                            style="font-weight: 500;">
                                             {{ category.label }}
                                         </v-chip>
                                     </v-slide-group-item>
@@ -303,6 +308,8 @@ const isInitialized = ref(false)
 const isFetching = ref(false)
 
 // Pull to refresh properties
+const pullZone = ref(null);
+const isTouchingPullZone = ref(false)
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
 const touchStartY = ref(0)
@@ -311,6 +318,9 @@ const rotationAngle = ref(0)
 const rotationInterval = ref(null)
 const PULL_THRESHOLD = 200
 const showProgressThreshold = 100
+
+// Add this to track if we should prevent default
+const shouldPreventDefault = ref(false)
 
 // Location Permission Properties
 const locinderGPSRef = ref(null)
@@ -702,24 +712,41 @@ const formatTime = (time) => {
 
 // Pull to Refresh Methods - Only active in Shop Products tab
 const handleTouchStart = (e) => {
-    if (activeTab.value === 'ourproducts' &&
-        contentContainer.value &&
-        contentContainer.value.scrollTop === 0 &&
-        !isRefreshing.value) {
-        touchStartY.value = e.touches[0].clientY
-        isPulling.value = true
+    const scrollElement = contentContainer.value;
+    if (!scrollElement) return;
+
+    const isTopOfContent = scrollElement.scrollTop === 0;
+    const touchY = e.touches[0].clientY;
+    const elementRect = scrollElement?.getBoundingClientRect();
+    const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+
+    if (isTopOfContent && isNearTop && !isRefreshing.value) {
+        touchStartY.value = touchY;
+        isPulling.value = true;
+        isTouchingPullZone.value = true;
+        shouldPreventDefault.value = true;
+    } else {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
     }
 }
 
 const handleTouchMove = (e) => {
-    if (!isPulling.value || isRefreshing.value || activeTab.value !== 'ourproducts') return
+    // Only handle if we're in pulling mode and not refreshing
+    if (!isPulling.value || isRefreshing.value || !isTouchingPullZone.value) return;
 
-    const currentY = e.touches[0].clientY
-    const diff = currentY - touchStartY.value
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.value;
+    const scrollElement = contentContainer.value;
 
-    if (diff > 0 && contentContainer.value && contentContainer.value.scrollTop === 0) {
-        e.preventDefault()
-
+    // Only activate when pulling down AND at the very top
+    if (diff > 0 && scrollElement && scrollElement.scrollTop === 0) {
+        // Check if event is cancelable before preventing default
+        if (e.cancelable && shouldPreventDefault.value) {
+            e.preventDefault();
+        }
+        
         let progress = Math.min(diff, PULL_THRESHOLD);
 
         if (progress > showProgressThreshold) {
@@ -734,22 +761,33 @@ const handleTouchMove = (e) => {
         } else {
             rotationAngle.value = 0;
         }
+    } else if (diff < 0) {
+        // User is scrolling down into content, reset pulling state
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
 }
 
 const handleTouchEnd = async () => {
-    if (!isPulling.value || isRefreshing.value || activeTab.value !== 'ourproducts') {
-        isPulling.value = false
-        return
+    if (!isPulling.value || isRefreshing.value) {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        shouldPreventDefault.value = false;
+        return;
     }
 
-    isPulling.value = false
+    isPulling.value = false;
+    isTouchingPullZone.value = false;
+    shouldPreventDefault.value = false;
 
     if (pullProgress.value >= (PULL_THRESHOLD - showProgressThreshold)) {
-        await refreshData()
+        await refreshData();
     } else {
-        pullProgress.value = 0
-        rotationAngle.value = 0
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
 }
 
@@ -778,6 +816,10 @@ const refreshData = async () => {
             fetchProducts(true),
             fetchShopLocation()
         ])
+
+        if (contentContainer.value) {
+            contentContainer.value.scrollTop = 0
+        }
 
         setTimeout(() => {
             isRefreshing.value = false
@@ -846,14 +888,29 @@ onMounted(() => {
     nextTick(() => {
         setupInfiniteScroll()
         contentContainer.value = document.querySelector('.scroll-content')
+        if (contentContainer.value) {
+            contentContainer.value.addEventListener('touchstart', handleTouchStart, { passive: false });
+            contentContainer.value.addEventListener('touchmove', handleTouchMove, { passive: false });
+            contentContainer.value.addEventListener('touchend', handleTouchEnd);
+            contentContainer.value.addEventListener('touchcancel', handleTouchEnd);
+        }
     })
 })
 
 onUnmounted(() => {
     window.removeEventListener('online', onOnline)
+
     removeInfiniteScroll()
+
     if (rotationInterval.value) {
         clearInterval(rotationInterval.value)
+    }
+
+    if (contentContainer.value) {
+        contentContainer.value.removeEventListener('touchstart', handleTouchStart);
+        contentContainer.value.removeEventListener('touchmove', handleTouchMove);
+        contentContainer.value.removeEventListener('touchend', handleTouchEnd);
+        contentContainer.value.removeEventListener('touchcancel', handleTouchEnd);
     }
 })
 </script>
@@ -980,14 +1037,6 @@ onUnmounted(() => {
     font-size: 14px;
 }
 
-.sticky-content {
-    position: sticky !important;
-    position: -webkit-sticky !important;
-    top: 0 !important;
-    z-index: 999;
-    padding-top: 10px;
-}
-
 /* Remove the default Vuetify tab underline */
 :deep(.v-tabs-slider-wrapper) {
     display: none !important;
@@ -1002,6 +1051,7 @@ onUnmounted(() => {
     letter-spacing: normal !important;
     opacity: 0.7;
     transition: all 0.3s ease;
+    font-size: 15px;
 }
 
 .active-tab {
@@ -1059,6 +1109,10 @@ onUnmounted(() => {
     background-color: #5c3a21 !important;
     color: #fff !important;
     transition: 0.5s ease;
+}
+
+.v-chip--variant-outlined {
+    border: thin solid rgb(213 213 213 / 87%) !important;
 }
 
 .v-icon--size-default {

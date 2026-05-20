@@ -11,15 +11,16 @@
                         transform: `rotate(${rotationAngle}deg)`,
                         color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
                         background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
-                    }"
-                        style="border-radius: 50%; padding: 8px;" />
+                    }" style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
 
         <!-- Scrollable Content -->
-        <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
-            @touchend="handleTouchEnd">
+        <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+            
+            <div class="pull-zone" ref="pullZone"></div>
+            
             <!-- Headline -->
             <div class="headline content-between">
                 <div>
@@ -61,11 +62,8 @@
                         </v-chip>
                         <v-chip v-for="(category) in sortedCategories" :key="category.label"
                             @click="handleCategorySelect(category)"
-                            :class="{ active: requested_category === category.label }"
-                            :ripple="false" 
-                            variant="outlined"
-                            class="me-1 category-chip"
-                            style="font-weight: 500;">
+                            :class="{ active: requested_category === category.label }" :ripple="false"
+                            variant="outlined" class="me-1 category-chip" style="font-weight: 500;">
                             {{ category.label }}
                         </v-chip>
                     </v-slide-group-item>
@@ -107,14 +105,14 @@
                                         <span style="color: #5c3a21;">{{ product.product_name }}</span>
                                     </span>
                                     <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
-                                        }}</span>
+                                    }}</span>
                                     <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
-                                            }}</em></span>
+                                    }}</em></span>
                                 </div>
                                 <div class="d-flex align-center">
                                     <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
                                         product.base_price
-                                    }}</span>
+                                        }}</span>
                                 </div>
                             </v-btn>
                         </v-col>
@@ -199,6 +197,9 @@ const contentContainer = ref(null)
 const scrollTimeout = ref(null)
 
 // Pull to refresh properties
+const pullZone = ref(null);
+// Add this ref to track if touch started on pull zone
+const isTouchingPullZone = ref(false)
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
 const touchStartY = ref(0)
@@ -467,22 +468,37 @@ const handleCategorySelect = async (category) => {
     }
 }
 
-// Pull to Refresh Methods
 const handleTouchStart = (e) => {
-    if (contentContainer.value && contentContainer.value.scrollTop === 0 && !isRefreshing.value) {
-        touchStartY.value = e.touches[0].clientY
-        isPulling.value = true
+    const scrollElement = contentContainer.value;
+    if (!scrollElement) return;
+
+    const isTopOfContent = scrollElement.scrollTop === 0;
+
+    const touchY = e.touches[0].clientY;
+    const elementRect = scrollElement?.getBoundingClientRect();
+    const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+
+    if (isTopOfContent && isNearTop && !isRefreshing.value) {
+        touchStartY.value = e.touches[0].clientY;
+        isPulling.value = true;
+        isTouchingPullZone.value = true;
+    } else {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
     }
-}
+};
 
 const handleTouchMove = (e) => {
-    if (!isPulling.value || isRefreshing.value) return
+    if (!isPulling.value || isRefreshing.value || !isTouchingPullZone.value) return;
 
-    const currentY = e.touches[0].clientY
-    const diff = currentY - touchStartY.value
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchStartY.value;
+    const scrollElement = contentContainer.value;
 
-    if (diff > 0 && contentContainer.value && contentContainer.value.scrollTop === 0) {
-        e.preventDefault()
+    if (diff > 0 && scrollElement && scrollElement.scrollTop === 0) {
+        if (e.cancelable) {
+            e.preventDefault();
+        }
 
         let progress = Math.min(diff, PULL_THRESHOLD);
 
@@ -498,24 +514,31 @@ const handleTouchMove = (e) => {
         } else {
             rotationAngle.value = 0;
         }
+    } else if (diff < 0) {
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
-}
+};
 
 const handleTouchEnd = async () => {
     if (!isPulling.value || isRefreshing.value) {
-        isPulling.value = false
-        return
+        isPulling.value = false;
+        isTouchingPullZone.value = false;
+        return;
     }
 
-    isPulling.value = false
+    isPulling.value = false;
+    isTouchingPullZone.value = false;
 
     if (pullProgress.value >= (PULL_THRESHOLD - showProgressThreshold)) {
-        await refreshData()
+        await refreshData();
     } else {
-        pullProgress.value = 0
-        rotationAngle.value = 0
+        pullProgress.value = 0;
+        rotationAngle.value = 0;
     }
-}
+};
 
 const startRefreshingAnimation = () => {
     let angle = 0
@@ -542,11 +565,18 @@ const refreshData = async () => {
         hasMoreProducts.value = true
         productsStore.products = []
 
-        // Refresh both categories and products
+        searchProduct.value = ''
+        requested_category.value = null
+        selectedCard.value = null
+
         await Promise.all([
             fetchCategories(),
             fetchProducts(1, false)
         ])
+
+        if (contentContainer.value) {
+            contentContainer.value.scrollTop = 0
+        }
 
         setTimeout(() => {
             isRefreshing.value = false
@@ -590,16 +620,26 @@ watch(searchProduct, (newVal) => {
 // Lifecycle
 onMounted(() => {
     window.addEventListener('online', onOnline)
-    
+
+    contentContainer.value = document.querySelector('.scroll-content');
+
+    if (contentContainer.value) {
+        contentContainer.value.addEventListener('touchmove', handleTouchMove, { passive: false });
+    }
+
     nextTick(() => {
         setupInfiniteScroll()
-        contentContainer.value = document.querySelector('.scroll-content')
     })
 })
 
 onUnmounted(() => {
     window.removeEventListener('online', onOnline)
     removeInfiniteScroll()
+
+    if (contentContainer.value) {
+        contentContainer.value.removeEventListener('touchmove', handleTouchMove);
+    }
+
     if (rotationInterval.value) {
         clearInterval(rotationInterval.value)
     }
@@ -681,6 +721,16 @@ onUnmounted(() => {
     to {
         transform: rotate(360deg);
     }
+}
+
+.pull-zone {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .headline {

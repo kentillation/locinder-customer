@@ -20,6 +20,9 @@
         <!-- Scrollable Content -->
         <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
             @touchend="handleTouchEnd">
+
+            <div class="pull-zone" ref="pullZone"></div>
+
             <!-- Top -->
             <div class="headline content-between">
                 <div>
@@ -203,6 +206,7 @@ const scrollTimeout = ref(null)
 const isInitialized = ref(false)
 
 // Pull to refresh properties
+const pullZone = ref(null);
 const isRefreshing = ref(false)
 const pullProgress = ref(0)
 const touchStartY = ref(0)
@@ -464,13 +468,24 @@ const handleCategorySelect = async (category) => {
     }
 }
 
-// Pull to Refresh Methods
 const handleTouchStart = (e) => {
-    if (contentContainer.value && contentContainer.value.scrollTop === 0 && !isRefreshing.value) {
-        touchStartY.value = e.touches[0].clientY
-        isPulling.value = true
+    // Check if touch started on the pull zone or very top of scroll-content
+    const targetElement = e.target;
+    const scrollElement = contentContainer.value;
+    const isTopOfContent = scrollElement && scrollElement.scrollTop === 0;
+    
+    // Check if touch is near the top (first 50px of the scrollable area)
+    const touchY = e.touches[0].clientY;
+    const elementRect = scrollElement?.getBoundingClientRect();
+    const isNearTop = elementRect && (touchY - elementRect.top) < 50;
+    
+    if (scrollElement && scrollElement.contains(targetElement) && isTopOfContent && isNearTop && !isRefreshing.value) {
+        touchStartY.value = e.touches[0].clientY;
+        isPulling.value = true;
+    } else {
+        isPulling.value = false;
     }
-}
+};
 
 const handleTouchMove = (e) => {
     if (!isPulling.value || isRefreshing.value) return
@@ -653,6 +668,16 @@ onUnmounted(() => {
     color: #a4a4a4;
     font-size: 14px;
     font-weight: 500;
+}
+
+.pull-zone {
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .headline {
