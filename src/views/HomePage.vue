@@ -11,8 +11,7 @@
                         transform: `rotate(${rotationAngle}deg)`,
                         color: pullProgress >= 100 ? '#fff !important' : '#ccc !important',
                         background: pullProgress >= 100 ? '#5c3a21' : '#f8f8f8'
-                    }"
-                        style="border-radius: 50%; padding: 8px;" />
+                    }" style="border-radius: 50%; padding: 8px;" />
                 </div>
             </div>
         </div>
@@ -81,7 +80,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Search -->
             <!-- Add find nearby shops based on movement -->
             <v-card class="search-box">
@@ -259,7 +258,7 @@
                             <span>Mga baligyaan sa Sagay</span>
                         </h4>
                         <v-row>
-                            <v-col cols="12" style="padding: 5px !important;" v-for="(shop) in limitedStores"
+                            <v-col cols="12" style="padding: 5px !important;" v-for="(shop) in limitedStoresSorted"
                                 :key="shop.id">
                                 <v-btn @click="toShop(shop)" class="button content-between">
                                     <span :class="isShopOpen(shop) ? 'badge-dot' : 'd-none'"></span>
@@ -278,8 +277,9 @@
                                         <span class="text-wrap mr-15">
                                             {{ shop.name }}
                                         </span>
-                                        <span class="text-grey-darken-1">
-                                            {{ shop.type }}
+                                        <span :class="['distance-text', getDistanceToShop(shop).colorClass]"
+                                            style="font-size: 11px;">
+                                            {{ getDistanceToShop(shop).text }}
                                         </span>
                                     </div>
                                     <div :class="!shop.lowest_price ? 'd-none' : 'd-flex align-end flex-column'"
@@ -482,6 +482,44 @@ const surpriseCooldownInterval = ref(null);
 const surpriseCooldownEndTime = ref(null);
 
 // Computed properties
+const shopsSortedByDistance = computed(() => {
+    if (!locationStore.currentLocation) return shopStore.getShops;
+
+    return [...shopStore.getShops].sort((a, b) => {
+        const distA = calculateDistance(
+            locationStore.currentLocation.lat,
+            locationStore.currentLocation.lng,
+            a.latitude || a.shop_latitude,
+            a.longitude || a.shop_longitude
+        ) || Infinity;
+
+        const distB = calculateDistance(
+            locationStore.currentLocation.lat,
+            locationStore.currentLocation.lng,
+            b.latitude || b.shop_latitude,
+            b.longitude || b.shop_longitude
+        ) || Infinity;
+
+        return distA - distB;
+    });
+});
+
+const getDistanceColorClass = (distance) => {
+    if (!distance) return 'distance-unknown';
+
+    if (distance < 0.5) { // Less than 500m
+        return 'distance-very-close';
+    } else if (distance < 1) { // Less than 1km
+        return 'distance-close';
+    } else if (distance < 3) { // Less than 3km
+        return 'distance-moderate';
+    } else if (distance < 5) { // Less than 5km
+        return 'distance-far';
+    } else {
+        return 'distance-very-far';
+    }
+};
+
 const getSpeedometerIcon = computed(() => {
     const speed = locationStore.movementSpeed;
 
@@ -535,8 +573,8 @@ const limitedCategories = computed(() => {
     return productsStore.getBaseCategories.slice(0, 10);
 });
 
-const limitedStores = computed(() => {
-    return shopStore.getShops.slice(0, 20);
+const limitedStoresSorted = computed(() => {
+    return shopsSortedByDistance.value.slice(0, 20);
 });
 
 const searchSuggestions = computed(() => {
@@ -655,6 +693,90 @@ const checkAuthentication = async () => {
 
     authCheckDone.value = true;
     return true;
+};
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+};
+
+// Get travel time based on distance and average speed
+const getTravelTime = (distanceKm, speedKmPerHour = 5) => {
+    if (!distanceKm) return null;
+    const timeHours = distanceKm / speedKmPerHour;
+    const timeMinutes = Math.round(timeHours * 60);
+    return Math.max(1, timeMinutes);
+};
+
+// Format distance display
+const formatDistance = (distanceKm) => {
+    if (!distanceKm) return 'Distance unavailable';
+
+    if (distanceKm < 0.1) {
+        return `${Math.round(distanceKm * 1000)}m away`;
+    } else if (distanceKm < 1) {
+        return `${Math.round(distanceKm * 1000)}m away`;
+    } else {
+        return `${distanceKm.toFixed(1)}km away`;
+    }
+};
+
+// Get distance function
+const getDistanceToShop = (shop) => {
+    // Check if we have user location
+    if (!locationStore.currentLocation || !shop.latitude || !shop.longitude) {
+        return { text: 'Location unavailable', colorClass: 'distance-unknown' };
+    }
+
+    // Get shop coordinates
+    const shopLat = shop.latitude || shop.shop_latitude;
+    const shopLng = shop.longitude || shop.shop_longitude;
+
+    if (!shopLat || !shopLng) {
+        return { text: 'Location unavailable', colorClass: 'distance-unknown' };
+    }
+
+    // Calculate distance
+    const distance = calculateDistance(
+        locationStore.currentLocation.lat,
+        locationStore.currentLocation.lng,
+        shopLat,
+        shopLng
+    );
+
+    if (distance === null) return { text: 'Distance unavailable', colorClass: 'distance-unknown' };
+
+    // Get estimated travel time
+    const travelTime = getTravelTime(distance, 5); // 5 km/h walking speed
+
+    let text = '';
+
+    // Format based on distance
+    if (distance < 0.1) {
+        text = `Very close • ${formatDistance(distance)}`;
+    } else if (travelTime <= 5) {
+        text = `${travelTime} min • ${formatDistance(distance)}`;
+    } else if (travelTime <= 15) {
+        text = `${travelTime} mins • ${formatDistance(distance)}`;
+    } else if (travelTime <= 30) {
+        const driveTime = getTravelTime(distance, 30); // 30 km/h driving speed
+        text = `${driveTime} min drive • ${formatDistance(distance)}`;
+    } else {
+        text = `${travelTime} mins • ${formatDistance(distance)}`;
+    }
+
+    return {
+        text: text,
+        colorClass: getDistanceColorClass(distance)
+    };
 };
 
 const initializeLocationWithMovementTracking = async () => {
@@ -1343,12 +1465,12 @@ const handleTouchStart = (e) => {
     const targetElement = e.target;
     const scrollElement = contentContainer.value;
     const isTopOfContent = scrollElement && scrollElement.scrollTop === 0;
-    
+
     // Check if touch is near the top (first 50px of the scrollable area)
     const touchY = e.touches[0].clientY;
     const elementRect = scrollElement?.getBoundingClientRect();
     const isNearTop = elementRect && (touchY - elementRect.top) < 50;
-    
+
     if (scrollElement && scrollElement.contains(targetElement) && isTopOfContent && isNearTop && !isRefreshing.value) {
         touchStartY.value = e.touches[0].clientY;
         isPulling.value = true;
@@ -1456,6 +1578,10 @@ watch(searchBox, () => {
     selectedBaseCategory.value = searchBox.value;
 });
 
+watch(() => locationStore.currentLocation, () => {
+    // This will trigger re-rendering of distances when location changes
+}, { deep: true });
+
 // Lifecycle
 onMounted(async () => {
     await checkAuthentication();
@@ -1561,6 +1687,77 @@ onBeforeUnmount(() => {
 
 .speed-icon-very-fast {
     animation: veryFastSpin 0.5s linear infinite;
+}
+
+/* Distance color classes */
+.distance-very-close {
+    color: #2e7d32 !important;
+    font-weight: 600;
+    position: relative;
+    display: inline-block;
+}
+
+.distance-close {
+    color: #4c77af !important;
+    font-weight: 500;
+    position: relative;
+    display: inline-block;
+}
+
+.distance-moderate {
+    color: #ca9545 !important;
+    font-weight: 500;
+    position: relative;
+    display: inline-block;
+}
+
+.distance-far {
+    color: #f44336 !important;
+    font-weight: 500;
+    position: relative;
+    display: inline-block;
+}
+
+.distance-very-far {
+    color: #f44336 !important;
+    font-weight: 400;
+    position: relative;
+    display: inline-block;
+}
+
+.distance-unknown {
+    color: #9e9e9e !important;
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* Optional: Add pulse animation for very close distances */
+.distance-very-close {
+    animation: distancePulse 2s ease-in-out infinite;
+}
+
+@keyframes distancePulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* For mobile devices, adjust dot size */
+@media (max-width: 600px) {
+    .distance-very-close::before,
+    .distance-close::before,
+    .distance-moderate::before,
+    .distance-far::before,
+    .distance-very-far::before {
+        font-size: 6px;
+        margin-right: 3px;
+    }
 }
 
 /* Keyframe animations */

@@ -74,6 +74,8 @@ export const useShopStore = defineStore('shops', {
                 name: shop.shop_name,
                 type: shop.shop_type,
                 address: shop.shop_address,
+                latitude: shop.branch_latitude,
+                longitude: shop.branch_longitude,
                 open_at: shop.open_at,
                 close_at: shop.close_at,
                 lowest_price: shop.lowest_price,
