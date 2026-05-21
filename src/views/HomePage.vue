@@ -1731,23 +1731,6 @@ onBeforeUnmount(() => {
     font-style: italic;
 }
 
-/* Optional: Add pulse animation for very close distances */
-.distance-very-close {
-    animation: distancePulse 2s ease-in-out infinite;
-}
-
-@keyframes distancePulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.7;
-    }
-}
-
 /* For mobile devices, adjust dot size */
 @media (max-width: 600px) {
     .distance-very-close::before,
