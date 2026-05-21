@@ -3,7 +3,7 @@
     <!-- Connection Banner -->
     <div v-if="connectionStatus !== 'online'" class="connection-container">
       <div class="connection-banner" :class="connectionStatus">
-        <HugeiconsIcon :icon="connectionStatusIcon" width="17" class="mr-1" />
+        <HugeiconsIcon :icon="connectionStatusIcon" width="17" :class="{ 'loading-icon' : connectionStatusText === 'Waiting for connection...' }" class="mr-1" />
         <span>{{ connectionStatusText }}</span>
       </div>
     </div>
@@ -35,7 +35,12 @@
           <div class="nav-item" :class="{ 'active-page': signoutLoading }" @click="signingOut">
 
             <template v-if="signoutLoading">
-                <v-progress-circular indeterminate color="grey" size="30" />
+              <div class="d-flex align-center">
+                <HugeiconsIcon :icon="Loading03Icon"
+                  size="30"
+                  color="#adadad"
+                  class="loading-icon" />
+              </div>
             </template>
 
             <template v-else>
@@ -64,7 +69,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { WifiDisconnected01Icon, WifiLowSignalIcon, Loading01Icon, Home03Icon, Store01Icon, Logout02Icon } from '@hugeicons/core-free-icons'
+import { WifiDisconnected01Icon, WifiLowSignalIcon, Loading03Icon, Home03Icon, Store01Icon, Logout02Icon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth';
@@ -199,7 +204,7 @@ const connectionStatusIcon = computed(() => {
       return WifiLowSignalIcon
 
     case 'waiting':
-      return Loading01Icon
+      return Loading03Icon
 
     default:
       return ''
@@ -290,5 +295,19 @@ onBeforeUnmount(() => {
 
 .active-nav-text {
   font-weight: 600;
+}
+
+.loading-icon {
+    animation: fastSpin 0.8s linear infinite;
+}
+
+@keyframes fastSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>
