@@ -113,9 +113,9 @@
                             <!-- Products Skeleton -->
                             <template v-if="(isProductsLoading && productsStore.products.length === 0) || isRefreshing">
                                 <div class="image-section my-4">
-                                    <div v-for="p in 8" :key="p" class="image-section-item">
+                                    <div v-for="p in 8" :key="p" class="image-section-item" style="height: 210px;">
                                         <v-card class="d-flex flex-column align-content-start"
-                                            style="margin: 5px; box-shadow: none; min-width: 150px; height: 260px;">
+                                            style="border-radius: 10px; margin: 5px; box-shadow: none; min-width: 150px; height: 210px;">
                                             <v-skeleton-loader type="text, text, image, text"
                                                 class="px-4"></v-skeleton-loader>
                                         </v-card>
@@ -1281,6 +1281,11 @@ onUnmounted(() => {
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
+}
+
+:deep(.v-skeleton-loader__image) {
+    height: 100px;
+    border-radius: 10px;
 }
 
 .content-between {

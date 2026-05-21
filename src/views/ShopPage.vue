@@ -30,7 +30,17 @@
                     <h3 class="text-wrap">{{ shop_name }}</h3>
                     <span>{{ shop_type }}</span>
                 </span>
-                <span><v-img :src="storeImage" width="30"></v-img></span>
+                <v-avatar color="#5c3a21" size="40" class="ml-1 mr-2 d-flex align-center justify-center">
+                    <template v-if="getStoreImageUrl">
+                        <img :src="getStoreImageUrl" width="50" alt="Avatar" />
+                    </template>
+                
+                    <template v-else>
+                        <span style="color: white; font-weight: bold; font-size: 20px;">
+                            {{ (shop_name || '?').charAt(0).toUpperCase() }}
+                        </span>
+                    </template>
+                </v-avatar>
             </div>
 
             <v-tabs v-model="activeTab" align-tabs="center" color="#5c3a21" class="mt-3" show-arrows>
@@ -102,9 +112,9 @@
                             <!-- Products Skeleton -->
                             <template v-if="(isProductsLoading && productsStore.products.length === 0) || isRefreshing">
                                 <div class="image-section my-4">
-                                    <div v-for="p in 8" :key="p" class="image-section-item">
+                                    <div v-for="p in 8" :key="p" class="image-section-item" style="height: 210px;">
                                         <v-card class="d-flex flex-column align-content-start"
-                                            style="margin: 5px; box-shadow: none; min-width: 150px; height: 260px;">
+                                            style="border-radius: 10px; margin: 5px; box-shadow: none; min-width: 150px; height: 210px;">
                                             <v-skeleton-loader type="text, text, image, text"
                                                 class="px-4"></v-skeleton-loader>
                                         </v-card>
@@ -254,6 +264,7 @@ const nameOnMap = ref('')
 const latitudeOnMap = ref(0)
 const longitudeOnMap = ref(0)
 const addressOnMap = ref('')
+const shopThumbnail = ref('')
 
 // Products
 const isProductsLoading = ref(false)
@@ -282,7 +293,6 @@ const isCategoryLoading = ref(false)
 const requested_category = ref(null)
 
 // Images
-const storeImage = new URL('@/assets/img/png/food/Store.png', import.meta.url).href
 const nofastfoodImage = new URL('@/assets/img/png/food/No Fast Food.png', import.meta.url).href
 
 // Scroll handling
@@ -324,6 +334,17 @@ const sortedCategories = computed(() => {
     const others = allCategories.value.find(c => c.label === 'Other')
     const rest = allCategories.value.filter(c => c.label !== 'Other')
     return others ? [...rest, others] : rest
+})
+
+const getStoreImageUrl = computed(() => {
+    if (
+        shopThumbnail.value &&
+        shopThumbnail.value !== 'null' &&
+        shopThumbnail.value !== ''
+    ) {
+        return shopThumbnail.value
+    }
+    return shopThumbnail.value
 })
 
 const formattedOpenTime = computed(() => {
@@ -819,6 +840,7 @@ const fetchShopLocation = async () => {
         latitudeOnMap.value = Number(locationData.branch_latitude) || ''
         longitudeOnMap.value = Number(locationData.branch_longitude) || ''
         addressOnMap.value = locationData.branch_address || ''
+        shopThumbnail.value = locationData.thumbnail_url || ''
 
     } catch (error) {
         console.error('Error fetching shop location:', error)
@@ -902,6 +924,7 @@ onUnmounted(() => {
     -webkit-overflow-scrolling: touch;
     padding: 0 16px;
     overscroll-behavior-y: contain;
+    /* ADD CUSTOM BACKGROUND */
 }
 
 /* Pull to Refresh Progress Styles */
@@ -1268,6 +1291,11 @@ onUnmounted(() => {
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: center;
+}
+
+:deep(.v-skeleton-loader__image) {
+    height: 100px;
+    border-radius: 10px;
 }
 
 .content-between {
