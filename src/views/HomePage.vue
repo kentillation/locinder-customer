@@ -165,7 +165,7 @@
                                     class="button">
                                     <span class="button-item">
                                         <span>
-                                            <v-img :src="currentTimeImage" width="40"></v-img>
+                                            <v-img :src="currentTimeImage" width="50"></v-img>
                                         </span>
                                         <span class="button-text">
                                             <template v-if="currentTimeMeal === 'Midnight Snacks'">
@@ -2313,7 +2313,7 @@ onBeforeUnmount(() => {
 .new-product-btn {
     background-image:
         linear-gradient(to right, #c4926c, rgba(0, 0, 0, 0.2)),
-        url('@/assets/img/jpg/features/new-product-bg.jpeg');
+        url('@/assets/img/png/store/new-food.png');
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
@@ -2323,7 +2323,7 @@ onBeforeUnmount(() => {
 .open-shop-btn {
     background-image:
         linear-gradient(to right, #c4926c, rgba(0, 0, 0, 0.2)),
-        url('@/assets/img/jpg/features/cashier.jpeg');
+        url('@/assets/img/png/store/open-store.png');
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;

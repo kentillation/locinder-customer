@@ -14,8 +14,10 @@
                             sm="4" style="padding: 5px !important;">
                             <v-btn class="button" @click="handleCategorySelect(category)">
                                 <span class="button-item">
-                                    <span><v-img :src="productImages[category.label] || moreImage"
-                                            width="40"></v-img></span>
+                                    <span>
+                                        <v-img :src="productImages[category.label] || moreImage"
+                                            width="50"></v-img>
+                                        </span>
                                     <span class="button-text">{{ category.label }}</span>
                                 </span>
                             </v-btn>
@@ -283,7 +285,7 @@ const handleCategorySelect = async (category) => {
 .new-product-btn {
     background-image:
         linear-gradient(to right, #c4926c, rgba(0, 0, 0, 0.2)),
-        url('@/assets/img/jpg/features/new-product-bg.jpeg');
+        url('@/assets/img/png/store/new-food.png');
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
