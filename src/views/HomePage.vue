@@ -254,8 +254,8 @@
 
                     <template v-else>
                         <h4>
-                            Various stores in Sagay <br />
-                            <span>Mga baligyaan sa Sagay</span>
+                            Nearby stores in Sagay<br />
+                            <span>Mga baligyaan sa Sagay nga lapit sa imo</span>
                         </h4>
                         <v-row>
                             <v-col cols="12" style="padding: 5px !important;" v-for="(shop) in limitedStoresSorted"
