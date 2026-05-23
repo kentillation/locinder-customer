@@ -45,8 +45,10 @@
                 <v-tab v-for="tab in tabs" :key="tab.value" :value="tab.value" class="this-tab"
                     :class="{ 'active-tab': activeTab === tab.value }"
                     @click="tab.clickHandler ? tab.clickHandler() : null" size="small">
-                    <v-icon style="font-size: 20px !important;">{{ tab.value === "ourproducts" ? 'mdi-food' : 'mdi-map'
-                        }}</v-icon><span style="font-size: 12px !important;">&nbsp;{{ tab.label }}</span>
+                    <HugeiconsIcon
+                        :icon="tab.value === 'ourproducts' ? SpoonAndForkIcon : tab.value === 'map' ? MapsLocation01Icon : Store01Icon"
+                        style="color: #5c3a21;" size="20" />
+                    &nbsp;{{ tab.label }}
                 </v-tab>
             </v-tabs>
 
@@ -55,24 +57,15 @@
                     <div :key="activeTab">
                         <!-- Shop Products -->
                         <v-tabs-window-item value="ourproducts">
-                            <!-- Your existing products content -->
-                            <div class="shop-indication">
-                                <div class="d-flex align-center">
-                                    <v-icon>mdi-pin</v-icon>
-                                    <p class="ml-2">{{ shop_address }}</p>
-                                </div>
-                                <div class="d-flex align-center">
-                                    <v-icon>mdi-door-open</v-icon>
-                                    <p class="ml-2">Open: {{ formattedOpenTime }} – {{ formattedCloseTime }}</p>
-                                </div>
-                            </div>
-
                             <!-- Search Products -->
                             <v-card class="search-box">
                                 <v-text-field v-model="searchProduct" @click="noCategory"
                                     placeholder="Search product...">
                                     <template v-slot:prepend-inner>
-                                        <v-icon class="me-1">mdi-magnify</v-icon>
+                                        <HugeiconsIcon :icon="Search01Icon" size="20" class="mb-1 mr-1" />
+                                    </template>
+                                    <template v-slot:append-inner>
+                                        <HugeiconsIcon v-if="searchProduct" :icon="CancelCircleIcon" @click="clearSearch" size="20" class="mr-2"/>
                                     </template>
                                 </v-text-field>
                             </v-card>
@@ -198,9 +191,35 @@
                         <!-- Map - With Permission Handling -->
                         <v-tabs-window-item value="map">
                             <div class="map-container" ref="mapContainer">
-                                <LocinderGPS ref="locinderGPSRef" :name-on-map="nameOnMap"
+                                <LocinderGPS ref="locinderGPSRef" :name-on-map="branchNameOnMap"
                                     :latitude-on-map="latitudeOnMap" :longitude-on-map="longitudeOnMap"
                                     :address-on-map="addressOnMap" />
+                            </div>
+                        </v-tabs-window-item>
+
+                        <v-tabs-window-item value="info">
+                            <div class="shop-indication">
+                                <div>
+                                    <div class="d-flex align-center">
+                                        <HugeiconsIcon :icon="Store01Icon" size="20" />
+                                        <p class="ml-1">Branch name:</p>
+                                    </div>
+                                    <p class="ml-6">{{ branchNameOnMap }} Branch</p>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="d-flex align-center">
+                                        <HugeiconsIcon :icon="LocationIcon" size="20" />
+                                        <p class="ml-1">Branch address:</p>
+                                    </div>
+                                    <p class="ml-6">{{ shop_address }}</p>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="d-flex align-center">
+                                        <HugeiconsIcon :icon="DoorOpenIcon" size="20" />
+                                        <p class="ml-1">Store hours:</p>
+                                    </div>
+                                    <p class="ml-6">{{ formattedOpenTime }} – {{ formattedCloseTime }}</p>
+                                </div>
                             </div>
                         </v-tabs-window-item>
                     </div>
@@ -236,7 +255,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Loading03Icon,  } from '@hugeicons/core-free-icons'
+import { Loading03Icon, SpoonAndForkIcon, MapsLocation01Icon, Store01Icon, LocationIcon, DoorOpenIcon, Search01Icon, CancelCircleIcon  } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
@@ -263,7 +282,7 @@ const open_at = ref('')
 const close_at = ref('')
 const itemsPerPage = ref(20)
 const currentPage = ref(1)
-const nameOnMap = ref('')
+const branchNameOnMap = ref('')
 const latitudeOnMap = ref(0)
 const longitudeOnMap = ref(0)
 const addressOnMap = ref('')
@@ -331,6 +350,7 @@ const tabs = computed(() => {
     return [
         { label: 'Products', value: 'ourproducts' },
         { label: 'Map', value: 'map' },
+        { label: 'Info', value: 'info' },
     ]
 })
 
@@ -649,6 +669,10 @@ const noCategory = () => {
     selectedCard.value = null
 }
 
+const clearSearch = () => {
+    searchProduct.value = null
+}
+
 const selectProduct = (product) => {
     if (!product) {
         console.error("Product data is missing!", product)
@@ -850,7 +874,7 @@ const fetchShopLocation = async () => {
 
         const locationData = response.data[0] || {}
 
-        nameOnMap.value = locationData.branch_name || ''
+        branchNameOnMap.value = locationData.branch_name || ''
         latitudeOnMap.value = Number(locationData.branch_latitude) || ''
         longitudeOnMap.value = Number(locationData.branch_longitude) || ''
         addressOnMap.value = locationData.branch_address || ''
@@ -1053,15 +1077,20 @@ onUnmounted(() => {
     letter-spacing: normal !important;
     opacity: 0.7;
     transition: all 0.3s ease;
-    font-size: 15px;
+    font-size: 13px;
 }
 
 .active-tab {
     border-radius: 10px !important;
     background-color: #a8460056;
     color: #5c3a21 !important;
-    padding: 8px;
+    padding: 2px 8px 2px 8px;
     opacity: 1;
+}
+
+:deep(.v-tab.v-tab.v-btn) {
+    height: 40px;
+    min-width: 0;
 }
 
 .shop-indication {
@@ -1070,7 +1099,7 @@ onUnmounted(() => {
     flex-direction: column;
 }
 
-.shop-indication .v-icon,
+.shop-indication svg,
 .shop-indication p {
     font-weight: 500;
     color: #5c3a21;
@@ -1085,12 +1114,12 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     height: 52px;
-    padding-left: 20px;
+    padding-left: 8px;
     margin: 16px 0 16px 0;
 }
 
-.search-box .v-icon {
-    margin-right: 5px;
+:deep(svg) {
+    color: #747474;
 }
 
 :deep(.v-field.v-field--focused .v-field__outline),

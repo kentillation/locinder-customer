@@ -81,12 +81,11 @@
                         <v-text-field v-model="searchBox" placeholder="Search store..." @keyup.enter="handleSearchBox"
                             @keydown="handleKeyDown" @input="handleSearchInput" :loading="searching">
                             <template v-slot:prepend-inner>
-                                <v-icon size="small">mdi-magnify</v-icon>
+                                <HugeiconsIcon :icon="Search01Icon" size="20" class="mb-1 mr-1" />
                             </template>
                             <template v-slot:append-inner>
-                                <v-icon v-if="searchBox" @click="clearSearch" class="mr-2" size="small">
-                                    mdi-close-circle
-                                </v-icon>
+                                <HugeiconsIcon v-if="searchBox" :icon="CancelCircleIcon" @click="clearSearch" size="20"
+                                    class="mr-2" />
                             </template>
                         </v-text-field>
                         <v-card v-if="searchSuggestions.length && searchBox?.length >= 2" class="suggestions-dropdown"
@@ -97,8 +96,8 @@
                                     @click="selectSuggestion(suggestion)"
                                     :class="{ 'v-list-item--active': index === selectedSuggestionIndex }"
                                     :style="index === selectedSuggestionIndex ? 'background-color: #f5f5f5;' : ''">
-                                    <v-list-item-title>
-                                        <v-icon class="text-grey-darken-1 mx-2">mdi-magnify</v-icon>
+                                    <v-list-item-title class="d-flex align-center">
+                                        <HugeiconsIcon :icon="Store01Icon" size="20" class="text-grey-darken-1 mr-2" />
                                         <template v-if="searchBox && suggestion.label">
                                             <span>{{ highlightMatch(suggestion.label, searchBox).before }}</span>
                                             <strong>{{ highlightMatch(suggestion.label, searchBox).match }}</strong>
@@ -166,7 +165,7 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Loading03Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons'
+import { Loading03Icon, ArrowLeft02Icon, Search01Icon, Store01Icon, CancelCircleIcon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
@@ -780,12 +779,12 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     height: 52px;
-    padding-left: 10px;
+    padding-left: 8px;
     margin: 16px 0 16px 0;
 }
 
-.search-box .v-icon {
-    margin-right: 5px;
+:deep(svg) {
+    color: #747474;
 }
 
 :deep(.v-field.v-field--focused .v-field__outline),

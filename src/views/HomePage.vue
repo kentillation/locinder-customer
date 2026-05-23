@@ -29,15 +29,14 @@
                 <div class="mx-1">
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
                     <div class="d-flex">
-                        <div class="d-flex">
-                            <v-icon class="mt-1 mr-1 text-grey-lighten-2"
-                                style="font-size: 14px !important;">mdi-map-marker-outline</v-icon>
+                        <div class="d-flex align-center">
+                            <HugeiconsIcon :icon="LocationIcon" class="icon" size="15"/>
                             <h6>{{ locationStore.getAddress }}</h6>
                         </div>
                         <v-chip v-if="locationStore.permissionDenied" @click="requestLocation"
                             style="border: 1px solid #6cff00; font-size: 10px;" color="#6cff00" class="pl-1 pr-5"
                             size="small" variant="outline">
-                            <v-icon style="font-size: 13px !important;">mdi-map-marker-outline</v-icon>
+                            <HugeiconsIcon :icon="LocationIcon" style="color: #6cff00; margin-right: 3px;" size="15"/>
                             Enable Location
                         </v-chip>
                     </div>
@@ -88,7 +87,7 @@
                     @keyup.enter="handleSearchBox" @keydown="handleKeyDown" @input="handleSearchInput"
                     :loading="searching">
                     <template v-slot:prepend-inner>
-                        <HugeiconsIcon :icon="Search01Icon" size="20" class="mr-2" />
+                        <HugeiconsIcon :icon="Search01Icon" size="20" class="mb-1 mr-1" />
                     </template>
                     <template v-slot:append-inner>
                         <HugeiconsIcon v-if="searchBox" :icon="CancelCircleIcon" @click="clearSearch" size="20"
@@ -379,7 +378,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Loading03Icon, Search01Icon, Store01Icon, CancelCircleIcon, ArrowRight02Icon } from '@hugeicons/core-free-icons'
+import { Loading03Icon, Search01Icon, Store01Icon, CancelCircleIcon, LocationIcon, ArrowRight02Icon } from '@hugeicons/core-free-icons'
 import { useAuthStore } from '@/stores/auth';
 import { useLocationStore } from '@/stores/locationStore';
 import { useRouter } from 'vue-router';
@@ -389,6 +388,7 @@ import { useToast } from 'vue-toastification'
 import confetti from 'canvas-confetti';
 import MoreCategorySheet from '@/components/BottomSheets/MoreCategorySheet.vue';
 
+// State management properties
 const authStore = useAuthStore();
 const locationStore = useLocationStore();
 const shopStore = useShopStore();
@@ -396,38 +396,27 @@ const productsStore = useProductsStore();
 const toast = useToast();
 const router = useRouter();
 
-const isShopOpen = (shop) => {
-    const now = new Date()
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-
-    const [openH, openM] = shop.open_at.split(':').map(Number)
-    const [closeH, closeM] = shop.close_at.split(':').map(Number)
-
-    const openMinutes = openH * 60 + openM
-    const closeMinutes = closeH * 60 + closeM
-
-    // normal case (same day closing)
-    if (openMinutes < closeMinutes) {
-        return currentMinutes >= openMinutes &&
-            currentMinutes < closeMinutes
-    }
-
-    // overnight case (crosses midnight)
-    return currentMinutes >= openMinutes ||
-        currentMinutes < closeMinutes
-}
-
-// Data properties
+// Other data properties
 const authCheckDone = ref(false);
 const isOnline = ref(navigator.onLine);
 const krisantaDialog = ref(false);
+const itemsPerPage = ref(20);
+
+// Time properties
+const currentHour = ref(new Date().getHours());
+const currentMinute = ref(new Date().getMinutes());
+const timeInterval = ref(null);
+
+// Search properties
 const searchBox = ref(null);
 const searchTimeout = ref(null);
 const searching = ref(false);
 const debouncedSearch = ref(null);
 const selectedSuggestionIndex = ref(-1);
 const selectedBaseCategory = ref(null);
-const itemsPerPage = ref(20);
+
+// Sheet properties
+const activeSheet = ref(null);
 const moreSheet = ref(false);
 const sheetHeight = ref(60);
 const startY = ref(0);
@@ -436,7 +425,8 @@ const SNAP_POINTS = {
     half: 60,
     full: 95,
 };
-const activeSheet = ref(null);
+
+// Surprise properties
 const surpriseSheet = ref(false);
 const surpriseImage = ref(null);
 const surpriseProduct = ref(null);
@@ -454,6 +444,8 @@ const loadingSurpriseMessages = ref([
     "🎉 May ara kami sorpresa nga namit...",
     "🎉 Kadali lang gid, ari na imo sorpresa..."
 ]);
+
+// Asset images properties
 const currentTimeImage = ref(require('@/assets/img/png/food/Current Time.png'));
 const moreImage = ref(require('@/assets/img/png/food/Cutlery.png'));
 const storeImage = ref(require('@/assets/img/png/food/Store.png'));
@@ -463,9 +455,7 @@ const nofastfoodImage = ref(require('@/assets/img/png/food/No Fast Food.png'));
 const happyKrisantaImage = ref(require('@/assets/img/png/krisanta/Happy Krisanta.png'));
 const tiredKrisantaImage = ref(require('@/assets/img/png/krisanta/Tired Krisanta.png'));
 const sleepingKrisantaImage = ref(require('@/assets/img/png/krisanta/Sleeping Krisanta.png'));
-const currentHour = ref(new Date().getHours());
-const currentMinute = ref(new Date().getMinutes());
-const timeInterval = ref(null);
+
 // Pull to refresh properties
 const pullZone = ref(null);
 const isRefreshing = ref(false);
@@ -481,7 +471,10 @@ const surpriseCooldown = ref(false);
 const surpriseCooldownInterval = ref(null);
 const surpriseCooldownEndTime = ref(null);
 
-// Computed properties
+
+/****** WEB HOOKS ******/
+
+// COMPUTED HOOK
 const shopsSortedByDistance = computed(() => {
     if (!locationStore.currentLocation) return shopStore.getShops;
 
@@ -615,6 +608,27 @@ const searchSuggestions = computed(() => {
     return suggestions.slice(0, 10);
 });
 
+const isShopOpen = (shop) => {
+    const now = new Date()
+    const currentMinutes = now.getHours() * 60 + now.getMinutes()
+
+    const [openH, openM] = shop.open_at.split(':').map(Number)
+    const [closeH, closeM] = shop.close_at.split(':').map(Number)
+
+    const openMinutes = openH * 60 + openM
+    const closeMinutes = closeH * 60 + closeM
+
+    // normal case (same day closing)
+    if (openMinutes < closeMinutes) {
+        return currentMinutes >= openMinutes &&
+            currentMinutes < closeMinutes
+    }
+
+    // overnight case (crosses midnight)
+    return currentMinutes >= openMinutes ||
+        currentMinutes < closeMinutes
+}
+
 const productImages = computed(() => {
     const images = require.context('@/assets/img/png/food', false, /\.png$/);
     const map = {};
@@ -683,7 +697,7 @@ const currentTimeMeal = computed(() => {
 });
 
 
-// Methods
+// METHOD HOOK
 const checkAuthentication = async () => {
     if (!authStore.token) {
         authStore.clearAuth();
@@ -1573,7 +1587,7 @@ const refreshData = async () => {
     }
 };
 
-// Watchers
+// WATCH/WATCHER HOOK
 watch(searchBox, () => {
     selectedBaseCategory.value = searchBox.value;
 });
@@ -1582,7 +1596,7 @@ watch(() => locationStore.currentLocation, () => {
     // This will trigger re-rendering of distances when location changes
 }, { deep: true });
 
-// Lifecycle
+// LIFECYCLE HOOK
 onMounted(async () => {
     await checkAuthentication();
 
@@ -2042,8 +2056,13 @@ onBeforeUnmount(() => {
     border-radius: 10px;
 }
 
+.headline .icon {
+    color: #dfdfdf;
+    font-weight: 500;
+    margin-right: 3px;
+}
+
 .headline h6 {
-    margin-top: 0 !important;
     color: #dfdfdf;
     font-weight: 500;
 }
@@ -2073,14 +2092,9 @@ onBeforeUnmount(() => {
     border-radius: 10px;
     box-shadow: none !important;
     height: 52px;
-    padding-left: 10px;
+    padding-left: 8px;
     margin-bottom: 16px;
-    /* mb-5 */
     z-index: 100;
-}
-
-.search-box .v-icon {
-    margin-right: 5px;
 }
 
 :deep(.v-field.v-field--focused .v-field__outline),
