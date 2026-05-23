@@ -22,7 +22,7 @@
             <div class="pull-zone" ref="pullZone"></div>
 
             <!-- Top -->
-            <div class="headline content-between">
+            <div class="headline content-between" :style="{ background : accentColor !== '' ? accentColor : '#a86d00'}">
                 <v-btn size="small" style="background: transparent !important;" icon>
                     <HugeiconsIcon @click="goBack" :icon="ArrowLeft02Icon" size="20" />
                 </v-btn>
@@ -48,7 +48,7 @@
                     :class="{ 'active-tab': activeTab === tab.value }"
                     @click="tab.clickHandler ? tab.clickHandler() : null" size="small">
                     <HugeiconsIcon
-                        :icon="tab.value === 'ourproducts' ? SpoonAndForkIcon : tab.value === 'map' ? MapsLocation01Icon : Store01Icon"
+                        :icon="tab.value === 'ourproducts' ? SpoonAndForkIcon : tab.value === 'map' ? MapsLocation01Icon : InformationCircleIcon"
                         style="color: #5c3a21;" size="20" />
                     &nbsp;{{ tab.label }}
                 </v-tab>
@@ -186,7 +186,7 @@
 
                         <!-- Map - With Permission Handling -->
                         <v-tabs-window-item value="map">
-                            <div class="map-container" ref="mapContainer">
+                            <div class="map-container">
                                 <LocinderGPS ref="locinderGPSRef" :name-on-map="branchNameOnMap"
                                     :latitude-on-map="latitudeOnMap" :longitude-on-map="longitudeOnMap"
                                     :address-on-map="addressOnMap" />
@@ -198,21 +198,28 @@
                                 <div>
                                     <div class="d-flex align-center">
                                         <HugeiconsIcon :icon="Store01Icon" size="20" />
-                                        <p class="ml-1">Branch name:</p>
+                                        <p class="label">Branch name:</p>
                                     </div>
                                     <p class="ml-6">{{ branchNameOnMap }} Branch</p>
                                 </div>
                                 <div class="mt-3">
                                     <div class="d-flex align-center">
+                                        <HugeiconsIcon :icon="SmartPhone04Icon" size="20" />
+                                        <p class="label">Branch contact:</p>
+                                    </div>
+                                    <p class="ml-6">{{ contactOnMap }}</p>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="d-flex align-center">
                                         <HugeiconsIcon :icon="LocationIcon" size="20" />
-                                        <p class="ml-1">Branch address:</p>
+                                        <p class="label">Branch address:</p>
                                     </div>
                                     <p class="ml-6">{{ shop_address }}</p>
                                 </div>
                                 <div class="mt-3">
                                     <div class="d-flex align-center">
                                         <HugeiconsIcon :icon="DoorOpenIcon" size="20" />
-                                        <p class="ml-1">Store hours:</p>
+                                        <p class="label">Store hours:</p>
                                     </div>
                                     <p class="ml-6">{{ formattedOpenTime }} – {{ formattedCloseTime }}</p>
                                 </div>
@@ -252,7 +259,9 @@
 
 <script setup>
 import { HugeiconsIcon } from '@hugeicons/vue'
-import { Loading03Icon, ArrowLeft02Icon, SpoonAndForkIcon, MapsLocation01Icon, Store01Icon, LocationIcon, DoorOpenIcon, Search01Icon, CancelCircleIcon } from '@hugeicons/core-free-icons'
+import { Loading03Icon, ArrowLeft02Icon, SpoonAndForkIcon, MapsLocation01Icon, 
+        Store01Icon, InformationCircleIcon, LocationIcon, SmartPhone04Icon, 
+        DoorOpenIcon, Search01Icon, CancelCircleIcon } from '@hugeicons/core-free-icons'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useShopStore } from '@/stores/shopStore'
@@ -273,6 +282,7 @@ const isOnline = ref(navigator.onLine)
 // Shop
 const shop_id = ref(null)
 const branch_id = ref(null)
+const accentColor = ref('')
 const shop_name = ref('')
 const shop_type = ref('')
 const shop_address = ref('')
@@ -284,6 +294,7 @@ const branchNameOnMap = ref('')
 const latitudeOnMap = ref(0)
 const longitudeOnMap = ref(0)
 const addressOnMap = ref('')
+const contactOnMap = ref('')
 const shopThumbnail = ref('')
 
 // Products
@@ -865,6 +876,8 @@ const fetchShopLocation = async () => {
         latitudeOnMap.value = Number(locationData.branch_latitude) || ''
         longitudeOnMap.value = Number(locationData.branch_longitude) || ''
         addressOnMap.value = locationData.branch_address || ''
+        contactOnMap.value = locationData.branch_contact_number || ''
+        accentColor.value = locationData.shop_accent_color || ''
         shopThumbnail.value = locationData.thumbnail_url || ''
 
     } catch (error) {
@@ -1043,6 +1056,8 @@ onUnmounted(() => {
 /* Keep all your existing styles below */
 .headline {
     margin-top: 16px;
+    padding: 7px 4px 7px 2px;
+    border-radius: 10px;
 }
 
 .headline div {
@@ -1054,12 +1069,12 @@ onUnmounted(() => {
     box-shadow: none;
 }
 
-.headline .v-icon {
-    font-size: 20px !important;
+.headline svg {
+    color: #f8f8f8 !important;
 }
 
 .headline h3 {
-    color: #5c3a21;
+    color: #f8f8f8;
     font-weight: 500;
 }
 
@@ -1106,10 +1121,19 @@ onUnmounted(() => {
 }
 
 .shop-indication svg,
+.shop-indication p.label,
 .shop-indication p {
     font-weight: 500;
-    color: #5c3a21;
     font-size: 14px;
+}
+
+.shop-indication p.label {
+    color: #747474;
+    margin-left: 5px;
+}
+
+.shop-indication p {
+    color: #5c3a21;
 }
 
 .search-box {
