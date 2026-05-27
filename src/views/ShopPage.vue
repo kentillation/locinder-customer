@@ -119,6 +119,7 @@
                             <!-- Products -->
                             <template v-else>
                                 <div class="image-section my-4">
+                                    <!-- No Products -->
                                     <template v-if="productsStore.products.length === 0 && !isProductsLoading">
                                         <v-row>
                                             <v-col cols="12">
@@ -133,6 +134,7 @@
                                         </v-row>
                                     </template>
 
+                                    <!-- Show Products -->
                                     <template v-else>
                                         <div v-for="product in filteredProducts" :key="product.product_id"
                                             @click="selectProduct(product)" class="image-section-item">

@@ -89,53 +89,54 @@
             </template>
 
             <!-- Products -->
-            <template v-else-if="showProducts">
-                <v-card class="buttons-container">
-                    <h4>
-                        Taste these delicious foods<br />
-                        <span>Tilawi ang mga manamit nga pagkaon</span>
-                    </h4>
-                    <v-row>
-                        <v-col v-for="product in filteredProducts" :key="product.product_id" cols="12" lg="6" md="6"
-                            sm="6" style="padding: 5px !important;">
-                            <v-btn @click="selectProduct(product)" class="button"
-                                :class="{ active: selectedCard === product.product_id }">
-                                <v-img :src="productImages[product.category_label] || fastfoodImage" width="35"
-                                    class="mr-2 flex-shrink-0"></v-img>
-                                <div class="d-flex flex-column flex-grow-1 text-start overflow-hidden">
-                                    <span class="text-wrap mr-15">
-                                        <span style="color: #5c3a21;">{{ product.product_name }}</span>
-                                    </span>
-                                    <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
-                                    }}</span>
-                                    <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
-                                            }}</em></span>
-                                </div>
-                                <div class="d-flex align-center">
-                                    <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
-                                        product.base_price
-                                    }}</span>
-                                </div>
-                            </v-btn>
-                        </v-col>
-                    </v-row>
-                </v-card>
-            </template>
-
-            <!-- No Products -->
             <template v-else>
                 <v-card class="buttons-container">
-                    <v-row>
-                        <v-col cols="12">
-                            <v-card class="no-found">
-                                <span><v-img :src="nofastfoodImage" width="130"></v-img></span>
-                                <p style="font-weight: 500; color: #ab2323;">No available products found</p>
-                                <span class="text-grey" style="font-size: 12px;">
-                                    <em>Wala sang may nakita nga produkto</em>
-                                </span>
-                            </v-card>
-                        </v-col>
-                    </v-row>
+                    <!-- No Products -->
+                    <template v-if="productsStore.products.length === 0 && !isProductsLoading">
+                        <v-row>
+                            <v-col cols="12">
+                                <v-card class="no-found">
+                                    <span><v-img :src="nofastfoodImage" width="130"></v-img></span>
+                                    <p style="font-weight: 500; color: #ab2323;">No available products found</p>
+                                    <span class="text-grey" style="font-size: 12px;">
+                                        <em>Wala sang may nakita nga produkto</em>
+                                    </span>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </template>
+
+                    <!-- Show Products -->
+                    <template v-else>
+                        <h4>
+                            Taste these delicious foods<br />
+                            <span>Tilawi ang mga manamit nga pagkaon</span>
+                        </h4>
+                        <v-row>
+                            <v-col v-for="product in filteredProducts" :key="product.product_id" cols="12" lg="6" md="6"
+                                sm="6" style="padding: 5px !important;">
+                                <v-btn @click="selectProduct(product)" class="button"
+                                    :class="{ active: selectedCard === product.product_id }">
+                                    <v-img :src="productImages[product.category_label] || fastfoodImage" width="35"
+                                        class="mr-2 flex-shrink-0"></v-img>
+                                    <div class="d-flex flex-column flex-grow-1 text-start overflow-hidden">
+                                        <span class="text-wrap mr-15">
+                                            <span style="color: #5c3a21;">{{ product.product_name }}</span>
+                                        </span>
+                                        <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
+                                        }}</span>
+                                        <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
+                                                }}</em></span>
+                                    </div>
+                                    <div class="d-flex align-center">
+                                        <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
+                                            product.base_price
+                                        }}</span>
+                                    </div>
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </template>
                 </v-card>
             </template>
 
@@ -233,10 +234,6 @@ const filteredProducts = computed(() => {
     }
 
     return list
-})
-
-const showProducts = computed(() => {
-    return !productsStore.loading && filteredProducts.value.length > 0
 })
 
 const allCategories = computed(() => {
