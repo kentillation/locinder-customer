@@ -377,16 +377,6 @@ const fetchProducts = async (page = 1, isLoadMore = false) => {
             hasMoreProducts.value = productsStore.products.length >= itemsPerPage.value
             currentPage.value = page
         }
-
-        // REMOVE THIS ENTIRE BLOCK - IT'S CAUSING ISSUES
-        // if (requested_category.value) {
-        //     const category = productsStore.getProductCategories.find(
-        //         c => c.label === requested_category.value
-        //     )
-        //     if (category) {
-        //         await handleCategorySelect(category)
-        //     }
-        // }
         
     } catch (error) {
         console.error('Error fetching products:', error)
