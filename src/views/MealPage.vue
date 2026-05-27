@@ -18,9 +18,9 @@
 
         <!-- Scrollable Content -->
         <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
-            
+
             <div class="pull-zone" ref="pullZone"></div>
-            
+
             <!-- Headline -->
             <div class="headline content-between">
                 <div>
@@ -70,9 +70,9 @@
                 </v-slide-group>
             </template>
 
-            <v-card class="buttons-container">
-                <!-- Loading Products -->
-                <template v-if="isProductsLoading && productsStore.products.length === 0">
+            <!-- Products Skeleton -->
+            <template v-if="(isProductsLoading && productsStore.products.length === 0) || isRefreshing">
+                <v-card class="buttons-container">
                     <div class="title-skeleton">
                         <v-skeleton-loader type="sentences" width="200" class="no-background"></v-skeleton-loader>
                     </div>
@@ -85,10 +85,12 @@
                             </div>
                         </v-col>
                     </v-row>
-                </template>
+                </v-card>
+            </template>
 
-                <!-- Show Products -->
-                <template v-else-if="showProducts">
+            <!-- Products -->
+            <template v-else-if="showProducts">
+                <v-card class="buttons-container">
                     <h4>
                         Taste these delicious foods<br />
                         <span>Tilawi ang mga manamit nga pagkaon</span>
@@ -107,20 +109,22 @@
                                     <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
                                     }}</span>
                                     <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
-                                    }}</em></span>
+                                            }}</em></span>
                                 </div>
                                 <div class="d-flex align-center">
                                     <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
                                         product.base_price
-                                        }}</span>
+                                    }}</span>
                                 </div>
                             </v-btn>
                         </v-col>
                     </v-row>
-                </template>
+                </v-card>
+            </template>
 
-                <!-- No Products -->
-                <template v-else>
+            <!-- No Products -->
+            <template v-else>
+                <v-card class="buttons-container">
                     <v-row>
                         <v-col cols="12">
                             <v-card class="no-found">
@@ -132,8 +136,8 @@
                             </v-card>
                         </v-col>
                     </v-row>
-                </template>
-            </v-card>
+                </v-card>
+            </template>
 
             <!-- Infinite Scroll Loading Indicator -->
             <div v-if="loadingMore" class="loading-more">
