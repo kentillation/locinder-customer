@@ -18,9 +18,9 @@
 
         <!-- Scrollable Content -->
         <div ref="contentContainer" class="scroll-content" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
-
+            
             <div class="pull-zone" ref="pullZone"></div>
-
+            
             <!-- Headline -->
             <div class="headline content-between">
                 <div>
@@ -76,13 +76,15 @@
                     <div class="title-skeleton">
                         <v-skeleton-loader type="sentences" width="200" class="no-background"></v-skeleton-loader>
                     </div>
-                    <div v-for="n in 10" :key="n">
-                        <div class="button mb-2 content-between">
-                            <v-skeleton-loader type="avatar, sentences" width="300"
-                                class="no-background"></v-skeleton-loader>
-                            <v-skeleton-loader type="text" width="200" class="no-background"></v-skeleton-loader>
-                        </div>
-                    </div>
+                    <v-row>
+                        <v-col v-for="n in 10" :key="n" cols="12" lg="6" md="6" sm="6" style="padding: 5px !important;">
+                            <div class="button mb-3 content-between">
+                                <v-skeleton-loader type="avatar, sentences" width="300"
+                                    class="no-background"></v-skeleton-loader>
+                                <v-skeleton-loader type="text" width="200" class="no-background"></v-skeleton-loader>
+                            </div>
+                        </v-col>
+                    </v-row>
                 </template>
 
                 <!-- Show Products -->
@@ -91,27 +93,30 @@
                         Taste these delicious foods<br />
                         <span>Tilawi ang mga manamit nga pagkaon</span>
                     </h4>
-                    <div v-for="product in filteredProducts" :key="product.product_id" class="mb-2">
-                        <v-btn @click="selectProduct(product)" class="button"
-                            :class="{ active: selectedCard === product.product_id }">
-                            <v-img :src="productImages[product.category_label] || fastfoodImage" width="35"
-                                class="mr-2 flex-shrink-0"></v-img>
-                            <div class="d-flex flex-column flex-grow-1 text-start overflow-hidden">
-                                <span class="text-wrap mr-15">
-                                    <span style="color: #5c3a21;">{{ product.product_name }}</span>
-                                </span>
-                                <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
-                                }}</span>
-                                <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
-                                        }}</em></span>
-                            </div>
-                            <div class="d-flex align-center">
-                                <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
-                                    product.base_price
-                                }}</span>
-                            </div>
-                        </v-btn>
-                    </div>
+                    <v-row>
+                        <v-col v-for="product in filteredProducts" :key="product.product_id" cols="12" lg="6" md="6"
+                            sm="6" style="padding: 5px !important;">
+                            <v-btn @click="selectProduct(product)" class="button"
+                                :class="{ active: selectedCard === product.product_id }">
+                                <v-img :src="productImages[product.category_label] || fastfoodImage" width="35"
+                                    class="mr-2 flex-shrink-0"></v-img>
+                                <div class="d-flex flex-column flex-grow-1 text-start overflow-hidden">
+                                    <span class="text-wrap mr-15">
+                                        <span style="color: #5c3a21;">{{ product.product_name }}</span>
+                                    </span>
+                                    <span class="text-grey-darken-1" style="font-size: 12px;">{{ product.size_label
+                                    }}</span>
+                                    <span class="text-wrap mr-15" style="font-size: 12px;"><em>{{ product.shop_name
+                                    }}</em></span>
+                                </div>
+                                <div class="d-flex align-center">
+                                    <span style="font-size: 18px; position: absolute; right: 10px;">₱{{
+                                        product.base_price
+                                        }}</span>
+                                </div>
+                            </v-btn>
+                        </v-col>
+                    </v-row>
                 </template>
 
                 <!-- No Products -->
