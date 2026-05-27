@@ -1139,34 +1139,42 @@ const reverseGeocode = async (lat, lng) => {
         )
         const data = await response.json()
 
-        if (data && data.display_name) {
+        if (data && data.address) {
             const address = data.address
-            let formattedAddress = ''
 
-            if (address.road || address.pedestrian) {
-                formattedAddress += address.road || address.pedestrian || ''
-            }
-            if (address.suburb) {
-                formattedAddress += formattedAddress ? `, ${address.suburb}` : address.suburb
-            }
-            if (address.city || address.town || address.village) {
-                const city = address.city || address.town || address.village
-                formattedAddress += formattedAddress ? `, ${city}` : city
-            }
-            if (address.postcode) {
-                formattedAddress += formattedAddress ? ` ${address.postcode}` : address.postcode
-            }
+            // Quarter / neighborhood
+            const quarter =
+                address.quarter ||
+                address.neighbourhood ||
+                address.suburb ||
+                address.hamlet
 
-            const result = formattedAddress || data.display_name.split(',')[0]
+            // City
+            const city =
+                address.city ||
+                address.town ||
+                address.village ||
+                address.municipality
+
+            // State / province
+            const state =
+                address.state ||
+                address.region ||
+                address.province
+
+            // Build formatted address
+            const parts = [quarter, city, state].filter(Boolean)
+
+            const result = parts.join(', ')
 
             addressCache.set(cacheKey, {
                 address: result,
                 timestamp: Date.now()
             })
 
-            return result
+            return result || 'Address not found'
         }
-        return 'Address not found'
+
     } catch (error) {
         console.error('Reverse geocoding error:', error)
         return 'Address unavailable'
@@ -1201,7 +1209,7 @@ const updateUserMarkerWithAddress = async (lat, lng, shouldOpenPopup = true) => 
     const popup = new maplibregl.Popup({ closeButton: false })
         .setHTML(`
             <div style="text-align: center; min-width: 200px;">
-                <strong style="font-size: 14px;">📍 You are here</strong><br>
+                <span style="font-size: 14px;">&#128205; You are here</span><br>
                 <small style="font-size: 11px; color: #666;">${address}</small>
             </div>
         `)
@@ -2341,5 +2349,9 @@ onBeforeUnmount(() => {
 
 :deep(.maplibregl-popup-anchor-bottom) {
     display: none !important;
+}
+
+.custom {
+    color: #4CAF50;
 }
 </style>
