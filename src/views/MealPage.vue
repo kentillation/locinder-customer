@@ -184,6 +184,7 @@ const products = ref([])
 const categories = ref([])
 const selectedCard = ref(null)
 const requested_category = ref(null)
+const productImages = {}
 const fastfoodImage = new URL('@/assets/img/png/food/Fast Food.png', import.meta.url).href
 const currentTimeImage = new URL('@/assets/img/png/food/Current Time.png', import.meta.url).href
 const nofastfoodImage = new URL('@/assets/img/png/food/No Fast Food.png', import.meta.url).href
@@ -234,18 +235,14 @@ const showProducts = computed(() => {
     return !productsStore.loading && filteredProducts.value.length > 0
 })
 
-const imageContext = require.context(
-    '@/assets/img/png/food',
-    false,
-    /\.png$/
-)
+const allCategories = computed(() => {
+    return productsStore.getProductCategories
+})
 
-const productImages = {}
-
-imageContext.keys().forEach(path => {
-    const fileName = path.split('/').pop()
-    const cleanName = fileName.replace('.png', '')
-    productImages[cleanName] = imageContext(path)
+const sortedCategories = computed(() => {
+    const others = allCategories.value.find(c => c.label === 'Other')
+    const rest = allCategories.value.filter(c => c.label !== 'Other')
+    return others ? [...rest, others] : rest
 })
 
 // Methods
@@ -380,16 +377,6 @@ const fetchProducts = async (page = 1, isLoadMore = false) => {
     }
 }
 
-const allCategories = computed(() => {
-    return productsStore.getProductCategories
-})
-
-const sortedCategories = computed(() => {
-    const others = allCategories.value.find(c => c.label === 'Other')
-    const rest = allCategories.value.filter(c => c.label !== 'Other')
-    return others ? [...rest, others] : rest
-})
-
 const loadMoreProducts = async () => {
     if (loadingMore.value || !hasMoreProducts.value || isProductsLoading.value || isFetching.value || isRefreshing.value) {
         return
@@ -429,6 +416,18 @@ const fetchCategories = async () => {
 const noCategory = () => {
     requested_category.value = ''
 }
+
+const imageContext = require.context(
+    '@/assets/img/png/food',
+    false,
+    /\.png$/
+)
+
+imageContext.keys().forEach(path => {
+    const fileName = path.split('/').pop()
+    const cleanName = fileName.replace('.png', '')
+    productImages[cleanName] = imageContext(path)
+})
 
 const selectProduct = (product) => {
     if (!product) {

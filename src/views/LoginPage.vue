@@ -28,7 +28,7 @@
                                         <span>Email</span>
                                     </div>
                                     <v-text-field v-model="customer_email" :rules="[requiredRule, emailFormatRule]"
-                                        :disabled="loading" placeholder="myname@example.com" variant="solo" density="comfortable"
+                                        :disabled="loading" placeholder="myname@example.com" variant="solo" density="compact"
                                         autocomplete="customer_email" class="custom-input" :error="emailError"
                                         hide-details="auto" />
                                 </div>
@@ -39,7 +39,7 @@
                                         <span>Password</span>
                                     </div>
                                     <v-text-field v-model="customer_password" :rules="[requiredRule]"
-                                        :disabled="loading" placeholder="Enter your password" variant="solo" density="comfortable"
+                                        :disabled="loading" placeholder="Enter your password" variant="solo" density="compact"
                                         autocomplete="customer_password" :type="showPassword ? 'text' : 'password'"
                                         class="custom-input" hide-details="auto">
                                         <template v-slot:append-inner>
@@ -185,7 +185,7 @@ const handleLogin = async () => {
     justify-content: center;
     position: relative;
     background: linear-gradient(135deg, #faf8f5 0%, #fff6e3 100%);
-    overflow: hidden;
+    overflow: scroll;
 }
 
 .logo-wrapper {
@@ -214,7 +214,6 @@ const handleLogin = async () => {
 /* Login Card */
 .login-card {
     border-radius: 30px;
-    overflow: hidden;
     box-shadow: none;
     max-width: 500px;
     margin: 0 auto;

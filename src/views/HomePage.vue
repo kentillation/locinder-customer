@@ -43,20 +43,6 @@
                 </div>
             </div>
 
-            <div v-if="locationStore.isMoving" class="movement-indicator"
-                :class="[locationStore.getMovementStatus, { 'fast-speed': locationStore.movementSpeed >= 60 }]">
-                <v-icon small :class="getSpeedometerIconClass">
-                    {{ getSpeedometerIcon }}
-                </v-icon>
-                <span>{{ locationStore.getFormattedSpeed }}</span>
-            </div>
-
-            <!-- Show driving warning based on speed -->
-            <v-alert v-if="locationStore.isMoving && locationStore.movementSpeed > 10" :type="getSpeedAlertType"
-                variant="outlined" density="compact" class="mb-5">
-                {{ getSpeedWarningMessage }}
-            </v-alert>
-
             <div v-if="krisantaDialog"
                 :class="currentKrisantaImage === sleepingKrisantaImage ? 'd-none' : 'd-none customer-dialog-overlay'"
                 @click="closeKrisantaDialog">
@@ -512,55 +498,6 @@ const getDistanceColorClass = (distance) => {
         return 'distance-very-far';
     }
 };
-
-const getSpeedometerIcon = computed(() => {
-    const speed = locationStore.movementSpeed;
-
-    if (speed < 5) {
-        return 'mdi-speedometer-slow';
-    } else if (speed < 30) {
-        return 'mdi-speedometer-medium';
-    } else {
-        return 'mdi-speedometer';
-    }
-});
-
-const getSpeedometerIconClass = computed(() => {
-    const speed = locationStore.movementSpeed;
-
-    return {
-        'speed-icon-slow': speed < 5,
-        'speed-icon-medium': speed >= 5 && speed < 30,
-        'speed-icon-fast': speed >= 30,
-        'speed-icon-very-fast': speed >= 60
-    };
-});
-
-const getSpeedAlertType = computed(() => {
-    const speed = locationStore.movementSpeed;
-
-    if (speed >= 60) {
-        return 'error';
-    } else if (speed >= 40) {
-        return 'warning';
-    } else {
-        return 'info';
-    }
-});
-
-const getSpeedWarningMessage = computed(() => {
-    const speed = locationStore.movementSpeed;
-
-    if (speed >= 80) {
-        return '⚠️ High speed detected! Please drive safely and don\'t use the app while driving!';
-    } else if (speed >= 60) {
-        return '🚗 You\'re driving quite fast. Please focus on the road!';
-    } else if (speed >= 40) {
-        return '🚙 Driving detected. Please be safe on the road!';
-    } else {
-        return '🚶 Moving detected. Stay safe!';
-    }
-});
 
 const limitedCategories = computed(() => {
     return productsStore.getBaseCategories.slice(0, 10);
