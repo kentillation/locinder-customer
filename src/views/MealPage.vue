@@ -185,7 +185,6 @@ const searchProduct = ref('')
 const itemsPerPage = ref(20)
 const isProductsLoading = ref(false)
 const isCategoriesLoading = ref(false)
-const products = ref([])
 const categories = ref([])
 const selectedCard = ref(null)
 const requested_category = ref(null)
@@ -318,10 +317,28 @@ const fetchAllData = async () => {
     }
 }
 
-const reloadProductsAndCategories = () => {
+const reloadProductsAndCategories = async () => {
     requested_category.value = null
     selectedCard.value = null
-    categories.value = productsStore.product_categories
+    searchProduct.value = ''
+    currentPage.value = 1
+    hasMoreProducts.value = true
+    productsStore.products = []
+    await fetchProducts(1, false)
+}
+
+const loadMoreProducts = async () => {
+    if (loadingMore.value || !hasMoreProducts.value || isProductsLoading.value || isFetching.value || isRefreshing.value) {
+        return
+    }
+
+    // Don't load more if searching
+    if (searchProduct.value && searchProduct.value.trim() !== '') {
+        return
+    }
+
+    const nextPage = currentPage.value + 1
+    await fetchProducts(nextPage, true)
 }
 
 const fetchProducts = async (page = 1, isLoadMore = false) => {
@@ -343,6 +360,11 @@ const fetchProducts = async (page = 1, isLoadMore = false) => {
             page: page
         }
 
+        // Add category to request if one is selected
+        if (requested_category.value) {
+            request.category_label = requested_category.value
+        }
+
         const response = await productsStore.fetchProductsByMealTypeStore(request)
 
         if (response && response.pagination) {
@@ -356,15 +378,16 @@ const fetchProducts = async (page = 1, isLoadMore = false) => {
             currentPage.value = page
         }
 
-        if (requested_category.value) {
-            const category = productsStore.getProductCategories.find(
-                c => c.label === requested_category.value
-            )
-            if (category) {
-                await handleCategorySelect(category)
-            }
-        }
-        products.value = productsStore.products
+        // REMOVE THIS ENTIRE BLOCK - IT'S CAUSING ISSUES
+        // if (requested_category.value) {
+        //     const category = productsStore.getProductCategories.find(
+        //         c => c.label === requested_category.value
+        //     )
+        //     if (category) {
+        //         await handleCategorySelect(category)
+        //     }
+        // }
+        
     } catch (error) {
         console.error('Error fetching products:', error)
         throw error
@@ -378,18 +401,22 @@ const fetchProducts = async (page = 1, isLoadMore = false) => {
     }
 }
 
-const loadMoreProducts = async () => {
-    if (loadingMore.value || !hasMoreProducts.value || isProductsLoading.value || isFetching.value || isRefreshing.value) {
+const handleCategorySelect = async (category) => {
+    selectedCard.value = null
+    if (!category || !category.label) {
+        toast.error('Invalid selected category')
         return
     }
 
-    // Don't load more if searching
-    if (searchProduct.value && searchProduct.value.trim() !== '') {
-        return
-    }
-
-    const nextPage = currentPage.value + 1
-    await fetchProducts(nextPage, true)
+    // Reset to page 1 and fetch products for the selected category
+    currentPage.value = 1
+    hasMoreProducts.value = true
+    requested_category.value = category.label
+    searchProduct.value = ''
+    
+    // Clear existing products and fetch new ones
+    productsStore.products = []
+    await fetchProducts(1, false)
 }
 
 const fetchCategories = async () => {
@@ -415,7 +442,8 @@ const fetchCategories = async () => {
 }
 
 const noCategory = () => {
-    requested_category.value = ''
+    requested_category.value = null
+    selectedCard.value = null
 }
 
 const imageContext = require.context(
@@ -450,22 +478,6 @@ const selectProduct = (product) => {
             requestedCategory: product.category_label,
         }
     })
-}
-
-const handleCategorySelect = async (category) => {
-    selectedCard.value = null
-    if (!category || !category.label) {
-        toast.error('Invalid selected category')
-        return
-    }
-
-    try {
-        await nextTick()
-        requested_category.value = category.label
-        searchProduct.value = ''
-    } catch (error) {
-        console.error('Error handling category selection:', error)
-    }
 }
 
 const handleTouchStart = (e) => {
