@@ -1993,7 +1993,7 @@ onBeforeUnmount(() => {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    margin-top: 20px;
+    margin-top: 15px;
     margin-bottom: 20px;
 }
 

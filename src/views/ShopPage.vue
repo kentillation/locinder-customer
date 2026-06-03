@@ -56,7 +56,7 @@
 
             <v-tabs-window v-model="activeTab">
                 <transition name="slide-x-transition" mode="out-in">
-                    <div :key="activeTab">
+                    <div :key="activeTab" style="margin-top: -10px !important;">
                         <!-- Shop Products -->
                         <v-tabs-window-item value="ourproducts">
                             <!-- Search Products -->
@@ -186,7 +186,7 @@
                             </div>
                         </v-tabs-window-item>
 
-                        <!-- Map - With Permission Handling -->
+                        <!-- Shop Map -->
                         <v-tabs-window-item value="map">
                             <div class="map-container">
                                 <LocinderGPS ref="locinderGPSRef" :name-on-map="branchNameOnMap"
@@ -195,6 +195,7 @@
                             </div>
                         </v-tabs-window-item>
 
+                        <!-- Shop Info -->
                         <v-tabs-window-item value="info">
                             <div class="shop-indication">
                                 <div>
