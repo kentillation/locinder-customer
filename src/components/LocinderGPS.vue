@@ -1,4 +1,15 @@
 <template>
+    <!-- Store Promotion Banner -->
+    <div v-if="showPromotion" class="promotion-banner">
+        <div class="promotion-content">
+            <HugeiconsIcon :icon="PartyIcon" size="30" style="color: #fff !important" />
+            <div class="promotion-text">
+                <strong>Special Offer!</strong>
+                <p>{{ promotionMessage }}</p>
+            </div>
+            <button @click="showPromotion = false" class="promotion-close">×</button>
+        </div>
+    </div>
     <div class="locinder-wrapper">
         <!-- Map Style Selector -->
         <div class="map-style-selector">
@@ -101,9 +112,9 @@
 
         <!-- Loading Overlay -->
         <div v-if="loading" class="loading-overlay">
-            <div class="spinner"></div>
-            <p>Getting your exact location...</p>
-            <p style="font-size: 12px; margin-top: 10px; opacity: 0.7;">Please allow location access when prompted</p>
+            <HugeiconsIcon :icon="Loading03Icon" size="50" color="#ccc" class="loading-icon" />
+            <p style="margin-top: 5px;">Getting your exact location...</p>
+            <p style="font-size: 12px; margin-top: 5px; opacity: 0.7;">Please allow location access when prompted</p>
         </div>
 
         <!-- Status messages -->
@@ -113,7 +124,9 @@
 
 <script setup>
 /* eslint-disable */
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
+import { HugeiconsIcon } from '@hugeicons/vue'
+import { Loading03Icon, PartyIcon } from '@hugeicons/core-free-icons'
+import { ref, onMounted, onBeforeUnmount, watch, computed, onErrorCaptured } from 'vue'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Geolocation } from '@capacitor/geolocation'
@@ -150,6 +163,8 @@ const userAddress = ref('Getting your address...')
 const loading = ref(false)
 const error = ref(null)
 const showGpsGuidance = ref(false)
+const showPromotion = ref(false)
+const promotionMessage = ref('')
 let destinationMarker = null
 let userMarker = null
 
@@ -162,7 +177,9 @@ let routeLayer = null
 let glowRouteLayer = null
 let routeArrowLayer = null
 let currentRouteSource = null
-let currentRouteData = null // Store current route data for style changes
+let currentRouteData = null
+let connectionSource = null
+let connectionLayer = null
 
 // Rotation and Tilt-related
 const currentBearing = ref(0)
@@ -190,14 +207,12 @@ let lastAddressUpdate = 0
 const ADDRESS_UPDATE_THROTTLE = 5000
 const ROUTE_UPDATE_DEBOUNCE = 2000
 const LOCATION_WATCH_INTERVAL = 3000
-let lastZoomLevel = ref(17) // Store zoom level for GPS mode
+let lastZoomLevel = ref(17)
 let locationWatchInterval = null
-let touchStart = null
-let inertiaVelocity = { x: 0, y: 0 }
-let lastPanPosition = null
-let inertiaFrame = null
-let isPanning = false
-let lastPanTime = 0
+
+// Performance optimization: Track last route update position
+let lastRouteUpdatePosition = ref(null)
+const MIN_DISTANCE_FOR_ROUTE_UPDATE = 20 // meters
 
 // Abort controller for route requests
 let currentRouteController = null
@@ -233,13 +248,215 @@ const mapStyles = [
 
 const currentStyle = ref('maptiler-streets')
 
-// Cache for reverse geocoding
+// Cache management with size limits
 const addressCache = new Map()
 const routeCache = new Map()
+const MAX_CACHE_SIZE = 100
+
+// Business analytics
+const userBehavior = {
+    routeRequests: 0,
+    averageDistanceToStore: 0,
+    distanceReadings: [],
+    peakUsageHours: new Map(),
+    sessionStart: Date.now(),
+    lastActivity: Date.now(),
+    visitCount: 0
+}
 
 // Check if running in Capacitor
 const isCapacitor = () => {
     return !!(window && window.Capacitor && window.Capacitor.isNativePlatform)
+}
+
+// ==================== Cache Management ====================
+const cleanupCache = (cache) => {
+    if (cache.size > MAX_CACHE_SIZE) {
+        const oldestKey = cache.keys().next().value
+        cache.delete(oldestKey)
+    }
+}
+
+// ==================== Business Analytics ====================
+const trackUserBehavior = () => {
+    const hour = new Date().getHours()
+    userBehavior.peakUsageHours.set(hour, (userBehavior.peakUsageHours.get(hour) || 0) + 1)
+    userBehavior.lastActivity = Date.now()
+}
+
+const trackRouteRequest = () => {
+    userBehavior.routeRequests++
+    trackUserBehavior()
+}
+
+const trackDistanceToStore = (distanceKm) => {
+    userBehavior.distanceReadings.push(distanceKm)
+    const sum = userBehavior.distanceReadings.reduce((a, b) => a + b, 0)
+    userBehavior.averageDistanceToStore = sum / userBehavior.distanceReadings.length
+}
+
+const reportMetrics = () => {
+    if (process.env.NODE_ENV === 'production' && userBehavior.routeRequests > 0) {
+        // Send analytics to backend (implement based on your analytics service)
+        console.log('Analytics:', {
+            routeRequests: userBehavior.routeRequests,
+            averageDistance: userBehavior.averageDistanceToStore.toFixed(2),
+            peakHours: Array.from(userBehavior.peakUsageHours.entries()),
+            sessionDuration: (Date.now() - userBehavior.sessionStart) / 1000,
+            visitCount: userBehavior.visitCount
+        })
+    }
+}
+
+// ==================== Smart Notifications ====================
+const checkProximityAlerts = () => {
+    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return
+
+    const distanceToStore = calculateDistance(
+        coordinates.value.lat,
+        coordinates.value.lng,
+        props.latitudeOnMap,
+        props.longitudeOnMap
+    )
+
+    // Check if user is near the store (within 100 meters)
+    if (distanceToStore < 0.1) {
+        if (!localStorage.getItem(`promotion_shown_${props.nameOnMap}`)) {
+            showStorePromotion()
+            localStorage.setItem(`promotion_shown_${props.nameOnMap}`, Date.now().toString())
+        }
+    }
+}
+
+const showStorePromotion = () => {
+    promotionMessage.value = `You're near ${props.nameOnMap}! Show this message for a special discount!`
+    showPromotion.value = true
+
+    setTimeout(() => {
+        showPromotion.value = false
+    }, 10000)
+}
+
+// ==================== Alternative Routes ====================
+const getAlternativeRoutes = async () => {
+    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return []
+
+    const routeOptions = ['driving', 'walking', 'cycling']
+    const routes = []
+
+    for (const mode of routeOptions) {
+        try {
+            const route = await fetchRouteForMode(mode)
+            if (route) {
+                routes.push({
+                    mode: mode,
+                    duration: route.duration,
+                    distance: route.distance,
+                    isGreenest: mode === 'cycling',
+                    isFastest: routes.length === 0 || route.duration < (routes[0]?.duration || Infinity)
+                })
+            }
+        } catch (err) {
+            console.warn(`Failed to fetch ${mode} route:`, err)
+        }
+    }
+
+    return routes
+}
+
+const fetchRouteForMode = async (mode) => {
+    let profile = 'driving'
+    if (mode === 'walking') profile = 'walking'
+    if (mode === 'cycling') profile = 'cycling'
+
+    const start = `${coordinates.value.lng},${coordinates.value.lat}`
+    const end = `${props.longitudeOnMap},${props.latitudeOnMap}`
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${start};${end}?geometries=geojson&overview=full`
+
+    try {
+        const response = await fetch(url)
+        const data = await response.json()
+
+        if (data.routes && data.routes[0]) {
+            return {
+                coordinates: data.routes[0].geometry.coordinates,
+                distance: data.routes[0].distance,
+                duration: data.routes[0].duration
+            }
+        }
+    } catch (err) {
+        console.error(`Error fetching ${mode} route:`, err)
+    }
+    return null
+}
+
+// ==================== Battery Optimization ====================
+const checkBatteryStatus = async () => {
+    if ('getBattery' in navigator) {
+        try {
+            const battery = await navigator.getBattery()
+            if (battery.level < 0.2 && !battery.charging) {
+                if (locationWatchInterval) {
+                    clearInterval(locationWatchInterval)
+                    locationWatchInterval = setInterval(updateGPSLocation, 5000)
+                    if (toast) toast.warning('Battery low: GPS accuracy reduced')
+                }
+            } else if (battery.level > 0.3 && locationWatchInterval && locationWatchInterval._idleTimeout === 5000) {
+                clearInterval(locationWatchInterval)
+                locationWatchInterval = setInterval(updateGPSLocation, 1200)
+            }
+        } catch (err) {
+            console.error('Battery status check failed:', err)
+        }
+    }
+}
+
+// ==================== Offline Support ====================
+const enableOfflineMode = async () => {
+    if (!map || !mapInitialized) return
+
+    try {
+        // Cache current route for offline use
+        if (currentRouteData) {
+            const cachedRoutes = JSON.parse(localStorage.getItem('cachedRoutes') || '[]')
+            const routeToCache = {
+                id: `${props.latitudeOnMap},${props.longitudeOnMap}`,
+                data: currentRouteData,
+                timestamp: Date.now()
+            }
+
+            const existingIndex = cachedRoutes.findIndex(r => r.id === routeToCache.id)
+            if (existingIndex !== -1) {
+                cachedRoutes[existingIndex] = routeToCache
+            } else {
+                cachedRoutes.push(routeToCache)
+            }
+
+            // Keep only last 10 routes
+            while (cachedRoutes.length > 10) cachedRoutes.shift()
+
+            localStorage.setItem('cachedRoutes', JSON.stringify(cachedRoutes))
+        }
+    } catch (err) {
+        console.error('Failed to cache route offline:', err)
+    }
+}
+
+const loadOfflineRoute = () => {
+    if (!props.latitudeOnMap || !props.longitudeOnMap) return null
+
+    try {
+        const cachedRoutes = JSON.parse(localStorage.getItem('cachedRoutes') || '[]')
+        const routeId = `${props.latitudeOnMap},${props.longitudeOnMap}`
+        const cached = cachedRoutes.find(r => r.id === routeId)
+
+        if (cached && Date.now() - cached.timestamp < 7 * 24 * 60 * 60 * 1000) { // 7 days
+            return cached.data
+        }
+    } catch (err) {
+        console.error('Failed to load offline route:', err)
+    }
+    return null
 }
 
 // ==================== Location Permission Methods ====================
@@ -324,477 +541,6 @@ const openAppSettings = async () => {
     }
 }
 
-// ==================== GPS Auto-rotation Mode ====================
-const calculateHeading = (lat1, lng1, lat2, lng2) => {
-    // Calculate bearing between two points
-    const dLng = (lng2 - lng1) * Math.PI / 180
-    const lat1Rad = lat1 * Math.PI / 180
-    const lat2Rad = lat2 * Math.PI / 180
-
-    const y = Math.sin(dLng) * Math.cos(lat2Rad)
-    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
-        Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
-
-    let bearing = Math.atan2(y, x) * 180 / Math.PI
-    bearing = (bearing + 360) % 360
-
-    return bearing
-}
-
-const toggleGPSMode = async () => {
-    gpsModeEnabled.value = !gpsModeEnabled.value
-
-    if (gpsModeEnabled.value) {
-        if (toast) toast.success('Map will follow location & direction')
-
-        // Get current user location
-        let currentLocation = coordinates.value
-
-        if (!currentLocation) {
-            // Try to get location if not available
-            const hasPermission = await checkLocationPermission()
-            if (hasPermission) {
-                if (isCapacitor()) {
-                    try {
-                        const position = await Geolocation.getCurrentPosition({
-                            enableHighAccuracy: true,
-                            timeout: 5000
-                        })
-                        currentLocation = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        }
-                        coordinates.value = currentLocation
-                    } catch (err) {
-                        console.error('Could not get location for GPS mode:', err)
-                        toast.error('Could not get your location')
-                        gpsModeEnabled.value = false
-                        return
-                    }
-                } else if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition((position) => {
-                        currentLocation = {
-                            lat: position.coords.latitude,
-                            lng: position.coords.longitude
-                        }
-                        coordinates.value = currentLocation
-                        enableGPSFollowMode(currentLocation)
-                    }, (err) => {
-                        console.error('Could not get location for GPS mode:', err)
-                        toast.error('Could not get your location')
-                        gpsModeEnabled.value = false
-                    })
-                    return // Wait for async callback
-                }
-            } else {
-                toast.error('Location permission needed for GPS mode')
-                gpsModeEnabled.value = false
-                return
-            }
-        }
-
-        enableGPSFollowMode(currentLocation)
-    } else {
-        if (toast) toast.warning('GPS Mode disabled')
-
-        setMapPitch(0, { animate: true })
-        setMapBearing(0, { animate: true, duration: 500 })
-
-        // Clean up interval when disabled
-        if (locationWatchInterval) {
-            clearInterval(locationWatchInterval)
-            locationWatchInterval = null
-        }
-    }
-}
-
-const projectPointOnSegment = (p, a, b) => {
-    const A = { x: a[0], y: a[1] }
-    const B = { x: b[0], y: b[1] }
-    const P = { x: p.lng, y: p.lat }
-
-    const ABx = B.x - A.x
-    const ABy = B.y - A.y
-    const APx = P.x - A.x
-    const APy = P.y - A.y
-
-    const ab2 = ABx * ABx + ABy * ABy
-    const ap_ab = APx * ABx + APy * ABy
-
-    let t = ab2 !== 0 ? ap_ab / ab2 : 0
-    t = Math.max(0, Math.min(1, t))
-
-    return {
-        lng: A.x + ABx * t,
-        lat: A.y + ABy * t,
-        t
-    }
-}
-
-const snapToRoute = (location, routeCoords) => {
-    if (!routeCoords || routeCoords.length < 2) return location
-
-    let bestPoint = null
-    let minDist = Infinity
-    let bestIndex = 0
-
-    for (let i = 0; i < routeCoords.length - 1; i++) {
-        const snapped = projectPointOnSegment(
-            location,
-            routeCoords[i],
-            routeCoords[i + 1]
-        )
-
-        const dist = calculateDistance(
-            location.lat,
-            location.lng,
-            snapped.lat,
-            snapped.lng
-        )
-
-        if (dist < minDist) {
-            minDist = dist
-            bestPoint = snapped
-            bestIndex = i
-        }
-    }
-
-    return { point: bestPoint, index: bestIndex }
-}
-
-const getLookAheadPoint = (routeCoords, startIndex, distanceMeters = 40) => {
-    let remaining = distanceMeters
-
-    for (let i = startIndex; i < routeCoords.length - 1; i++) {
-        const a = routeCoords[i]
-        const b = routeCoords[i + 1]
-
-        const segmentDist = calculateDistance(a[1], a[0], b[1], b[0]) * 1000
-
-        if (segmentDist >= remaining) {
-            const ratio = remaining / segmentDist
-
-            return {
-                lat: a[1] + (b[1] - a[1]) * ratio,
-                lng: a[0] + (b[0] - a[0]) * ratio
-            }
-        }
-
-        remaining -= segmentDist
-    }
-
-    return {
-        lat: routeCoords.at(-1)[1],
-        lng: routeCoords.at(-1)[0]
-    }
-}
-
-const smoothBearing = (current, target, factor = 0.12) => {
-    let diff = target - current
-
-    if (diff > 180) diff -= 360
-    if (diff < -180) diff += 360
-
-    return current + diff * factor
-}
-
-const enableGPSFollowMode = (location) => {
-    if (!map || !mapInitialized || !location) return
-
-    // NEW: compute route bearing
-    let routeBearing = null
-
-    if (currentRouteData?.coordinates?.length > 1) {
-        routeBearing = getRouteInitialBearing(
-            location,
-            currentRouteData.coordinates
-        )
-    }
-
-    // fallback to device heading if no route yet
-    const finalBearing = routeBearing ?? lastHeading ?? map.getBearing()
-
-    // set orientation BEFORE flying (important for smoothness)
-    setMapBearing(finalBearing, { animate: true, duration: 500 })
-
-    // tilt for navigation feel
-    setMapPitch(75, { animate: true })
-
-    const gpsZoom = 18
-    lastZoomLevel.value = gpsZoom
-
-    map.flyTo({
-        center: [location.lng, location.lat],
-        zoom: gpsZoom,
-        bearing: finalBearing, // important
-        duration: 850,
-        essential: true,
-        pitch: 75
-    })
-
-    if (locationWatchInterval) {
-        clearInterval(locationWatchInterval)
-    }
-
-    locationWatchInterval = setInterval(async () => {
-        if (!gpsModeEnabled.value || !map || !mapInitialized) {
-            clearInterval(locationWatchInterval)
-            locationWatchInterval = null
-            return
-        }
-
-        await updateGPSLocation()
-    }, 1200)
-}
-
-const getRouteInitialBearing = (userLocation, routeCoords) => {
-    if (!routeCoords || routeCoords.length < 2) return 0
-
-    // find nearest route point index (optional improvement)
-    const nextPoint = routeCoords[1] // simple approach
-
-    return calculateHeading(
-        userLocation.lat,
-        userLocation.lng,
-        nextPoint[1],
-        nextPoint[0]
-    )
-}
-
-// Improve GPS location tracking with requestAnimationFrame
-let animationFrameId = null
-let lastGPSPosition = null
-
-const updateGPSLocation = async () => {
-    if (!gpsModeEnabled.value || !map || !mapInitialized) return
-
-    let newLocation = null
-
-    if (isCapacitor()) {
-        try {
-            const position = await Geolocation.getCurrentPosition({
-                enableHighAccuracy: true,
-                timeout: 5000
-            })
-            newLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            }
-        } catch (err) {
-            console.error('GPS location update failed:', err)
-            return
-        }
-    } else if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((position) => {
-            newLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            }
-            updateMapPosition(newLocation)
-        }, (err) => {
-            console.error('GPS location update failed:', err)
-        }, {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 1000 // Add maximum age for smoother updates
-        })
-        return
-    }
-
-    if (newLocation &&
-        (!lastGPSPosition ||
-            Math.abs(newLocation.lat - lastGPSPosition.lat) > 0.00001 ||
-            Math.abs(newLocation.lng - lastGPSPosition.lng) > 0.00001)) {
-
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId)
-        }
-
-        animationFrameId = requestAnimationFrame(() => {
-            updateMapPosition(newLocation)
-            lastGPSPosition = newLocation
-            animationFrameId = null
-        })
-    }
-}
-
-const updateMapPosition = (location) => {
-    if (!gpsModeEnabled.value || !map || !mapInitialized || !location) return
-
-    const route = currentRouteData?.coordinates
-    if (!route) return
-
-    // 1. SNAP USER TO ROUTE
-    const snapped = snapToRoute(location, route)
-    const snappedPoint = snapped.point
-
-    if (!snappedPoint) return
-
-    const snappedLocation = {
-        lat: snappedPoint.lat,
-        lng: snappedPoint.lng
-    }
-
-    coordinates.value = snappedLocation
-
-    if (userMarker) {
-        userMarker.setLngLat([snappedLocation.lng, snappedLocation.lat])
-    }
-
-    // 2. LOOK-AHEAD TARGET (navigation feel)
-    const lookAhead = getLookAheadPoint(route, snapped.index, 50)
-
-    // 3. COMPUTE TARGET BEARING
-    const targetBearing = calculateHeading(
-        snappedLocation.lat,
-        snappedLocation.lng,
-        lookAhead.lat,
-        lookAhead.lng
-    )
-
-    // 4. SMOOTH ROTATION (progressive heading)
-    const currentMapBearing = map.getBearing()
-    const newBearing = smoothBearing(currentMapBearing, targetBearing)
-
-    map.setBearing(newBearing)
-    currentBearing.value = newBearing
-
-    // 5. SMOOTH CAMERA FOLLOW
-    map.easeTo({
-        center: [snappedLocation.lng, snappedLocation.lat],
-        zoom: lastZoomLevel.value,
-        pitch: currentPitch.value,
-        duration: 250,
-        easing: (t) => t
-    })
-
-    // 6. ROUTE UPDATE (optional debounce already exists)
-    debouncedUpdateRoute()
-    updateDestinationMarker()
-}
-
-const updateMapRotationForGPS = () => {
-    if (!gpsModeEnabled.value || !map || !mapInitialized) return
-
-    if (lastHeading !== null) {
-        // Smoothly rotate to face the direction of travel
-        const currentMapBearing = map.getBearing()
-        let delta = lastHeading - currentMapBearing
-
-        // Shortest path rotation
-        if (delta > 180) delta -= 360
-        if (delta < -180) delta += 360
-
-        // Smooth rotation with easing
-        const newBearing = currentMapBearing + delta * 0.3
-        map.easeTo({
-            bearing: newBearing,
-            duration: 300,
-            easing: (t) => t
-        })
-        currentBearing.value = newBearing
-        emit('bearing-changed', newBearing)
-    }
-}
-
-// ==================== Rotation Methods ====================
-const setMapBearing = (bearing, options = { animate: true, duration: 300 }) => {
-    if (!map || !mapInitialized) return
-
-    try {
-        const normalizedBearing = ((bearing % 360) + 360) % 360
-        if (options.animate) {
-            map.easeTo({
-                bearing: normalizedBearing,
-                duration: options.duration || 300,
-                easing: (t) => {
-                    // Smooth easing function
-                    return 1 - Math.pow(1 - t, 3)
-                }
-            })
-        } else {
-            map.setBearing(normalizedBearing)
-        }
-        currentBearing.value = normalizedBearing
-        emit('bearing-changed', normalizedBearing)
-    } catch (error) {
-        console.error('Error setting map bearing:', error)
-    }
-}
-
-const getCurrentBearing = () => {
-    if (!map || !mapInitialized) return 0
-    return map.getBearing()
-}
-
-const resetRotation = () => {
-    if (gpsModeEnabled.value) {
-        toggleGPSMode() // Disable GPS mode when manually resetting
-    }
-    setMapBearing(0, { animate: true })
-}
-
-const rotateMap = (deltaDegrees) => {
-    if (gpsModeEnabled.value) {
-        toggleGPSMode()
-    }
-    const newBearing = (currentBearing.value + deltaDegrees) % 360
-    setMapBearing(newBearing, { animate: true, duration: 400 })
-}
-
-// ==================== 3D Tilt Methods ====================
-const setMapPitch = (pitch, options = { animate: true, duration: 300 }) => {
-    if (!map || !mapInitialized) return
-
-    try {
-        const normalizedPitch = Math.min(maxPitch, Math.max(minPitch, pitch))
-        if (options.animate) {
-            map.easeTo({
-                pitch: normalizedPitch,
-                duration: options.duration || 300,
-                easing: (t) => {
-                    // Smooth easing for pitch
-                    return t < 0.5
-                        ? 4 * t * t * t
-                        : 1 - Math.pow(-2 * t + 2, 3) / 2
-                }
-            })
-        } else {
-            map.setPitch(normalizedPitch)
-        }
-        currentPitch.value = normalizedPitch
-        emit('pitch-changed', normalizedPitch)
-    } catch (error) {
-        console.error('Error setting map pitch:', error)
-    }
-}
-
-const getCurrentPitch = () => {
-    if (!map || !mapInitialized) return 0
-    return map.getPitch()
-}
-
-const increaseTilt = () => {
-    if (gpsModeEnabled.value && currentPitch.value >= 40) {
-        // Allow tilt adjustment even in GPS mode
-    }
-    const newPitch = Math.min(maxPitch, currentPitch.value + 10)
-    setMapPitch(newPitch, { animate: true })
-}
-
-const decreaseTilt = () => {
-    const newPitch = Math.max(minPitch, currentPitch.value - 10)
-    setMapPitch(newPitch, { animate: true })
-}
-
-const resetTilt = () => {
-    setMapPitch(defaultPitch, { animate: true })
-}
-
-const enable3DMode = () => {
-    setMapPitch(60, { animate: true })
-}
-
 // ==================== Helper Functions ====================
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371
@@ -813,11 +559,104 @@ const getTravelTime = (distanceKm, speedKmPerHour = 5) => {
     return Math.max(1, timeMinutes)
 }
 
-// Add these to your reactive state at the top
-let connectionSource = null
-let connectionLayer = null
+const calculateHeading = (lat1, lng1, lat2, lng2) => {
+    const dLng = (lng2 - lng1) * Math.PI / 180
+    const lat1Rad = lat1 * Math.PI / 180
+    const lat2Rad = lat2 * Math.PI / 180
 
-// Update clearRouteLayers
+    const y = Math.sin(dLng) * Math.cos(lat2Rad)
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+        Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng)
+
+    let bearing = Math.atan2(y, x) * 180 / Math.PI
+    bearing = (bearing + 360) % 360
+
+    return bearing
+}
+
+const shouldUpdateRoute = (newPosition) => {
+    if (!lastRouteUpdatePosition.value) return true
+    const distance = calculateDistance(
+        lastRouteUpdatePosition.value.lat,
+        lastRouteUpdatePosition.value.lng,
+        newPosition.lat,
+        newPosition.lng
+    ) * 1000
+    return distance > MIN_DISTANCE_FOR_ROUTE_UPDATE
+}
+
+// ==================== Map Rotation & Tilt ====================
+const setMapBearing = (bearing, options = { animate: true, duration: 300 }) => {
+    if (!map || !mapInitialized) return
+
+    try {
+        const normalizedBearing = ((bearing % 360) + 360) % 360
+        if (options.animate) {
+            map.easeTo({
+                bearing: normalizedBearing,
+                duration: options.duration || 300,
+                easing: (t) => 1 - Math.pow(1 - t, 3)
+            })
+        } else {
+            map.setBearing(normalizedBearing)
+        }
+        currentBearing.value = normalizedBearing
+        emit('bearing-changed', normalizedBearing)
+    } catch (error) {
+        console.error('Error setting map bearing:', error)
+    }
+}
+
+const getCurrentBearing = () => {
+    if (!map || !mapInitialized) return 0
+    return map.getBearing()
+}
+
+const resetRotation = () => {
+    if (gpsModeEnabled.value) {
+        toggleGPSMode()
+    }
+    setMapBearing(0, { animate: true })
+}
+
+const setMapPitch = (pitch, options = { animate: true, duration: 300 }) => {
+    if (!map || !mapInitialized) return
+
+    try {
+        const normalizedPitch = Math.min(maxPitch, Math.max(minPitch, pitch))
+        if (options.animate) {
+            map.easeTo({
+                pitch: normalizedPitch,
+                duration: options.duration || 300,
+                easing: (t) => t < 0.5
+                    ? 4 * t * t * t
+                    : 1 - Math.pow(-2 * t + 2, 3) / 2
+            })
+        } else {
+            map.setPitch(normalizedPitch)
+        }
+        currentPitch.value = normalizedPitch
+        emit('pitch-changed', normalizedPitch)
+    } catch (error) {
+        console.error('Error setting map pitch:', error)
+    }
+}
+
+const increaseTilt = () => {
+    const newPitch = Math.min(maxPitch, currentPitch.value + 10)
+    setMapPitch(newPitch, { animate: true })
+}
+
+const decreaseTilt = () => {
+    const newPitch = Math.max(minPitch, currentPitch.value - 10)
+    setMapPitch(newPitch, { animate: true })
+}
+
+const resetTilt = () => {
+    setMapPitch(defaultPitch, { animate: true })
+}
+
+// ==================== Route Management ====================
 const clearRouteLayers = () => {
     try {
         if (routeLayer && map && map.getLayer(routeLayer)) {
@@ -836,24 +675,12 @@ const clearRouteLayers = () => {
             map.removeSource(routeSource)
             routeSource = null
         }
-
-        // Clean up connection layer
-        if (connectionLayer && map && map.getLayer(connectionLayer)) {
-            map.removeLayer(connectionLayer)
-            connectionLayer = null
-        }
-        if (connectionSource && map && map.getSource(connectionSource)) {
-            map.removeSource(connectionSource)
-            connectionSource = null
-        }
-
         currentRouteSource = null
-        currentRouteData = null
     } catch (err) {
         console.warn('Error clearing route layers:', err)
     }
 }
-// Cancel ongoing route request
+
 const cancelRouteRequest = () => {
     if (currentRouteController) {
         currentRouteController.abort()
@@ -861,11 +688,12 @@ const cancelRouteRequest = () => {
     }
 }
 
-// Draw route line using MapLibre
 const drawOsrmRoute = async () => {
     if (!map || !mapInitialized || !coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) {
         return
     }
+
+    if (!shouldUpdateRoute(coordinates.value)) return
 
     cancelRouteRequest()
     clearRouteLayers()
@@ -876,6 +704,8 @@ const drawOsrmRoute = async () => {
     if (cachedRoute && Date.now() - cachedRoute.timestamp < 30000) {
         currentRouteData = cachedRoute.data
         renderRoute(cachedRoute.data)
+        trackRouteRequest()
+        lastRouteUpdatePosition = { ...coordinates.value }
         return
     }
 
@@ -903,10 +733,19 @@ const drawOsrmRoute = async () => {
                 data: routeData,
                 timestamp: Date.now()
             })
+            cleanupCache(routeCache)
 
             currentRouteData = routeData
             renderRoute(routeData)
             currentRouteSource = 'osrm'
+            trackRouteRequest()
+            lastRouteUpdatePosition = { ...coordinates.value }
+
+            // Fetch alternative routes in background
+            getAlternativeRoutes()
+
+            // Enable offline mode
+            enableOfflineMode()
         } else {
             console.warn('OSRM route not available')
             currentRouteSource = null
@@ -914,6 +753,13 @@ const drawOsrmRoute = async () => {
     } catch (err) {
         if (err.name !== 'AbortError') {
             console.error('OSRM routing error:', err)
+            // Try to load offline route
+            const offlineRoute = loadOfflineRoute()
+            if (offlineRoute) {
+                currentRouteData = offlineRoute
+                renderRoute(offlineRoute)
+                if (toast) toast.info('Using cached route (offline mode)')
+            }
             currentRouteSource = null
         }
     } finally {
@@ -921,7 +767,6 @@ const drawOsrmRoute = async () => {
     }
 }
 
-// Update renderRoute to use the global connection variables
 const renderRoute = (routeData) => {
     if (!map || !mapInitialized) return
 
@@ -930,8 +775,23 @@ const renderRoute = (routeData) => {
         let needsConnection = false
         let connectionCoords = null
 
+        // Calculate distance to destination
+        let distanceToDestination = Infinity
+        if (coordinates.value && props.latitudeOnMap && props.longitudeOnMap) {
+            distanceToDestination = calculateDistance(
+                coordinates.value.lat,
+                coordinates.value.lng,
+                props.latitudeOnMap,
+                props.longitudeOnMap
+            ) * 1000 // Convert to meters
+        }
+
         // Check if we need to add a direct connection from user location
-        if (coordinates.value && routeCoords.length > 0) {
+        // Only show dashed line if user is MORE than 100 meters from destination
+        const SHOW_CONNECTION_THRESHOLD = 100 // meters
+        const isFarFromDestination = distanceToDestination > SHOW_CONNECTION_THRESHOLD
+
+        if (coordinates.value && routeCoords.length > 0 && isFarFromDestination) {
             const firstRoutePoint = routeCoords[0]
             const distanceToFirstPoint = calculateDistance(
                 coordinates.value.lat,
@@ -1029,9 +889,10 @@ const renderRoute = (routeData) => {
         })
         routeArrowLayer = arrowLayerId
 
-        // Add connection line as a separate source and layer if needed
-        if (needsConnection && connectionCoords) {
-            connectionSource = 'connection-' + Date.now()
+        // Add connection line as a separate source and layer (dashed line)
+        // Only show when user is far from destination
+        if (needsConnection && connectionCoords && isFarFromDestination) {
+            const connectionSourceId = 'connection-' + Date.now()
             const connectionGeojson = {
                 type: 'Feature',
                 properties: {},
@@ -1041,16 +902,16 @@ const renderRoute = (routeData) => {
                 }
             }
 
-            map.addSource(connectionSource, {
+            map.addSource(connectionSourceId, {
                 type: 'geojson',
                 data: connectionGeojson
             })
 
-            connectionLayer = connectionSource + '-line'
+            // Add dashed connection line
             map.addLayer({
-                id: connectionLayer,
+                id: connectionSourceId + '-line',
                 type: 'line',
-                source: connectionSource,
+                source: connectionSourceId,
                 layout: {
                     'line-join': 'round',
                     'line-cap': 'round'
@@ -1058,10 +919,14 @@ const renderRoute = (routeData) => {
                 paint: {
                     'line-color': '#8B4513',
                     'line-width': 4,
-                    'line-dasharray': [2, 3],
+                    'line-dasharray': [2, 3], // This creates the dashed effect
                     'line-opacity': 0.8
                 }
             })
+
+            // Store reference for cleanup
+            connectionSource = connectionSourceId
+            connectionLayer = connectionSourceId + '-line'
         }
 
         // Add distance label at midpoint of the main route
@@ -1071,7 +936,6 @@ const renderRoute = (routeData) => {
             const distanceKm = distance / 1000
             const minutes = Math.round(duration / 60)
 
-            // Create popup for distance
             const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false })
                 .setLngLat(midPoint)
                 .setHTML(`
@@ -1081,7 +945,6 @@ const renderRoute = (routeData) => {
                 `)
                 .addTo(map)
 
-            // Auto-remove popup after 5 seconds
             setTimeout(() => {
                 if (popup) popup.remove()
             }, 5000)
@@ -1091,19 +954,7 @@ const renderRoute = (routeData) => {
         console.error('Error rendering route:', err)
     }
 }
-// Re-render route after style change
-const rerenderRouteAfterStyleChange = () => {
-    if (currentRouteData && map && mapInitialized) {
-        // Small delay to ensure style is fully loaded
-        setTimeout(() => {
-            if (currentRouteData && map && mapInitialized) {
-                renderRoute(currentRouteData)
-            }
-        }, 100)
-    }
-}
 
-// Debounced route update
 const debouncedUpdateRoute = () => {
     if (routeUpdateTimeout) {
         clearTimeout(routeUpdateTimeout)
@@ -1116,7 +967,324 @@ const debouncedUpdateRoute = () => {
     }, ROUTE_UPDATE_DEBOUNCE)
 }
 
-// Reverse geocoding with caching
+// ==================== GPS Mode Functions ====================
+const projectPointOnSegment = (p, a, b) => {
+    const A = { x: a[0], y: a[1] }
+    const B = { x: b[0], y: b[1] }
+    const P = { x: p.lng, y: p.lat }
+
+    const ABx = B.x - A.x
+    const ABy = B.y - A.y
+    const APx = P.x - A.x
+    const APy = P.y - A.y
+
+    const ab2 = ABx * ABx + ABy * ABy
+    const ap_ab = APx * ABx + APy * ABy
+
+    let t = ab2 !== 0 ? ap_ab / ab2 : 0
+    t = Math.max(0, Math.min(1, t))
+
+    return {
+        lng: A.x + ABx * t,
+        lat: A.y + ABy * t,
+        t
+    }
+}
+
+const snapToRoute = (location, routeCoords) => {
+    if (!routeCoords || routeCoords.length < 2) return { point: location, index: 0 }
+
+    let bestPoint = null
+    let minDist = Infinity
+    let bestIndex = 0
+
+    for (let i = 0; i < routeCoords.length - 1; i++) {
+        const snapped = projectPointOnSegment(
+            location,
+            routeCoords[i],
+            routeCoords[i + 1]
+        )
+
+        const dist = calculateDistance(
+            location.lat,
+            location.lng,
+            snapped.lat,
+            snapped.lng
+        )
+
+        if (dist < minDist) {
+            minDist = dist
+            bestPoint = snapped
+            bestIndex = i
+        }
+    }
+
+    return { point: bestPoint || location, index: bestIndex }
+}
+
+const getLookAheadPoint = (routeCoords, startIndex, distanceMeters = 40) => {
+    let remaining = distanceMeters
+
+    for (let i = startIndex; i < routeCoords.length - 1; i++) {
+        const a = routeCoords[i]
+        const b = routeCoords[i + 1]
+
+        const segmentDist = calculateDistance(a[1], a[0], b[1], b[0]) * 1000
+
+        if (segmentDist >= remaining) {
+            const ratio = remaining / segmentDist
+
+            return {
+                lat: a[1] + (b[1] - a[1]) * ratio,
+                lng: a[0] + (b[0] - a[0]) * ratio
+            }
+        }
+
+        remaining -= segmentDist
+    }
+
+    return {
+        lat: routeCoords.at(-1)[1],
+        lng: routeCoords.at(-1)[0]
+    }
+}
+
+const smoothBearing = (current, target, factor = 0.12) => {
+    let diff = target - current
+
+    if (diff > 180) diff -= 360
+    if (diff < -180) diff += 360
+
+    return current + diff * factor
+}
+
+const toggleGPSMode = async () => {
+    gpsModeEnabled.value = !gpsModeEnabled.value
+
+    if (gpsModeEnabled.value) {
+        if (toast) toast.success('Map will follow location & direction')
+
+        let currentLocation = coordinates.value
+
+        if (!currentLocation) {
+            const hasPermission = await checkLocationPermission()
+            if (hasPermission) {
+                if (isCapacitor()) {
+                    try {
+                        const position = await Geolocation.getCurrentPosition({
+                            enableHighAccuracy: true,
+                            timeout: 5000
+                        })
+                        currentLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        }
+                        coordinates.value = currentLocation
+                    } catch (err) {
+                        console.error('Could not get location for GPS mode:', err)
+                        toast.error('Could not get your location')
+                        gpsModeEnabled.value = false
+                        return
+                    }
+                } else if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition((position) => {
+                        currentLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        }
+                        coordinates.value = currentLocation
+                        enableGPSFollowMode(currentLocation)
+                    }, (err) => {
+                        console.error('Could not get location for GPS mode:', err)
+                        toast.error('Could not get your location')
+                        gpsModeEnabled.value = false
+                    })
+                    return
+                }
+            } else {
+                toast.error('Location permission needed for GPS mode')
+                gpsModeEnabled.value = false
+                return
+            }
+        }
+
+        enableGPSFollowMode(currentLocation)
+    } else {
+        if (toast) toast.warning('GPS Mode disabled')
+
+        setMapPitch(0, { animate: true })
+        setMapBearing(0, { animate: true, duration: 500 })
+
+        if (locationWatchInterval) {
+            clearInterval(locationWatchInterval)
+            locationWatchInterval = null
+        }
+    }
+}
+
+const enableGPSFollowMode = (location) => {
+    if (!map || !mapInitialized || !location) return
+
+    let routeBearing = null
+
+    if (currentRouteData?.coordinates?.length > 1) {
+        routeBearing = getRouteInitialBearing(
+            location,
+            currentRouteData.coordinates
+        )
+    }
+
+    const finalBearing = routeBearing ?? lastHeading ?? map.getBearing()
+
+    setMapBearing(finalBearing, { animate: true, duration: 500 })
+    setMapPitch(75, { animate: true })
+
+    const gpsZoom = 18
+    lastZoomLevel.value = gpsZoom
+
+    map.flyTo({
+        center: [location.lng, location.lat],
+        zoom: gpsZoom,
+        bearing: finalBearing,
+        duration: 850,
+        essential: true,
+        pitch: 75
+    })
+
+    if (locationWatchInterval) {
+        clearInterval(locationWatchInterval)
+    }
+
+    locationWatchInterval = setInterval(async () => {
+        if (!gpsModeEnabled.value || !map || !mapInitialized) {
+            clearInterval(locationWatchInterval)
+            locationWatchInterval = null
+            return
+        }
+
+        await updateGPSLocation()
+        await checkBatteryStatus()
+    }, 1200)
+}
+
+const getRouteInitialBearing = (userLocation, routeCoords) => {
+    if (!routeCoords || routeCoords.length < 2) return 0
+    const nextPoint = routeCoords[1]
+    return calculateHeading(
+        userLocation.lat,
+        userLocation.lng,
+        nextPoint[1],
+        nextPoint[0]
+    )
+}
+
+let animationFrameId = null
+let lastGPSPosition = null
+
+const updateGPSLocation = async () => {
+    if (!gpsModeEnabled.value || !map || !mapInitialized) return
+
+    let newLocation = null
+
+    if (isCapacitor()) {
+        try {
+            const position = await Geolocation.getCurrentPosition({
+                enableHighAccuracy: true,
+                timeout: 5000
+            })
+            newLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            }
+        } catch (err) {
+            console.error('GPS location update failed:', err)
+            return
+        }
+    } else if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+            newLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            }
+            updateMapPosition(newLocation)
+        }, (err) => {
+            console.error('GPS location update failed:', err)
+        }, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 1000
+        })
+        return
+    }
+
+    if (newLocation &&
+        (!lastGPSPosition ||
+            Math.abs(newLocation.lat - lastGPSPosition.lat) > 0.00001 ||
+            Math.abs(newLocation.lng - lastGPSPosition.lng) > 0.00001)) {
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId)
+        }
+
+        animationFrameId = requestAnimationFrame(() => {
+            updateMapPosition(newLocation)
+            lastGPSPosition = newLocation
+            animationFrameId = null
+        })
+    }
+}
+
+const updateMapPosition = (location) => {
+    if (!gpsModeEnabled.value || !map || !mapInitialized || !location) return
+
+    const route = currentRouteData?.coordinates
+    if (!route) return
+
+    const snapped = snapToRoute(location, route)
+    const snappedPoint = snapped.point
+
+    if (!snappedPoint) return
+
+    const snappedLocation = {
+        lat: snappedPoint.lat,
+        lng: snappedPoint.lng
+    }
+
+    coordinates.value = snappedLocation
+
+    if (userMarker) {
+        userMarker.setLngLat([snappedLocation.lng, snappedLocation.lat])
+    }
+
+    const lookAhead = getLookAheadPoint(route, snapped.index, 50)
+
+    const targetBearing = calculateHeading(
+        snappedLocation.lat,
+        snappedLocation.lng,
+        lookAhead.lat,
+        lookAhead.lng
+    )
+
+    const currentMapBearing = map.getBearing()
+    const newBearing = smoothBearing(currentMapBearing, targetBearing)
+
+    map.setBearing(newBearing)
+    currentBearing.value = newBearing
+
+    map.easeTo({
+        center: [snappedLocation.lng, snappedLocation.lat],
+        zoom: lastZoomLevel.value,
+        pitch: currentPitch.value,
+        duration: 250,
+        easing: (t) => t
+    })
+
+    debouncedUpdateRoute()
+    updateDestinationMarker()
+    checkProximityAlerts()
+}
+
+// ==================== Reverse Geocoding ====================
 const reverseGeocode = async (lat, lng) => {
     const cacheKey = `${lat.toFixed(6)},${lng.toFixed(6)}`
 
@@ -1141,36 +1309,17 @@ const reverseGeocode = async (lat, lng) => {
 
         if (data && data.address) {
             const address = data.address
-
-            // Quarter / neighborhood
-            const quarter =
-                address.quarter ||
-                address.neighbourhood ||
-                address.suburb ||
-                address.hamlet
-
-            // City
-            const city =
-                address.city ||
-                address.town ||
-                address.village ||
-                address.municipality
-
-            // State / province
-            const state =
-                address.state ||
-                address.region ||
-                address.province
-
-            // Build formatted address
+            const quarter = address.quarter || address.neighbourhood || address.suburb || address.hamlet
+            const city = address.city || address.town || address.village || address.municipality
+            const state = address.state || address.region || address.province
             const parts = [quarter, city, state].filter(Boolean)
-
             const result = parts.join(', ')
 
             addressCache.set(cacheKey, {
                 address: result,
                 timestamp: Date.now()
             })
+            cleanupCache(addressCache)
 
             return result || 'Address not found'
         }
@@ -1181,25 +1330,6 @@ const reverseGeocode = async (lat, lng) => {
     }
 }
 
-// Throttled address update
-const throttledUpdateAddress = async (lat, lng, shouldOpenPopup = false) => {
-    const now = Date.now()
-    if (now - lastAddressUpdate < ADDRESS_UPDATE_THROTTLE) {
-        if (addressUpdateTimeout) {
-            clearTimeout(addressUpdateTimeout)
-        }
-        addressUpdateTimeout = setTimeout(async () => {
-            await updateUserMarkerWithAddress(lat, lng, shouldOpenPopup)
-            addressUpdateTimeout = null
-        }, ADDRESS_UPDATE_THROTTLE - (now - lastAddressUpdate))
-        return
-    }
-
-    lastAddressUpdate = now
-    await updateUserMarkerWithAddress(lat, lng, shouldOpenPopup)
-}
-
-// Update user marker with address
 const updateUserMarkerWithAddress = async (lat, lng, shouldOpenPopup = true) => {
     if (!userMarker || !map) return
 
@@ -1226,61 +1356,24 @@ const updateUserMarkerWithAddress = async (lat, lng, shouldOpenPopup = true) => 
     }
 }
 
-// Computed distance properties
-const distanceMinutes = computed(() => {
-    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return 0
-
-    const distanceKm = calculateDistance(
-        coordinates.value.lat,
-        coordinates.value.lng,
-        props.latitudeOnMap,
-        props.longitudeOnMap
-    )
-    return getTravelTime(distanceKm, 5)
-})
-
-const distanceText = computed(() => {
-    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return ''
-
-    const distanceKm = calculateDistance(
-        coordinates.value.lat,
-        coordinates.value.lng,
-        props.latitudeOnMap,
-        props.longitudeOnMap
-    )
-    const minutes = getTravelTime(distanceKm, 5)
-
-    let distanceDisplay = ''
-    if (distanceKm < 1) {
-        distanceDisplay = `${Math.round(distanceKm * 1000)}m`
-    } else {
-        distanceDisplay = `${distanceKm.toFixed(1)}km`
+const throttledUpdateAddress = async (lat, lng, shouldOpenPopup = false) => {
+    const now = Date.now()
+    if (now - lastAddressUpdate < ADDRESS_UPDATE_THROTTLE) {
+        if (addressUpdateTimeout) {
+            clearTimeout(addressUpdateTimeout)
+        }
+        addressUpdateTimeout = setTimeout(async () => {
+            await updateUserMarkerWithAddress(lat, lng, shouldOpenPopup)
+            addressUpdateTimeout = null
+        }, ADDRESS_UPDATE_THROTTLE - (now - lastAddressUpdate))
+        return
     }
 
-    if (minutes === 1) {
-        return `est. 1 min away (${distanceDisplay})`
-    }
-    return `est. ${minutes} mins away (${distanceDisplay})`
-})
+    lastAddressUpdate = now
+    await updateUserMarkerWithAddress(lat, lng, shouldOpenPopup)
+}
 
-const distanceIcon = computed(() => {
-    const minutes = distanceMinutes.value
-    if (minutes <= 5) return '🚶‍♂️'
-    if (minutes <= 10) return '🚶'
-    if (minutes <= 20) return '🚲'
-    if (minutes <= 30) return '🚗'
-    return '🚌'
-})
-
-const distanceClass = computed(() => {
-    const minutes = distanceMinutes.value
-    if (minutes <= 5) return 'distance-very-close'
-    if (minutes <= 10) return 'distance-close'
-    if (minutes <= 20) return 'distance-moderate'
-    if (minutes <= 30) return 'distance-far'
-    return 'distance-very-far'
-})
-
+// ==================== Map Markers ====================
 const updateDestinationMarker = () => {
     if (!map || !mapInitialized || !props.latitudeOnMap || !props.longitudeOnMap) return
 
@@ -1290,7 +1383,6 @@ const updateDestinationMarker = () => {
             destinationMarker = null
         }
 
-        // Create custom marker element
         const markerEl = document.createElement('div')
         markerEl.innerHTML = `<div style="background-color: #ff4444; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px rgba(0,0,0,0.3);"></div>`
         markerEl.style.cursor = 'pointer'
@@ -1309,6 +1401,7 @@ const updateDestinationMarker = () => {
             )
             const minutes = getTravelTime(distanceKm, 5)
             distanceDisplay = `est. ${minutes} mins away`
+            trackDistanceToStore(distanceKm)
         }
 
         const popup = new maplibregl.Popup({ closeButton: true })
@@ -1324,12 +1417,6 @@ const updateDestinationMarker = () => {
 
     } catch (err) {
         console.error('Error updating destination marker:', err)
-    }
-}
-
-const refreshLocation = async () => {
-    if (map && mapInitialized) {
-        await updateUserMarker()
     }
 }
 
@@ -1360,7 +1447,6 @@ const updateUserMarker = async () => {
                     userMarker.setLngLat([userLng, userLat])
                     await throttledUpdateAddress(userLat, userLng, true)
                 } else {
-                    // Create custom user marker
                     const markerEl = document.createElement('div')
                     markerEl.innerHTML = `<div style="background-color: #4CAF50; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px rgba(0,0,0,0.3); animation: pulse-green 2s ease-in-out infinite;"></div>`
 
@@ -1381,6 +1467,8 @@ const updateUserMarker = async () => {
                 })
 
                 loading.value = false
+                trackUserBehavior()
+                userBehavior.visitCount++
             },
             (err) => {
                 console.error('Error getting user location:', err)
@@ -1439,6 +1527,8 @@ const updateUserMarker = async () => {
             })
 
             loading.value = false
+            trackUserBehavior()
+            userBehavior.visitCount++
         } catch (err) {
             console.error('Error getting user location:', err)
             error.value = 'Could not get your location. Please check your location settings.'
@@ -1455,17 +1545,13 @@ const updateUserMarker = async () => {
     }
 }
 
-const setGPSZoomLevel = (zoom) => {
-    lastZoomLevel.value = Math.min(22, Math.max(15, zoom))
-    if (gpsModeEnabled.value && coordinates.value) {
-        map.easeTo({
-            center: [coordinates.value.lng, coordinates.value.lat],
-            zoom: lastZoomLevel.value,
-            duration: 500
-        })
+const refreshLocation = async () => {
+    if (map && mapInitialized) {
+        await updateUserMarker()
     }
 }
 
+// ==================== Location Watching ====================
 const startWatchingLocation = () => {
     if (!navigator.geolocation && !isCapacitor()) return
 
@@ -1498,15 +1584,11 @@ const startWatchingLocation = () => {
 
                     if (distanceMoved < 10) return
 
-                    // Calculate heading for GPS mode
                     if (gpsModeEnabled.value && lastPosition) {
                         lastHeading = calculateHeading(
                             lastPosition.lat, lastPosition.lng,
                             newLat, newLng
                         )
-                        updateMapRotationForGPS()
-
-                        // Also update map position with zoom in GPS mode
                         if (gpsModeEnabled.value) {
                             map.easeTo({
                                 center: [newLng, newLat],
@@ -1533,6 +1615,7 @@ const startWatchingLocation = () => {
 
                     debouncedUpdateRoute()
                     updateDestinationMarker()
+                    checkProximityAlerts()
                 }
             } catch (err) {
                 console.error('Watch position error:', err)
@@ -1555,15 +1638,11 @@ const startWatchingLocation = () => {
 
                     if (distanceMoved < 10) return
 
-                    // Calculate heading for GPS mode
                     if (gpsModeEnabled.value && lastPosition) {
                         lastHeading = calculateHeading(
                             lastPosition.lat, lastPosition.lng,
                             newLat, newLng
                         )
-                        updateMapRotationForGPS()
-
-                        // Also update map position with zoom in GPS mode
                         if (gpsModeEnabled.value && map && mapInitialized) {
                             map.easeTo({
                                 center: [newLng, newLat],
@@ -1590,6 +1669,7 @@ const startWatchingLocation = () => {
 
                     debouncedUpdateRoute()
                     updateDestinationMarker()
+                    checkProximityAlerts()
                 }
             },
             (err) => {
@@ -1619,6 +1699,7 @@ const stopWatchingLocation = () => {
     lastHeading = null
 }
 
+// ==================== Map Initialization ====================
 const initMap = () => {
     if (mapInitialized) return
 
@@ -1660,24 +1741,11 @@ const initMap = () => {
             }
         })
 
-        // Add minimal navigation control
         map.addControl(new maplibregl.NavigationControl({
             showCompass: true,
             showZoom: true,
             visualizePitch: true
         }), 'top-right')
-
-        // ============ ADD INERTIA EVENT LISTENERS HERE ============
-
-        // Optional: Add momentum scrolling with map's built-in events
-        map.on('moveend', () => {
-            // You can add additional logic here if needed
-            if (!isPanning && inertiaFrame) {
-                // Inertia is handling the movement
-            }
-        })
-
-        // ============ END INERTIA SETUP ============
 
         map.on('load', () => {
             mapInitialized = true
@@ -1691,6 +1759,13 @@ const initMap = () => {
             updateUserMarker()
             startWatchingLocation()
             emit('map-ready')
+
+            // Try to load offline route
+            const offlineRoute = loadOfflineRoute()
+            if (offlineRoute) {
+                currentRouteData = offlineRoute
+                renderRoute(offlineRoute)
+            }
 
             setTimeout(() => {
                 map.resize()
@@ -1712,7 +1787,6 @@ const initMap = () => {
         map.dragRotate.enable()
         map.touchZoomRotate.enable()
 
-        // Ensure map is responsive to window resize
         window.addEventListener('resize', () => {
             if (map) {
                 map.resize()
@@ -1726,29 +1800,81 @@ const initMap = () => {
     }
 }
 
-const setupTouchGestures = () => {
-    const mapElement = document.getElementById('map')
-    if (!mapElement) return
-}
-
 const changeMapStyle = (style) => {
     if (!map || !mapInitialized) return
 
-    // Save current route data before style change
     const savedRouteData = currentRouteData
 
     map.setStyle(style.url)
     currentStyle.value = style.id
 
-    // Restore route after style loads
     if (savedRouteData) {
         map.once('styledata', () => {
-            rerenderRouteAfterStyleChange()
+            setTimeout(() => {
+                if (currentRouteData && map && mapInitialized) {
+                    renderRoute(currentRouteData)
+                }
+            }, 100)
         })
     }
 }
 
-// Cleanup function
+// ==================== Error Boundary ====================
+onErrorCaptured((err, instance, info) => {
+    console.error('Map component error:', err, info)
+    if (toast) toast.error('Something went wrong. Refreshing map...')
+    cleanup()
+    setTimeout(() => initMap(), 2000)
+    return false
+})
+
+// ==================== Computed Properties ====================
+const distanceMinutes = computed(() => {
+    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return 0
+
+    const distanceKm = calculateDistance(
+        coordinates.value.lat,
+        coordinates.value.lng,
+        props.latitudeOnMap,
+        props.longitudeOnMap
+    )
+    return getTravelTime(distanceKm, 5)
+})
+
+const distanceText = computed(() => {
+    if (!coordinates.value || !props.latitudeOnMap || !props.longitudeOnMap) return ''
+
+    const distanceKm = calculateDistance(
+        coordinates.value.lat,
+        coordinates.value.lng,
+        props.latitudeOnMap,
+        props.longitudeOnMap
+    )
+    const minutes = getTravelTime(distanceKm, 5)
+
+    let distanceDisplay = ''
+    if (distanceKm < 1) {
+        distanceDisplay = `${Math.round(distanceKm * 1000)}m`
+    } else {
+        distanceDisplay = `${distanceKm.toFixed(1)}km`
+    }
+
+    if (minutes === 1) {
+        return `est. 1 min away (${distanceDisplay})`
+    }
+    return `est. ${minutes} mins away (${distanceDisplay})`
+})
+
+const distanceClass = computed(() => {
+    const minutes = distanceMinutes.value
+    if (minutes <= 5) return 'distance-very-close'
+    if (minutes <= 10) return 'distance-close'
+    if (minutes <= 20) return 'distance-moderate'
+    if (minutes <= 30) return 'distance-far'
+    return 'distance-very-far'
+})
+
+// ==================== Cleanup ====================
 const cleanup = () => {
     if (routeUpdateTimeout) {
         clearTimeout(routeUpdateTimeout)
@@ -1771,33 +1897,29 @@ const cleanup = () => {
         map = null
         mapInitialized = false
     }
-    addressCache.clear()
-    routeCache.clear()
+    reportMetrics()
 }
 
-// Expose methods to parent component
+// ==================== Expose Methods ====================
 defineExpose({
     refreshLocation,
     setMapBearing,
     getCurrentBearing,
     resetRotation,
-    rotateMap,
     currentBearing,
     setMapPitch,
-    getCurrentPitch,
     increaseTilt,
     decreaseTilt,
     resetTilt,
-    enable3DMode,
     currentPitch,
     toggleGPSMode,
     gpsModeEnabled,
-    setGPSZoomLevel,
     checkLocationPermission,
-    requestLocationPermission
+    requestLocationPermission,
+    getAlternativeRoutes
 })
 
-// Watch for prop changes
+// ==================== Watchers ====================
 watch(() => [props.latitudeOnMap, props.longitudeOnMap], () => {
     if (map && mapInitialized && props.latitudeOnMap && props.longitudeOnMap) {
         updateDestinationMarker()
@@ -1810,7 +1932,6 @@ watch(() => [props.latitudeOnMap, props.longitudeOnMap], () => {
     }
 })
 
-// Watch for coordinates changes to update route
 watch(coordinates, () => {
     if (map && mapInitialized && coordinates.value) {
         debouncedUpdateRoute()
@@ -1818,10 +1939,28 @@ watch(coordinates, () => {
     }
 })
 
-// Lifecycle Hooks
+// Add this watcher to re-render route when user gets close to destination
+watch(() => distanceMinutes.value, (newMinutes) => {
+    // Convert minutes to approximate distance (assuming 5km/h speed)
+    // 1 minute ≈ 83 meters
+    const estimatedDistanceMeters = newMinutes * 83
+
+    // If user is within 100 meters of destination, re-render route to hide dashed line
+    if (estimatedDistanceMeters < 100 && currentRouteData && map && mapInitialized) {
+        console.log('User getting close to destination, updating route view...')
+        setTimeout(() => {
+            if (currentRouteData) {
+                renderRoute(currentRouteData)
+            }
+        }, 100)
+    }
+})
+
+// ==================== Lifecycle ====================
 onMounted(() => {
     setTimeout(() => {
         initMap()
+        checkBatteryStatus()
     }, 100)
 })
 
@@ -1858,7 +1997,7 @@ onBeforeUnmount(() => {
     margin-bottom: 20px;
 }
 
-.locinder-wrapper > div:not(#map) {
+.locinder-wrapper>div:not(#map) {
     pointer-events: auto;
 }
 
@@ -2117,21 +2256,16 @@ onBeforeUnmount(() => {
     border-radius: 20px;
 }
 
-.spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #5c3a21;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.loading-icon {
+    animation: fastSpin 0.8s linear infinite;
 }
 
-@keyframes spin {
-    0% {
+@keyframes fastSpin {
+    from {
         transform: rotate(0deg);
     }
 
-    100% {
+    to {
         transform: rotate(360deg);
     }
 }
@@ -2250,6 +2384,66 @@ onBeforeUnmount(() => {
     font-weight: 500;
 }
 
+/* Promotion Banner */
+.promotion-banner {
+    margin-top: 10px;
+    left: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 12px 16px;
+    z-index: 1000;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.promotion-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: white;
+}
+
+.promotion-text {
+    flex: 1;
+}
+
+.promotion-text strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.promotion-text p {
+    font-size: 12px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.promotion-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+    opacity: 0.8;
+}
+
+.promotion-close:hover {
+    opacity: 1;
+}
+
 @media (max-width: 768px) {
     .map-style-selector {
         top: 0;
@@ -2287,11 +2481,8 @@ onBeforeUnmount(() => {
 :deep(.maplibregl-canvas) {
     border-radius: 20px !important;
     border: 1px solid #ccc;
-    /* Hardware acceleration for canvas */
     transform: translateZ(0);
     will-change: transform;
-
-    /* Smoother rendering */
     image-rendering: crisp-edges;
     image-rendering: -webkit-optimize-contrast;
 }
@@ -2313,19 +2504,11 @@ onBeforeUnmount(() => {
 }
 
 :deep(.maplibregl-ctrl-compass) {
-    /* transform-origin: center; */
     transition: transform 0.3s ease;
 }
 
 :deep(.maplibregl-ctrl-compass:hover) {
     transform: rotate(15deg);
-}
-
-:deep(.maplibregl-ctrl-compass .maplibregl-ctrl-icon) {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%235c3a21' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpolygon points='16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76'%3E%3C/polygon%3E%3C/svg%3E");
-    background-size: 60%;
-    background-position: center;
-    background-repeat: no-repeat;
 }
 
 :deep(.maplibregl-ctrl-attrib.maplibregl-compact) {
@@ -2345,10 +2528,6 @@ onBeforeUnmount(() => {
 :deep(.maplibregl-popup-close-button) {
     right: 8px;
     top: 8px;
-}
-
-:deep(.maplibregl-popup-anchor-bottom) {
-    display: none !important;
 }
 
 .custom {
