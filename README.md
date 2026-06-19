@@ -49,13 +49,20 @@ Locinder solves this by:
 ### Database
 - MySQL
 
-### Tools & Services
-- OpenStreetMap
-- Map Tiler
-- Vercel (frontend deployment)
-- DirectAdmin (backend deployment and web hosting control panel)
-- Postman (API testing)
-- Git & GitHub
+## 🛠️ Tools & Services
+
+- **OpenStreetMap** – Map data provider for location-based features  
+- **MapTiler** – Map rendering and customization service  
+- **Capacitor** – Cross-platform mobile runtime for building Android and iOS applications  
+- **Android Studio** – Mobile app development, testing environment, and APK builder  
+
+### Deployment & Hosting
+- **Vercel** – Frontend deployment platform  
+- **DirectAdmin** – Backend hosting and server management control panel  
+
+### Development & Testing
+- **Postman** – API testing and development  
+- **Git & GitHub** – Version control and source code management  
 
 ---
 
