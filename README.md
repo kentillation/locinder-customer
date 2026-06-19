@@ -80,6 +80,12 @@ I am responsible for:
 ## Screenshots
 
 ```md
-![Home Page](images/home.png)
-![Map View](images/map.png)
-![Store Details](images/store.png)
+![Home Page 1](/public/img/jpg/Home Page 1.jpg)
+![Home Page 2](/public/img/jpg/Home Page 2.jpg)
+![Home Page 3](/public/img/jpg/Home Page 3.jpg)
+![Home Page 4](/public/img/jpg/Home Page 4.png)
+![Open Now](/public/img/jpg/Open Now.jpg)
+![Where to buy](/public/img/jpg/Where to buy.jpg)
+![Products](/public/img/jpg/Products.jpg)
+![Map](/public/img/jpg/Map.jpg)
+![Info](/public/img/jpg/Store info.jpg)
