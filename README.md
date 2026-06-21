@@ -49,7 +49,7 @@ Locinder solves this by:
 ### Database
 - MySQL
 
-## 🛠️ Tools & Services
+## Tools & Platforms
 
 - **OpenStreetMap** – Map data provider for location-based features  
 - **MapTiler** – Map rendering and customization service  
@@ -79,7 +79,6 @@ I am responsible for:
 
 ## Screenshots
 
-```md
 ![Home Page 1](/public/img/jpg/Home Page 1.jpg)
 ![Home Page 2](/public/img/jpg/Home Page 2.jpg)
 ![Home Page 3](/public/img/jpg/Home Page 3.jpg)

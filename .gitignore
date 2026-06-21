@@ -2,6 +2,7 @@
 node_modules
 /dist
 
+for Mobile app
 
 # env files
 .env
