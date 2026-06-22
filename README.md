@@ -36,7 +36,7 @@ Locinder solves this by:
 ## Tech Stack
 
 ### Frontend
-- TypeScript
+- JavaScript
 - Vue.js
 - Vuetify
 - HugeIcons
