@@ -1,3 +1,4 @@
+// This file is subject for integration
 import apiClient from '../axios';
 
 export const TRANSACTION_API = {
