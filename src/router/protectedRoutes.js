@@ -9,19 +9,19 @@ import NewProducts from '@/views/NewProducts.vue'
 export const protectedRoutes = [
     {
         path: '/home',
-        name: 'Home',
+        name: 'HomePage',
         component: HomePage,
         meta: { requiresAuth: true }
     },
     {
         path: '/shop',
-        name: 'Shop',
+        name: 'ShopPage',
         component: ShopPage,
         meta: { requiresAuth: true }
     },
     {
         path: '/store',
-        name: 'Store',
+        name: 'StorePage',
         component: StorePage,
         meta: { requiresAuth: true }
     },
@@ -39,7 +39,7 @@ export const protectedRoutes = [
     },
     {
         path: '/meal',
-        name: 'Meal',
+        name: 'MealPage',
         component: MealPage,
         meta: { requiresAuth: true }
     },

@@ -40,8 +40,6 @@ router.beforeEach(async (to, from, next) => {
   const isAuth = authStore.isAuthenticated
 
   if (to.meta.requiresAuth && !isAuth) {
-    // authStore.logout()
-    // setSlideTransition(to, from)
     return next({
       path: '/',
       query: { redirect: to.fullPath }
@@ -50,7 +48,6 @@ router.beforeEach(async (to, from, next) => {
 
   if ((to.path === '/' || to.path === '/register') && isAuth) {
     const redirect = to.query.redirect || '/home'
-    // setSlideTransition(to, from)
     return next(redirect)
   }
 
