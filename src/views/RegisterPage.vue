@@ -624,6 +624,7 @@ const handleRegister = async () => {
 
             setTimeout(() => {
                 window.location.href = redirectPath
+                router.push(redirectPath)
             }, 2000)
         } else {
             handleValidationErrors(result.errors)

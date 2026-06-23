@@ -7,14 +7,16 @@ import { loadFonts } from './plugins/webfontloader';
 import Toast from 'vue-toastification'
 import 'vue-toastification/dist/index.css'
 import './styles.css';
+import { useAuthStore } from '@/stores/auth'
 
 loadFonts();
 
 const app = createApp(App);
+const pinia = createPinia();
 
-app.use(createPinia()); // Pinia first
+app.use(pinia);         // Pinia first
 app.use(router);        // Then router
-app.use(vuetify);
+app.use(vuetify);       // Then Vuetify
 app.use(Toast, {
   position: 'top-center',
   timeout: 3000,
@@ -37,7 +39,10 @@ app.use(Toast, {
 
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme) {
-  vuetify.theme.global.name.value = savedTheme;
+  vuetify.theme.change(savedTheme);
 }
+
+const authStore = useAuthStore()
+authStore.restoreAuth()
 
 app.mount('#app');

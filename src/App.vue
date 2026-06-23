@@ -77,6 +77,7 @@ import { useAuthStore } from '@/stores/auth';
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+authStore.restoreAuth()
 let signoutLoading = ref(false)
 
 /* ----------------------------------------------------------

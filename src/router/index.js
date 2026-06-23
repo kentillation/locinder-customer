@@ -1,100 +1,65 @@
-// router/index.js
-import { createRouter, createWebHistory } from 'vue-router';
-import NotFound from '@/views/NotFound.vue';
-import LoginPage from '@/views/LoginPage.vue';
-import ForgotPassword from '@/views/ForgotPassword.vue';
-import HomePage from '@/views/HomePage.vue';
-import RegisterPage from '@/views/RegisterPage.vue';
-import ShopPage from '@/views/ShopPage.vue';
-import StorePage from '@/views/StorePage.vue';
-import ShopList from '@/views/ShopList.vue';
-import ShopWhereToBuy from '@/views/ShopWhereToBuy.vue';
-import MealPage from '@/views/MealPage.vue';
-import NewProducts from '@/views/NewProducts.vue';
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-const routes = [
-  { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
-  { path: '/', name: 'LoginPage', component: LoginPage },
-  { path: '/register', name: 'RegisterPage', component: RegisterPage },
-  { path: '/forgot-password', name: 'ForgotPassword', component: ForgotPassword },
-  { path: '/home', name: 'HomePage', component: HomePage, meta: { requiresAuth: true } },
-  { path: '/shop', name: 'ShopPage', component: ShopPage, meta: { requiresAuth: true } },
-  { path: '/store', name: 'StorePage', component: StorePage, meta: { requiresAuth: true } },
-  { path: '/shop-list', name: 'ShopList', component: ShopList, meta: { requiresAuth: true } },
-  { path: '/shop-where-to-buy', name: 'ShopWhereToBuy', component: ShopWhereToBuy, meta: { requiresAuth: true } },
-  { path: '/meal', name: 'MealPage', component: MealPage, meta: { requiresAuth: true } },
-  { path: '/new-products', name: 'NewProducts', component: NewProducts, meta: { requiresAuth: true } },
-];
+import { publicRoutes } from './publicRoutes'
+import { protectedRoutes } from './protectedRoutes'
+import { fallbackRoutes } from './fallbackRoutes'
+
+let historyStack = []
+
+const setSlideTransition = (to, from) => {
+  const toIndex = historyStack.indexOf(to.fullPath)
+  const fromIndex = historyStack.indexOf(from.fullPath)
+
+  if (toIndex === -1) {
+    historyStack.push(to.fullPath)
+    window.setPageTransition?.('slide-left')
+  } else {
+    window.setPageTransition?.(
+      toIndex < fromIndex ? 'slide-right' : 'slide-left'
+    )
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
-  routes,
+  routes: [
+    ...publicRoutes,
+    ...protectedRoutes,
+    ...fallbackRoutes
+  ],
+  scrollBehavior: () => ({ top: 0 })
+})
 
-    scrollBehavior() {
-        return {
-            top: 0
-        }
-    }
-});
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
 
-let historyStack = [];
-let isCheckingAuth = false;
+  const isAuth = authStore.isAuthenticated
 
-// Fixed slide transition function
-const setSlideTransition = (to, from) => {
-  const toIndex = historyStack.indexOf(to.fullPath);
-  const fromIndex = historyStack.indexOf(from.fullPath);
-  
-  if (toIndex === -1) {
-    historyStack.push(to.fullPath);
-    window.setPageTransition('slide-left');
-  } else {
-    window.setPageTransition(toIndex < fromIndex ? 'slide-right' : 'slide-left');
-  }
-};
+  // 🔒 protect routes
+  if (to.meta.requiresAuth && !isAuth) {
+    authStore.clearAuth()
 
-router.beforeEach(async (to, from, next) => {
-  const { useAuthStore } = await import('@/stores/auth');
-  const authStore = useAuthStore();
+    setSlideTransition(to, from)
 
-  if (!authStore.initialized && !isCheckingAuth) {
-    isCheckingAuth = true;
-
-    try {
-      await authStore.checkAuth();
-    } catch (err) {
-      console.error('Auth check failed:', err);
-    } finally {
-      isCheckingAuth = false;
-    }
+    return next({
+      path: '/',
+      query: { redirect: to.fullPath }
+    })
   }
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    authStore.clearAuth();
+  // 🔁 prevent login/register when already logged in
+  if ((to.path === '/' || to.path === '/register') && isAuth) {
+    const redirect = to.query.redirect || '/home'
 
-    setSlideTransition(to, from);
+    setSlideTransition(to, from)
 
-    next({
-      path: '/register',
-      query: {
-        redirect: to.fullPath
-      }
-    });
-
-    return;
+    return next(redirect)
   }
 
-  if ((to.path === '/' || to.path === '/register') && authStore.isAuthenticated) {
-    const redirectPath = to.query.redirect || '/home';
+  setSlideTransition(to, from)
 
-    setSlideTransition(to, from);
+  next()
+})
 
-    next(redirectPath);
-
-    return;
-  }
-
-  next();
-});
-
-export default router;
+export default router

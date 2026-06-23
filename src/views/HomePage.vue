@@ -642,6 +642,7 @@ const checkAuthentication = async () => {
         return false;
     }
 
+    await authStore.restoreAuth()
     authCheckDone.value = true;
     return true;
 };

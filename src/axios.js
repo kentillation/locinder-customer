@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '@/stores/auth'
 
 const apiClient = axios.create({
     baseURL: process.env.VUE_APP_API_BASE_URL,
@@ -10,10 +11,12 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(config => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const authStore = useAuthStore()
+
+    if (authStore.token) {
+        config.headers.Authorization = `Bearer ${authStore.token}`
     }
+
     return config;
 });
 
