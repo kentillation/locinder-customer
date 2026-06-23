@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-
 import { publicRoutes } from './publicRoutes'
 import { protectedRoutes } from './protectedRoutes'
 import { fallbackRoutes } from './fallbackRoutes'
@@ -31,16 +30,18 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 })
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+
+  if(!authStore.initialized) {
+    await authStore.restoreAuth()
+  }
 
   const isAuth = authStore.isAuthenticated
 
   if (to.meta.requiresAuth && !isAuth) {
-    authStore.clearAuth()
-
-    setSlideTransition(to, from)
-
+    // authStore.logout()
+    // setSlideTransition(to, from)
     return next({
       path: '/',
       query: { redirect: to.fullPath }
@@ -49,9 +50,7 @@ router.beforeEach((to, from, next) => {
 
   if ((to.path === '/' || to.path === '/register') && isAuth) {
     const redirect = to.query.redirect || '/home'
-
-    setSlideTransition(to, from)
-
+    // setSlideTransition(to, from)
     return next(redirect)
   }
 

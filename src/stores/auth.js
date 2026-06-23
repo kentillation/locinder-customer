@@ -29,7 +29,7 @@ export const useAuthStore = defineStore('auth', () => {
         userId.value = data.user_id
         firstName.value = data.first_name
 
-        // 🔐 persist token
+        // persist token
         await storage.setToken(data.access_token)
     }
 
@@ -81,9 +81,6 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             await checkAuth()
             return true
-        } catch {
-            await clearAuth()
-            return false
         } finally {
             initialized.value = true
         }
@@ -100,6 +97,9 @@ export const useAuthStore = defineStore('auth', () => {
                 Authorization: `Bearer ${token.value}`
             }
         })
+
+        userId.value = res.data.user_id
+        firstName.value = res.data.first_name
 
         return res.status === 200
     }

@@ -16,7 +16,7 @@ const pinia = createPinia();
 
 app.use(pinia);         // Pinia first
 app.use(router);        // Then router
-app.use(vuetify);       // Then Vuetify
+app.use(vuetify);
 app.use(Toast, {
   position: 'top-center',
   timeout: 3000,
