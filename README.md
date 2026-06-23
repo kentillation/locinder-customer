@@ -42,7 +42,7 @@ Locinder solves this by:
 - HugeIcons
 - Axios
 - Pinia
-- Secore storage
+- Secure storage
 
 ### Backend
 - Laravel
