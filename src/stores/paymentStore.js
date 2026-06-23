@@ -1,3 +1,4 @@
+// This file is subject for integration
 import { defineStore } from "pinia";
 import { EWALLET_PAYMENT_API } from "@/api/paymentApi";
 

@@ -36,18 +36,25 @@ Locinder solves this by:
 ## Tech Stack
 
 ### Frontend
+- JavaScript
 - Vue.js
 - Vuetify
+- HugeIcons
 - Axios
+- Pinia
 
 ### Backend
-- PHP (Laravel)
+- Laravel
 - RESTful API
 - Laravel Sanctum
 - Eloquent ORM
 
 ### Database
 - MySQL
+
+### Security
+- Token-based (Backend)
+- Memory-based (Frontend)
 
 ## Tools & Platforms
 

@@ -1,3 +1,4 @@
+// This file is subject for integration
 import { defineStore } from 'pinia';
 import { TRANSACTION_API } from '@/api/transactionApi';
 
