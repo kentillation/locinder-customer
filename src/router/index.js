@@ -36,7 +36,6 @@ router.beforeEach((to, from, next) => {
 
   const isAuth = authStore.isAuthenticated
 
-  // 🔒 protect routes
   if (to.meta.requiresAuth && !isAuth) {
     authStore.clearAuth()
 
@@ -48,7 +47,6 @@ router.beforeEach((to, from, next) => {
     })
   }
 
-  // 🔁 prevent login/register when already logged in
   if ((to.path === '/' || to.path === '/register') && isAuth) {
     const redirect = to.query.redirect || '/home'
 

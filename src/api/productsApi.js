@@ -174,16 +174,10 @@ export const PRODUCTS_API = {
 
     async fetchBaseCategoriesApi() {
         try {
-            const authToken = localStorage.getItem('auth_token');
-            if (!authToken) {
-                throw new Error('No authentication token found');
-            }
-
             const response = await apiClient.get(
                 `${this.ENDPOINTS.FETCH_BASE_CATEGORIES}`,
                 {
                     headers: {
-                        Authorization: `Bearer ${authToken}`,
                         'Content-Type': 'application/json'
                     }
                 }
