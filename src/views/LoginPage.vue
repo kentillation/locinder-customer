@@ -144,7 +144,7 @@ const handleLogin = async () => {
 
             setTimeout(() => {
                 router.push(redirectPath)
-            }, 300)
+            }, 500)
         } else {
             handleValidationErrors(result.errors)
         }
