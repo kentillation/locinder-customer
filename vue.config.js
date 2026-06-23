@@ -2,7 +2,7 @@
 const { defineConfig } = require('@vue/cli-service');
 const webpack = require('webpack');
 module.exports = defineConfig({
-  transpileDependencies: true,
+  transpileDependencies: [],
   pluginOptions: {
     vuetify: {
       // https://github.com/vuetifyjs/vuetify-loader/tree/next/packages/vuetify-loader
@@ -11,7 +11,7 @@ module.exports = defineConfig({
   devServer: {
     proxy: {
       '/api': {
-        target: 'https://poofsa.kentillation.com',
+        target: process.env.VUE_APP_API_BASE_URL,
         changeOrigin: true,
         pathRewrite: { '^/api': '' },
       },
