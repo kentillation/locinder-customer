@@ -142,8 +142,6 @@ const handleLogin = async () => {
         if (result.success) {
             const redirectPath = route.query.redirect || '/home'
 
-            document.body.style.opacity = '0'
-
             setTimeout(() => {
                 router.push(redirectPath)
             }, 300)
