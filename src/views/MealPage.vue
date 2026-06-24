@@ -656,6 +656,10 @@ onUnmounted(() => {
     margin-bottom: 80px;
 }
 
+.loading-more {
+    margin-bottom: 50px;
+}
+
 .loading-more,
 .no-more-products {
     text-align: center;
