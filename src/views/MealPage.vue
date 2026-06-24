@@ -657,7 +657,7 @@ onUnmounted(() => {
 }
 
 .loading-more {
-    margin-bottom: 50px;
+    margin: 50px auto;
 }
 
 .loading-more,
