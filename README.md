@@ -83,19 +83,3 @@ I am responsible for:
 - UI implementation and responsiveness
 - Map-based feature integration
 
----
-
-## Screenshots
-
-![Home Page 1](/public/img/jpg/Home Page 1.jpg)
-![Home Page 2](/public/img/jpg/Home Page 2.jpg)
-![Home Page 3](/public/img/jpg/Home Page 3.jpg)
-![Home Page 4](/public/img/jpg/Home Page 4.jpg)
-![More Categories](/public/img/jpg/More Categories.jpg)
-![You Deserve](/public/img/jpg/You Deserve.jpg)
-![Open Now](/public/img/jpg/Open Now.jpg)
-![Where To Buy](/public/img/jpg/Where To Buy.jpg)
-![Products](/public/img/jpg/Products.jpg)
-![Map 1](/public/img/jpg/Map 1.jpg)
-![Map 2](/public/img/jpg/Map 2.jpg)
-![Store Info](/public/img/jpg/Store info.jpg)
