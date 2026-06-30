@@ -64,13 +64,8 @@
                         <v-col cols="12">
                             <v-card class="no-found">
                                 <span><v-img :src="nostoreImage" width="130"></v-img></span>
-                                <p class="mt-5 text-center"
-                                    style="font-weight: 500; color: #ab2323; line-height: 0.5cm;">
-                                    There's no available merchant <br />
-                                    <span class="text-grey" style="font-style: italic; font-size: 13px;">
-                                        Wala sang may nagabaligya
-                                    </span>
-                                </p>
+                                <p>There's no available merchant</p>
+                                <span class="subtitle">Wala sang may nagabaligya</span>
                             </v-card>
                         </v-col>
                     </v-row>
@@ -923,12 +918,23 @@ onUnmounted(() => {
 .no-found {
     width: 100%;
     display: flex;
-    flex-direction: column;
     align-items: center;
+    flex-direction: column;
     background-color: #fff;
     border-radius: 10px;
     box-shadow: none !important;
     padding: 40px 20px 40px 20px;
+}
+
+.no-found p {
+    color: #ab2323;
+    font-weight: 500;
+}
+
+.subtitle {
+    font-size: 12px;
+    font-style: italic;
+    color: #d7d7d7 !important;
 }
 
 /* Custom scrollbar styling */

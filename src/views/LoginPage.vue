@@ -75,7 +75,6 @@
                     </v-col>
                 </v-row>
             </v-card>
-            <Snackbar ref="snackbarRef" />
         </v-container>
     </div>
 </template>
@@ -85,8 +84,6 @@ import { HugeiconsIcon } from '@hugeicons/vue'
 import { Mail01Icon, LockPasswordIcon, ViewIcon, ViewOffIcon, Loading03Icon } from '@hugeicons/core-free-icons'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-import Snackbar from '@/components/Snackbar.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -95,7 +92,6 @@ const router = useRouter()
 const logo = require('@/assets/Locinder-Submark.png')
 
 const form = ref(null)
-const snackbarRef = ref(null)
 
 const customer_email = ref('')
 const customer_password = ref('')

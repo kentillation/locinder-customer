@@ -57,10 +57,8 @@
                             <v-col cols="12" style="padding: 5px !important;">
                                 <v-card class="no-found">
                                     <span><v-img :src="nostoreImage" width="130"></v-img></span>
-                                    <p class="mt-5" style="font-weight: 600; color: #ab2323;">No available store found
-                                    </p>
-                                    <span class="text-grey" style="font-size: 12px;;"><em>Wala sang may nakita nga
-                                            baligyaan</em></span>
+                                    <p>No available store found</p>
+                                    <span class="subtitle">Wala sang may nakita nga baligyaan</span>
                                 </v-card>
                             </v-col>
                         </v-row>
@@ -873,6 +871,17 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     padding: 40px 20px 40px 20px;
+}
+
+.no-found p {
+    color: #ab2323;
+    font-weight: 500;
+}
+
+.subtitle {
+    font-size: 12px;
+    font-style: italic;
+    color: #d7d7d7 !important;
 }
 
 /* Custom scrollbar styling */

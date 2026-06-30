@@ -97,10 +97,8 @@
                             <v-col cols="12">
                                 <v-card class="no-found">
                                     <span><v-img :src="nofastfoodImage" width="130"></v-img></span>
-                                    <p style="font-weight: 500; color: #ab2323;">No available products found</p>
-                                    <span class="text-grey" style="font-size: 12px;">
-                                        <em>Wala sang may nakita nga produkto</em>
-                                    </span>
+                                    <p>No available product found</p>
+                                    <span class="subtitle">Wala sang may nakita nga produkto</span>
                                 </v-card>
                             </v-col>
                         </v-row>
@@ -876,6 +874,17 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     padding: 40px 20px 40px 20px;
+}
+
+.no-found p {
+    color: #ab2323;
+    font-weight: 500;
+}
+
+.subtitle {
+    font-size: 12px;
+    font-style: italic;
+    color: #d7d7d7 !important;
 }
 
 .image-section-item {

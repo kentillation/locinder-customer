@@ -131,9 +131,7 @@
                                 <v-card class="no-found">
                                     <span><v-img :src="nofastfoodImage" width="130"></v-img></span>
                                     <p>No available product found</p>
-                                    <span class="subtitle">
-                                        Wala sang may nakita nga produkto
-                                    </span>
+                                    <span class="subtitle">Wala sang may nakita nga produkto</span>
                                 </v-card>
                             </v-col>
                         </v-row>
@@ -2437,6 +2435,7 @@ onBeforeUnmount(() => {
 
 .no-found p {
     color: #ab2323;
+    font-weight: 500;
 }
 
 /* Custom scrollbar styling */

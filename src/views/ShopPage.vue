@@ -124,11 +124,9 @@
                                         <v-row>
                                             <v-col cols="12">
                                                 <v-card class="no-found">
-                                                    <div class="d-flex align-center flex-column">
-                                                        <span><v-img :src="nofastfoodImage" width="130"></v-img></span>
-                                                        <p style="font-weight: 500; color: #ab2323;">No available
-                                                            products found</p>
-                                                    </div>
+                                                    <span><v-img :src="nofastfoodImage" width="130"></v-img></span>
+                                                    <p>No available product found</p>
+                                                    <span class="subtitle">Wala sang may nakita nga produkto</span>
                                                 </v-card>
                                             </v-col>
                                         </v-row>
@@ -1368,25 +1366,6 @@ onUnmounted(() => {
     flex-direction: column;
 }
 
-/* Custom scrollbar styling */
-.scroll-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.scroll-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.scroll-content::-webkit-scrollbar-thumb {
-    background: #ce8600;
-    border-radius: 3px;
-}
-
-.scroll-content::-webkit-scrollbar-thumb:hover {
-    background: #5c3a21;
-}
-
 @media (min-width: 1280px) {
     .image-section-item {
         width: 25%;
@@ -1456,5 +1435,35 @@ onUnmounted(() => {
     border-radius: 10px;
     box-shadow: none !important;
     padding: 40px 20px 40px 20px;
+}
+
+.no-found p {
+    color: #ab2323;
+    font-weight: 500;
+}
+
+.subtitle {
+    font-size: 12px;
+    font-style: italic;
+    color: #d7d7d7 !important;
+}
+
+/* Custom scrollbar styling */
+.scroll-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scroll-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.scroll-content::-webkit-scrollbar-thumb {
+    background: #ce8600;
+    border-radius: 3px;
+}
+
+.scroll-content::-webkit-scrollbar-thumb:hover {
+    background: #5c3a21;
 }
 </style>
