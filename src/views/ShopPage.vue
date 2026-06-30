@@ -154,7 +154,7 @@
                                                     </template>
                                                 </v-img>
                                                 <p class="mt-2">
-                                                    <strong>₱{{ product.base_price }}</strong>
+                                                    <strong>₱{{ Number(product.base_price).toFixed(2) }}</strong>
                                                 </p>
                                             </div>
                                         </div>
