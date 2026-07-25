@@ -96,7 +96,7 @@
                                     <v-text-field v-model="new_password" :rules="[requiredRule, passwordRule]"
                                         placeholder="Create a new strong password" variant="outlined" density="compact"
                                         :type="showNewPassword ? 'text' : 'password'" class="custom-input"
-                                        hide-details="auto">
+                                        hide-details="auto" autocomplete="new-password">
                                         <template v-slot:append-inner>
                                             <HugeiconsIcon :icon="showNewPassword ? ViewIcon : ViewOffIcon"
                                                 @click="showNewPassword = !showNewPassword"
@@ -114,7 +114,7 @@
                                         :rules="[requiredRule, confirmPasswordRule]" placeholder="Confirm your new password"
                                         variant="outlined" density="compact"
                                         :type="showConfirmPassword ? 'text' : 'password'" class="custom-input"
-                                        hide-details="auto">
+                                        hide-details="auto" autocomplete="confirm-new-password">
                                         <template v-slot:append-inner>
                                             <HugeiconsIcon :icon="showConfirmPassword ? ViewIcon : ViewOffIcon"
                                                 @click="showConfirmPassword = !showConfirmPassword"

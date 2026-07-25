@@ -25,7 +25,7 @@
 
             <!-- Headline -->
             <div class="headline d-flex align-center">
-                <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog"></v-img></span>
+                <!-- <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog"></v-img></span> -->
                 <div class="mx-1">
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
                     <div class="d-flex">
@@ -772,9 +772,9 @@ const onOnline = () => {
     toast.info('Internet connection restored');
 };
 
-const showKrisantaDialog = () => {
+/* const showKrisantaDialog = () => {
     krisantaDialog.value = true;
-};
+}; */
 
 const closeKrisantaDialog = () => {
     krisantaDialog.value = false;
