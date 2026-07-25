@@ -26,7 +26,7 @@
             <!-- Headline -->
             <div class="headline d-flex align-center">
                 <!-- <span><v-img :src="currentKrisantaImage" width="50" @click="showKrisantaDialog"></v-img></span> -->
-                <div class="mx-1">
+                <div class="pa-3">
                     <h4>{{ currentDayGreeting }}, {{ authStore.firstName }}!</h4>
                     <div class="d-flex">
                         <div class="d-flex align-center">
