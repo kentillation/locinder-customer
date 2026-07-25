@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
     const firstName = ref(null)
     const userId = ref(null)
     const error = ref(null)
+    const recovery_code = ref(null);
 
     const initialized = ref(false)
     const checkingAuth = ref(false)
@@ -20,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
     // GETTERS
     // =====================
     const isAuthenticated = computed(() => !!token.value)
+    const getFirstName = computed(() => firstName.value);
 
     // =====================
     // SET AUTH
@@ -64,6 +66,103 @@ export const useAuthStore = defineStore('auth', () => {
             throw err
         }
     }
+
+    // =====================
+    // REGISTRATION
+    // =====================
+    const customerRegistration = async (credentials) => {
+        error.value = null;
+
+        try {
+            const response = await apiClient.post('v1/customer/registration', credentials);
+
+            const data = response.data;
+
+            setAuth(data);
+
+            return {
+                success: data.success,
+                message: data.message,
+                user_id: data.user_id,
+                first_name: data.first_name,
+            };
+
+        } catch (err) {
+            error.value = err.response?.data?.message ||
+                err.message ||
+                'Registration failed. Please try again.';
+            throw err;
+        }
+    };
+
+    // =====================
+    // PASSWORD RECOVERY FLOW
+    // =====================
+    const submitEmail = async (credentials) => {
+        error.value = null;
+
+        try {
+            const { data } = await apiClient.post('v1/customer/verify-email', credentials);
+
+            recovery_code.value = data.recovery_code;
+
+            return {
+                success: true,
+                recovery_code: data.recovery_code,
+            };
+
+        } catch (err) {
+            error.value = err.response?.data?.message ||
+                err.message ||
+                'Verifying email failed. Please try again.';
+            throw new Error(error.value);
+        }
+    };
+
+    const submitRecoveryCode = async (credentials) => {
+        error.value = null;
+
+        try {
+            const { data } = await apiClient.post(
+                'v1/customer/verify-recovery-code',
+                credentials
+            );
+
+            return {
+                success: true,
+                data,
+            };
+
+        } catch (err) {
+            error.value = err.response?.data?.message ||
+                err.message ||
+                'Recovery code failed. Please try again.';
+            throw new Error(error.value);
+        }
+    };
+
+    const submitNewPassword = async (credentials) => {
+        error.value = null;
+
+        try {
+            const response = await apiClient.post('v1/customer/recover-account', credentials);
+
+            const data = response.data;
+
+            setAuth(data);
+
+            return {
+                success: true,
+                data,
+            };
+
+        } catch (err) {
+            error.value = err.response?.data?.message ||
+                err.message ||
+                'Password reset failed.';
+            throw err;
+        }
+    };
 
     // =====================
     // RESTORE SESSION (IMPORTANT)
@@ -152,7 +251,12 @@ export const useAuthStore = defineStore('auth', () => {
         initialized,
         checkingAuth,
         isAuthenticated,
+        getFirstName,
         customerLogin,
+        customerRegistration,
+        submitEmail,
+        submitRecoveryCode,
+        submitNewPassword,
         logout,
         restoreAuth,
         checkAuth,
